@@ -1,0 +1,91 @@
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: agilizap-postgres
+    environment:
+      POSTGRES_DB: agilizap
+      POSTGRES_USER: agilizap
+      POSTGRES_PASSWORD: agilizap
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agilizap -d agilizap"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: agilizap-redis
+    command: ["redis-server", "--requirepass", "123456"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "123456", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    container_name: agilizap-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      BACKEND_URL: http://localhost:8080
+      FRONTEND_URL: http://localhost:3000
+      PROXY_PORT: ""
+      PORT: 8080
+      DB_DIALECT: postgres
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: agilizap
+      DB_PASS: agilizap
+      DB_NAME: agilizap
+      JWT_SECRET: kZaOTd+YZpjRUyyuQUpigJaEMk4vcW4YOymKPZX0Ts8=
+      JWT_REFRESH_SECRET: dBSXqFg9TaNUEDXVp6fhMTRLBysP+j2DSqf7+raxD3A=
+      REDIS_URI: redis://:123456@redis:6379
+      REDIS_OPT_LIMITER_MAX: 1
+      REDIS_OPT_LIMITER_DURATION: 3000
+      USER_LIMIT: 10000
+      CONNECTIONS_LIMIT: 100000
+      CLOSED_SEND_BY_ME: "true"
+      GERENCIANET_SANDBOX: "false"
+      GERENCIANET_CLIENT_ID: Client_Id_Gerencianet
+      GERENCIANET_CLIENT_SECRET: Client_Secret_Gerencianet
+      GERENCIANET_PIX_CERT: certificado-Gerencianet
+      GERENCIANET_PIX_KEY: chave pix gerencianet
+    ports:
+      - "8080:8080"
+    command: >
+      sh -c "npm run db:migrate
+      && (npm run db:seed || true)
+      && node dist/server.js"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        REACT_APP_BACKEND_URL: http://localhost:8080
+        REACT_APP_HOURS_CLOSE_TICKETS_AUTO: 24
+        REACT_APP_NAME_SYSTEM: Agilizap
+    container_name: agilizap-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:3650"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
