@@ -62,6 +62,7 @@ import FindOrCreateTicketService from "../TicketServices/FindOrCreateTicketServi
 import UpdateTicketService from "../TicketServices/UpdateTicketService";
 import typebotListener from "../TypebotServices/typebotListener";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
+import { v4 as uuidv4 } from "uuid";
 import ShowPromptService from "../PromptServices/ShowPromptService";
 import { generateAIResponse } from "../AIServices/AIService";
 import { provider } from "./providers";
@@ -785,6 +786,27 @@ const handleOpenAi = async (
     const targetQueueId = aiResult.queueId || prompt.queueId;
     if (aiResult.transferQueue && targetQueueId) {
       await transferQueue(targetQueueId, ticket, contact, wbot);
+
+      // Inserir mensagem de resumo interno para os atendentes humanos no painel
+      if (aiResult.summary && aiResult.summary.trim() !== "") {
+        try {
+          await CreateMessageService({
+            messageData: {
+              id: uuidv4(),
+              ticketId: ticket.id,
+              body: aiResult.summary.trim(),
+              fromMe: true,
+              read: true,
+              mediaType: "ai_summary",
+              queueId: targetQueueId
+            },
+            companyId: ticket.companyId
+          });
+          logger.info(`[handleOpenAi] Resumo interno da IA registrado para o ticket ${ticket.id}`);
+        } catch (sumErr) {
+          logger.warn(`[handleOpenAi] Erro ao gravar mensagem de resumo da IA: ${sumErr}`);
+        }
+      }
     }
   } catch (error: any) {
     logger.error(`[handleOpenAi / AIService] Erro no processamento de IA: ${error?.message || error}`);

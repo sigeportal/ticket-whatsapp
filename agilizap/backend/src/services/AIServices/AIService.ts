@@ -22,6 +22,7 @@ export interface AIResponseResult {
   text: string;
   transferQueue: boolean;
   queueId?: number;
+  summary?: string;
 }
 
 const sanitizeName = (name: string): string => {
@@ -141,6 +142,13 @@ REGRA CRÍTICA DE TRANSFERÊNCIA PARA ATENDIMENTO HUMANO:
 - Somente adicione uma ação de transferência se o cliente solicitar EXPLICITAMENTE para falar com uma pessoa, humano ou atendente (exemplos: "quero uma pessoa", "atendente", "falar com humano", "atendimento humano", "quero falar com alguém"), ou se for estritamente necessário passar para um atendente humano.
 - NUNCA adicione a ação de transferência se você estiver apenas perguntando, sugerindo ou oferecendo a opção ao cliente. Nesses casos, apenas ofereça a opção cordialmente sem adicionar a ação.
 - Ao realizar a transferência solicitada, responda cordialmente avisando o cliente que está realizando o encaminhamento para o setor correspondente e inclua a ação de transferência ao final.
+- Sempre que você realizar a transferência para atendimento humano, você DEVE gerar OBRIGATORIAMENTE no final da resposta o seguinte bloco:
+[RESUMO_IA]
+*Motivo:* (Explique em 1 linha o motivo do contato)
+*Tratado pela IA:* (O que o cliente perguntou e o que já foi respondido/esclarecido)
+*Necessidade/Ação:* (O que o atendente humano precisa fazer ou resolver)
+[/RESUMO_IA]
+O bloco [RESUMO_IA] é de uso interno da equipe e não será enviado para o WhatsApp do cliente.
 
 ${queueOptionsText}
 
@@ -266,6 +274,14 @@ ${prompt.prompt}`;
 
     let transfer = false;
     let targetQueueId = prompt.queueId;
+    let summaryText = "";
+
+    // Extrair o bloco de Resumo Interno da IA se presente
+    const matchSummary = responseRaw.match(/\[RESUMO_IA\]([\s\S]*?)\[\/RESUMO_IA\]/i);
+    if (matchSummary) {
+      summaryText = matchSummary[1].trim();
+      responseRaw = responseRaw.replace(matchSummary[0], "").trim();
+    }
 
     // Detectar transferência dinâmica com nome da fila:
     // Ex: "Ação: Transferir para a fila [Comercial]" ou "Ação: Transferir para o setor Suporte"
@@ -295,10 +311,16 @@ ${prompt.prompt}`;
         .trim();
     }
 
+    // Fallback de resumo caso tenha transferido mas o modelo não incluiu a tag [RESUMO_IA]
+    if (transfer && (!summaryText || summaryText.trim() === "")) {
+      summaryText = `*Motivo:* Transferência solicitada para atendimento humano.\n*Última mensagem do cliente:* "${userMessage || "Sem mensagem de texto"}".\n*Necessidade/Ação:* Dar continuidade ao atendimento com o operador do setor.`;
+    }
+
     return {
       text: responseRaw,
       transferQueue: transfer,
-      queueId: targetQueueId
+      queueId: targetQueueId,
+      summary: summaryText
     };
   } catch (err: any) {
     logger.error(`[AIService] Erro ao processar requisição com ${provider}: ${err?.message || err}`);

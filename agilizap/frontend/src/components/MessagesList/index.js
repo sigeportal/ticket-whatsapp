@@ -14,6 +14,7 @@ import {
 } from "@material-ui/core";
 
 import {
+  LockOutlined,
   AccessTime,
   Block,
   Done,
@@ -271,6 +272,81 @@ const useStyles = makeStyles((theme) => ({
     marginLeft: 4,
   },
 
+  aiSummaryWrapper: {
+    display: "flex",
+    justifyContent: "center",
+    width: "100%",
+    margin: "14px 0",
+    clear: "both",
+  },
+  aiSummaryCard: {
+    maxWidth: 580,
+    width: "92%",
+    borderRadius: 12,
+    padding: "14px 18px",
+    backgroundColor:
+      theme.palette.type === "dark" ? "rgba(148, 163, 184, 0.08)" : "#f8fafc",
+    border: `1px dashed ${
+      theme.palette.type === "dark" ? "rgba(148, 163, 184, 0.3)" : "#cbd5e1"
+    }`,
+    boxShadow:
+      theme.palette.type === "dark"
+        ? "0 2px 8px rgba(0, 0, 0, 0.25)"
+        : "0 2px 8px rgba(0, 0, 0, 0.04)",
+    fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+  },
+  aiSummaryHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+    paddingBottom: 8,
+    borderBottom: `1px solid ${
+      theme.palette.type === "dark" ? "rgba(148, 163, 184, 0.15)" : "#e2e8f0"
+    }`,
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  aiSummaryTitle: {
+    fontWeight: 700,
+    fontSize: "0.85rem",
+    color: theme.palette.type === "dark" ? "#e2e8f0" : "#334155",
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+  },
+  aiSummaryBadge: {
+    fontSize: "0.72rem",
+    fontWeight: 600,
+    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "3px 8px",
+    borderRadius: 6,
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(255, 255, 255, 0.06)"
+        : "rgba(226, 232, 240, 0.8)",
+  },
+  aiSummaryBody: {
+    fontSize: "0.84rem",
+    lineHeight: 1.65,
+    color: theme.palette.type === "dark" ? "#94a3b8" : "#475569",
+    "& p": {
+      margin: "4px 0",
+    },
+    "& strong": {
+      color: theme.palette.type === "dark" ? "#f1f5f9" : "#1e293b",
+      fontWeight: 700,
+    },
+  },
+  aiSummaryFooter: {
+    display: "flex",
+    justifyContent: "flex-end",
+    marginTop: 8,
+    fontSize: "0.70rem",
+    color: theme.palette.type === "dark" ? "#64748b" : "#94a3b8",
+  },
   downloadMedia: {
     display: "flex",
     alignItems: "center",
@@ -745,6 +821,35 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
   const renderMessages = () => {
     if (messagesList.length > 0) {
       const viewMessagesList = messagesList.map((message, index) => {
+
+        if (message.mediaType === "ai_summary") {
+          return (
+            <React.Fragment key={message.id}>
+              {renderDailyTimestamps(message, index)}
+              {renderNumberTicket(message, index)}
+              {renderMessageDivider(message, index)}
+              <div className={classes.aiSummaryWrapper}>
+                <div className={classes.aiSummaryCard}>
+                  <div className={classes.aiSummaryHeader}>
+                    <div className={classes.aiSummaryTitle}>
+                      <span>🤖</span> Resumo da IA
+                    </div>
+                    <span className={classes.aiSummaryBadge}>
+                      <LockOutlined style={{ fontSize: 13, marginRight: 4 }} />
+                      Visível apenas para a equipe (cliente não vê)
+                    </span>
+                  </div>
+                  <div className={classes.aiSummaryBody}>
+                    <MarkdownWrapper>{message.body}</MarkdownWrapper>
+                  </div>
+                  <div className={classes.aiSummaryFooter}>
+                    <span>{format(parseISO(message.createdAt), "HH:mm")}</span>
+                  </div>
+                </div>
+              </div>
+            </React.Fragment>
+          );
+        }
 
         if (message.mediaType === "call_log") {
           return (
