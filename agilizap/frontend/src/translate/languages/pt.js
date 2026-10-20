@@ -145,7 +145,6 @@ const messages = {
           expiresInactiveMessage: "Mensagem de encerramento por inatividade",
 		  greetingMessage: "Mensagem de saudação",
           complationMessage: "Mensagem de conclusão",
-		  sendIdQueue: "Fila",
         },
         buttons: {
           okAdd: "Adicionar",
@@ -164,20 +163,14 @@ const messages = {
 		  deletedAll: "Todos contatos excluídos com sucesso!",
         },
 		  searchPlaceholder: "Pesquisar...",
-          confirmationModal: {
-          deleteTitle: "Deletar ",
+        confirmationModal: {
+          deleteTitle: "Deletar",
           deleteAllTitle: "Deletar Todos",
           importTitle: "Importar contatos",
-          deleteMessage: "Tem certeza que deseja deletar este contato? Todos os tickets relacionados serão perdidos.",
+          deleteMessage: "Tem certeza que deseja deletar este contato? Todos os atendimentos relacionados serão perdidos.",
           deleteAllMessage: "Tem certeza que deseja deletar todos os contatos? Todos os tickets relacionados serão perdidos.",
-          importMessage: "Deseja importar todos os contatos do telefone?",
+          importMessage: "Esta ação irá importar os contatos salvos na agenda do WhatsApp. Alguns modelos podem não permitir essa funcionalidade ou de acordo com sua configuração de privacidade! Verifique em até 1 hora o resultado.",
         },
-		confirmationModal:{
-			importTitlte: "Importar contatos",
-			importMessage: "Esta ação irá importar os contatos salvos na agenda do WhatsApp. Alguns modelos podem não permitir essa funcionalidade ou de acordo com sua configuração de privacidade! Verifique em até 1 hora o resultado.",
-			deleteTitle:"Deletar",
-			deleteMessage:"Tem certeza que deseja deletar este contato? Todos os atendimentos relacionados serão perdidos.",
-		},
         buttons: {
           import: "Importar Contatos",
 		  importSheet: "Import. Excel",
@@ -413,12 +406,12 @@ const messages = {
           message: "Mensagem de",
         },
         tabs: {
-          open: { title: "Abertas" },
+          open: { title: "Abertos" },
           closed: { title: "Resolvidos" },
-          search: { title: "Busca" },
+          search: { title: "Buscar" },
         },
         search: {
-          placeholder: "Buscar atendimento e mensagens",
+          placeholder: "Buscar atendimentos e mensagens...",
           filterConnections: "Filtro por conexões",
           filterContacts: "Filtro por contato",
           filterConections: "Filtro por Conexão",
@@ -427,7 +420,7 @@ const messages = {
             closed: "Fechado",
             pending: "Pendente",
           },
-          filterUsers: "Filtro por Usuarios",
+          filterUsers: "Filtro por Usuários",
           ticketsPerPage: "Tickets por página"
         },
         buttons: {
@@ -448,9 +441,9 @@ const messages = {
       ticketsList: {
         pendingHeader: "Aguardando",
         assignedHeader: "Atendendo",
-        noTicketsTitle: "Nada aqui!",
+        noTicketsTitle: "Nenhum chamado encontrado",
         noTicketsMessage:
-          "Nenhum atendimento encontrado com esse status ou termo pesquisado",
+          "Não há conversas ativas com este status ou termo pesquisado.",
         buttons: {
           accept: "Aceitar",
           closed: "Finalizar",
@@ -604,7 +597,6 @@ const messages = {
           message: "Resposta",
           save: "Salvar",
           cancel: "Cancelar",
-          geral: "Permitir editar",
           add: "Adicionar",
           edit: "Editar",
           visao: "Permitir visão",

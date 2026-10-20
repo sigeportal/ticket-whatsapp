@@ -33,7 +33,9 @@ import {
 } from "@material-ui/core";
 import ConfirmationModal from "../ConfirmationModal";
 
-const path = require('path');
+const path = {
+    basename: (p) => (p ? String(p).split(/[\\/]/).pop() : ""),
+};
 
 const useStyles = makeStyles((theme) => ({
     root: {

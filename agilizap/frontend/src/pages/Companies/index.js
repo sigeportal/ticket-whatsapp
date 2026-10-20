@@ -30,9 +30,8 @@ import { i18n } from "../../translate/i18n";
 import { openApi } from "../../services/api";
 import toastError from "../../errors/toastError";
 import moment from "moment";
+import PortAiLogo from "../../components/PortAiLogo";
 
-
-const logo = `${process.env.REACT_APP_BACKEND_URL}/public/logotipos/login.png`;
 const useStyles = makeStyles(theme => ({
 	paper: {
 		marginTop: theme.spacing(8),
@@ -107,8 +106,8 @@ const SignUp = () => {
 		<Container component="main" maxWidth="xs">
 			<CssBaseline />
 			<div className={classes.paper}>
-				<div>
-					<img style={{ margin: "0 auto", height: "80px", width: "100%" }} src={logo} alt="Whats" />
+				<div style={{ textAlign: "center", marginBottom: 20 }}>
+					<PortAiLogo variant="full" width={220} height={75} />
 				</div>
 				{/*<Typography component="h1" variant="h5">
 					{i18n.t("signup.title")}

@@ -5,8 +5,10 @@
   "nomeEmpresa": "Multiconversa",
   "private": true,
   "dependencies": {
+    "@breezystack/lamejs": "^1.2.7",
     "@date-io/date-fns": "^2.14.0",
     "@date-io/moment": "^3.0.0",
+    "@emotion/react": "^11.10.6",
     "@emotion/styled": "^11.10.6",
     "@floating-ui/utils": "^0.2.4",
     "@material-ui/core": "4.12.3",
@@ -59,7 +61,6 @@
     "react-qr-code": "^2.0.7",
     "react-query": "^3.39.3",
     "react-router-dom": "^5.2.0",
-    "react-scripts": "3.4.3",
     "react-text-mask": "^5.5.0",
     "react-toastify": "^6.0.9",
     "react-trello": "^2.2.11",
@@ -74,12 +75,18 @@
     "xlsx": "^0.18.5",
     "yup": "^0.32.8"
   },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.3",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.14",
+    "vite": "^5.4.10"
+  },
   "scripts": {
-    "start": "export NODE_OPTIONS=\"--max-old-space-size=8192\" && react-scripts start",
-    "build": "export NODE_OPTIONS=\"--max-old-space-size=8192\" && NODE_OPTIONS=--openssl-legacy-provider GENERATE_SOURCEMAP=false react-scripts build",
-    "builddev": "export NODE_OPTIONS=\"--max-old-space-size=8192\" && react-scripts build",
-    "test": "export NODE_OPTIONS=\"--max-old-space-size=8192\" && react-scripts test",
-    "eject": "export NODE_OPTIONS=\"--max-old-space-size=8192\" && react-scripts eject"
+    "dev": "vite",
+    "start": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "eslintConfig": {
     "extends": "react-app"

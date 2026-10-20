@@ -12,6 +12,8 @@ import TicketsManagerTabs from "../../components/TicketsManagerTabs/";
 import Ticket from "../../components/Ticket/";
 import TicketAdvancedLayout from "../../components/TicketAdvancedLayout";
 import { TicketsContext } from "../../context/Tickets/TicketsContext";
+import Typography from '@material-ui/core/Typography';
+import PortAiLogo from "../../components/PortAiLogo";
 
 import { i18n } from "../../translate/i18n";
 
@@ -59,25 +61,38 @@ const TicketAdvanced = (props) => {
     }, [currentTicket])
 
 
-	const logo = `${process.env.REACT_APP_BACKEND_URL}/public/logotipos/login.png`;
-    const randomValue = Math.random(); // Generate a random number
-  
-    const logoWithRandom = `${logo}?r=${randomValue}`;
-
 	const renderPlaceholder = () => {
-		return <Box className={classes.placeholderContainer}>
-             {/*<div className={classes.placeholderItem}>{i18n.t("chat.noTicketMessage")}</div>*/}
-			//Multiconversa LOGO//
-			<div>
-			<center><img style={{ margin: "0 auto", width: "80%" }} src={logoWithRandom} alt={`${process.env.REACT_APP_NAME_SYSTEM}`} /></center>
-			</div>
-			//Multiconversa LOGO//
-			<br />
-            <Button onClick={() => setOption(1)} variant="contained" color="primary">
-                Selecionar Ticket
-            </Button>
-        </Box>
-	}
+		return (
+			<Box className={classes.placeholderContainer}>
+				<div style={{
+					maxWidth: 420,
+					padding: "40px 32px",
+					borderRadius: 24,
+					backgroundColor: "transparent",
+					display: "flex",
+					flexDirection: "column",
+					alignItems: "center",
+					textAlign: "center"
+				}}>
+					<div style={{ marginBottom: 20, filter: "drop-shadow(0 10px 18px rgba(16, 185, 129, 0.25))" }}>
+						<PortAiLogo variant="icon" size={84} />
+					</div>
+					<Typography variant="h6" style={{ fontWeight: 800, fontSize: "1.35rem", marginBottom: 4 }}>
+						Central <span style={{ color: "#10b981" }}>PortAI</span>
+					</Typography>
+					<Typography variant="caption" style={{ fontSize: "0.6875rem", fontWeight: 700, letterSpacing: "0.15em", color: "#10b981", opacity: 0.85, marginBottom: 16, textTransform: "uppercase" }}>
+						BY PORTAL • SMART CX
+					</Typography>
+					<Typography variant="body2" style={{ fontSize: "0.875rem", color: "#94a3b8", lineHeight: 1.6, maxWidth: 320, marginBottom: 24 }}>
+						{i18n.t("chat.noTicketMessage") || "Selecione uma conversa ao lado para iniciar o atendimento."}
+					</Typography>
+					<Button onClick={() => setOption(1)} variant="contained" color="primary" style={{ borderRadius: 12, padding: "8px 24px", fontWeight: 700, textTransform: "none" }}>
+						Selecionar Ticket
+					</Button>
+				</div>
+			</Box>
+		);
+	};
 
 	const renderMessageContext = () => {
 		if (ticketId) {

@@ -68,14 +68,14 @@ export interface Store {
     jid: string,
     sock: AnyWASocket | undefined
   ) => Promise<GroupMetadata>;
-  fetchBroadcastListInfo: (
+  fetchBroadcastListInfo?: (
     jid: string,
-    sock: WALegacySocket | undefined
+    sock: any
   ) => Promise<GroupMetadata>;
-  fetchMessageReceipts: (
-    { remoteJid, id }: WAMessageKey,
-    sock: WALegacySocket | undefined
-  ) => Promise<proto.IUserReceipt[]>;
+  fetchMessageReceipts?: (
+    { remoteJid, id }: any,
+    sock: any
+  ) => Promise<any>;
   toJSON: () => {
     chats: KeyedDB<Chat, string>;
     contacts: {

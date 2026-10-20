@@ -22,7 +22,6 @@ const useStyles = makeStyles((theme) => ({
     backgroundSize: "370px",
     backgroundImage: theme.mode === 'light' ? `url(${whatsBackground})` : `url(${whatsBackgroundDark})`, //DARK MODE Multiconversa//
     display: "flex",
-    display: "flex",
     justifyContent: "center",
     flexGrow: 1,
     padding: "20px 20px 20px 20px",

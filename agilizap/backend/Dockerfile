@@ -1,7 +1,8 @@
-FROM node:16-bullseye
+FROM node:20-bookworm
 
 WORKDIR /app
 
+# Instala dependências de sistema necessárias para o Chromium headless e processamento de áudio/vídeo
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     ca-certificates \
@@ -27,11 +28,19 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 COPY package*.json ./
-RUN npm ci
+
+# Instala todas as dependências (incluindo devDependencies necessárias para compilar TypeScript)
+RUN npm install --legacy-peer-deps --include=dev
 
 COPY . .
-RUN npm run build || test -f dist/server.js
+RUN npm run build
+
+# Define ambiente de produção em runtime
+ENV NODE_ENV=production
+
+# Diretórios para armazenamento persistente de mídias e sessões do Baileys
+RUN mkdir -p public sessions
 
 EXPOSE 8080
 
-CMD ["node", "dist/server.js"]
+CMD ["sh", "-c", "npx sequelize db:migrate && (npx sequelize db:seed:all || true) && node dist/server.js"]

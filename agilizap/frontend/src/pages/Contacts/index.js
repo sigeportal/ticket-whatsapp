@@ -86,9 +86,156 @@ const reducer = (state, action) => {
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(1),
+    padding: theme.spacing(1.5),
     overflowY: "scroll",
+    borderRadius: 14,
+    border: `1px solid ${
+      theme.palette.type === "dark"
+        ? "rgba(16, 185, 129, 0.18)"
+        : "rgba(226, 232, 240, 0.9)"
+    }`,
+    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
+    boxShadow:
+      theme.palette.type === "dark"
+        ? "0 4px 20px -2px rgba(0, 0, 0, 0.4)"
+        : "0 1px 3px rgba(0, 0, 0, 0.05)",
     ...theme.scrollbarStyles,
+  },
+  searchInput: {
+    backgroundColor: theme.palette.type === "dark" ? "#07130e" : "#f8fafc",
+    borderRadius: 10,
+    "& .MuiOutlinedInput-root": {
+      borderRadius: 10,
+      border: `1px solid ${
+        theme.palette.type === "dark"
+          ? "rgba(16, 185, 129, 0.2)"
+          : "rgba(226, 232, 240, 0.9)"
+      }`,
+      "&.Mui-focused": {
+        borderColor: "#10b981",
+        boxShadow: "0 0 0 3px rgba(16, 185, 129, 0.15)",
+      },
+    },
+  },
+  addButton: {
+    borderRadius: 10,
+    fontWeight: 700,
+    fontSize: "0.84rem",
+    padding: "8px 18px",
+    background: "linear-gradient(135deg, #10b981 0%, #0d9488 100%)",
+    color: "#ffffff",
+    boxShadow: "0 2px 8px rgba(16, 185, 129, 0.25)",
+    "&:hover": {
+      background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+      boxShadow: "0 4px 12px rgba(16, 185, 129, 0.4)",
+    },
+  },
+  secondaryButton: {
+    borderRadius: 10,
+    fontWeight: 600,
+    fontSize: "0.82rem",
+    padding: "8px 14px",
+    color: theme.palette.type === "dark" ? "#cbd5e1" : "#475569",
+    backgroundColor: theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.08)" : "#f1f5f9",
+    border: `1px solid ${theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.2)" : "#e2e8f0"}`,
+    "&:hover": {
+      backgroundColor: theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.15)" : "#e2e8f0",
+      color: theme.palette.type === "dark" ? "#34d399" : "#0f172a",
+    },
+  },
+  actionButtonWhatsapp: {
+    color: "#10b981",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(16, 185, 129, 0.12)"
+        : "rgba(16, 185, 129, 0.08)",
+    borderRadius: 8,
+    padding: 6,
+    marginRight: 6,
+    transition: "all 0.2s ease",
+    "&:hover": {
+      backgroundColor: "#10b981",
+      color: "#ffffff",
+    },
+  },
+  actionButtonEdit: {
+    color: theme.palette.type === "dark" ? "#34d399" : "#059669",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(16, 185, 129, 0.12)"
+        : "rgba(16, 185, 129, 0.08)",
+    borderRadius: 8,
+    padding: 6,
+    marginRight: 6,
+    transition: "all 0.2s ease",
+    "&:hover": {
+      backgroundColor: "#10b981",
+      color: "#ffffff",
+    },
+  },
+  actionButtonDelete: {
+    color: theme.palette.type === "dark" ? "#f87171" : "#dc2626",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(239, 68, 68, 0.12)"
+        : "rgba(239, 68, 68, 0.08)",
+    borderRadius: 8,
+    padding: 6,
+    transition: "all 0.2s ease",
+    "&:hover": {
+      backgroundColor: "#ef4444",
+      color: "#ffffff",
+    },
+  },
+  avatarSquircle: {
+    borderRadius: 10,
+    fontWeight: 700,
+    fontSize: "0.9rem",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+  },
+  statusPillActive: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 5,
+    padding: "3px 9px",
+    borderRadius: 12,
+    fontSize: "0.75rem",
+    fontWeight: 600,
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(16, 185, 129, 0.15)"
+        : "rgba(16, 185, 129, 0.1)",
+    color: theme.palette.type === "dark" ? "#34d399" : "#059669",
+    border: `1px solid ${
+      theme.palette.type === "dark"
+        ? "rgba(16, 185, 129, 0.3)"
+        : "rgba(16, 185, 129, 0.2)"
+    }`,
+  },
+  statusPillInactive: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 5,
+    padding: "3px 9px",
+    borderRadius: 12,
+    fontSize: "0.75rem",
+    fontWeight: 600,
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(148, 163, 184, 0.1)"
+        : "#f1f5f9",
+    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+    border: `1px solid ${
+      theme.palette.type === "dark"
+        ? "rgba(148, 163, 184, 0.2)"
+        : "#e2e8f0"
+    }`,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: "50%",
+    backgroundColor: "currentColor",
   },
 }));
 
@@ -304,46 +451,47 @@ function getDateLastMessage(contact) {
             placeholder={i18n.t("contacts.searchPlaceholder")}
             type="search"
             value={searchParam}
+            size="small"
+            variant="outlined"
+            className={classes.searchInput}
             onChange={handleSearch}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon style={{ color: "gray" }} />
+                  <SearchIcon style={{ color: "#10b981", fontSize: 20 }} />
                 </InputAdornment>
               ),
             }}
           />
           <Button
             variant="contained"
-            color="primary"
+            className={classes.secondaryButton}
             onClick={(e) => setConfirmOpen(true)}
           >
             {i18n.t("contacts.buttons.import")}
           </Button>
           <Button
-          variant="contained"
-          color="primary"
-          onClick={() => {
-            fileUploadRef.current.value = null;
-            fileUploadRef.current.click();
-          }}
-      >
-        {i18n.t("contacts.buttons.importSheet")}
-      </Button>
+            variant="contained"
+            className={classes.secondaryButton}
+            onClick={() => {
+              fileUploadRef.current.value = null;
+              fileUploadRef.current.click();
+            }}
+          >
+            {i18n.t("contacts.buttons.importSheet")}
+          </Button>
+          <CSVLink style={{ textDecoration: 'none' }} separator=";" filename={'whaticket.csv'} data={contacts.map((contact) => ({ name: contact.name, number: contact.number, email: contact.email }))}>
+            <Button variant="contained" className={classes.secondaryButton}> 
+              EXPORTAR CONTATOS 
+            </Button>
+          </CSVLink>
           <Button
             variant="contained"
-            color="primary"
+            className={classes.addButton}
             onClick={handleOpenContactModal}
           >
             {i18n.t("contacts.buttons.add")}
           </Button>
-
-         <CSVLink style={{ textDecoration:'none'}} separator=";" filename={'whaticket.csv'} data={contacts.map((contact) => ({ name: contact.name, number: contact.number, email: contact.email }))}>
-          <Button	variant="contained" color="primary"> 
-          EXPORTAR CONTATOS 
-          </Button>
-          </CSVLink>		  
-
         </MainHeaderButtonsWrapper>
       </MainHeader>
       <Paper
@@ -389,46 +537,50 @@ function getDateLastMessage(contact) {
               {contacts.map((contact) => (
                 <TableRow key={contact.id}>
                   <TableCell style={{ paddingRight: 0 }}>
-                    { <Avatar
-                      style={{ backgroundColor: generateColor(contact?.number), fontWeight: "bold", color: "white" }}
-                      src={contact.profilePicUrl}>
+                    <Avatar
+                      className={classes.avatarSquircle}
+                      style={{ backgroundColor: generateColor(contact?.number), color: "white" }}
+                      src={contact.profilePicUrl}
+                    >
                       {getInitials(contact?.name)}
-                    </Avatar>}
+                    </Avatar>
                   </TableCell>
-                  <TableCell>{contact.name}</TableCell>
+                  <TableCell style={{ fontWeight: 600 }}>{contact.name}</TableCell>
                   <TableCell align="center">{contact.number}</TableCell>
                   <TableCell align="center">{contact.email}</TableCell>
-                                    <TableCell align="center">
-                                        {getDateLastMessage(contact)}
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        {contact.active ? (
-                                            <CheckCircleIcon
-                                                style={{ color: "green" }}
-                                                fontSize="small"
-                                            />
-                                        ) : (
-                                            <CancelIcon
-                                                style={{ color: "red" }}
-                                                fontSize="small"
-                                            />
-                                        )}
-                                    </TableCell>
+                  <TableCell align="center">
+                    {getDateLastMessage(contact)}
+                  </TableCell>
+                  <TableCell align="center">
+                    {contact.active ? (
+                      <span className={classes.statusPillActive}>
+                        <span className={classes.statusDot} />
+                        Ativo
+                      </span>
+                    ) : (
+                      <span className={classes.statusPillInactive}>
+                        <span className={classes.statusDot} />
+                        Inativo
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell align="center">
                     <IconButton
                       size="small"
+                      className={classes.actionButtonWhatsapp}
                       onClick={() => {
                         setContactTicket(contact);
                         setNewTicketModalOpen(true);
                       }}
                     >
-                      <WhatsAppIcon />
+                      <WhatsAppIcon fontSize="small" />
                     </IconButton>
                     <IconButton
                       size="small"
+                      className={classes.actionButtonEdit}
                       onClick={() => hadleEditContact(contact.id)}
                     >
-                      <EditIcon />
+                      <EditIcon fontSize="small" />
                     </IconButton>
                     <Can
                       role={user.profile}
@@ -436,12 +588,13 @@ function getDateLastMessage(contact) {
                       yes={() => (
                         <IconButton
                           size="small"
+                          className={classes.actionButtonDelete}
                           onClick={(e) => {
                             setConfirmOpen(true);
                             setDeletingContact(contact);
                           }}
                         >
-                          <DeleteOutlineIcon />
+                          <DeleteOutlineIcon fontSize="small" />
                         </IconButton>
                       )}
                     />

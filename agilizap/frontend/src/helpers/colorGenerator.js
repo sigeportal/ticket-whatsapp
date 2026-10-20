@@ -50,19 +50,26 @@ function adjustColorForContrast(r, g, b) {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
+const modernPalette = [
+  "#10b981", // emerald
+  "#0d9488", // teal
+  "#0284c7", // sky
+  "#2563eb", // blue
+  "#14b8a6", // mint/teal
+  "#059669", // dark emerald
+  "#0891b2", // cyan
+  "#0e7490", // deep cyan
+  "#15803d", // forest green
+  "#16a34a", // green
+];
+
 // Main function to generate color from user identifier
 function generateColor(identifier) {
-  const hash = hashStringToNumber(identifier);
-  const { r, g, b } = generateColorFromHash(hash);
-  const luminance = getLuminance(r, g, b);
-  const thresholdLow = 50;  // Luminance threshold for dark colors
-  const thresholdHigh = 200; // Luminance threshold for bright colors
-
-  if (luminance < thresholdLow || luminance > thresholdHigh) {
-    return adjustColorForContrast(r, g, b);
-  }
-  return `rgb(${r}, ${g}, ${b})`;
+  if (!identifier) return modernPalette[0];
+  const hash = Math.abs(hashStringToNumber(String(identifier)));
+  return modernPalette[hash % modernPalette.length];
 }
 
 // Export the function
 export { generateColor };
+

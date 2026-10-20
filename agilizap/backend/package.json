@@ -20,10 +20,11 @@
   "dependencies": {
     "@adiwajshing/keyed-db": "^0.2.4",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@google/generative-ai": "^0.24.1",
     "@hapi/boom": "^9.1.4",
     "@sentry/node": "^6.18.1",
     "@types/fs-extra": "^11.0.4",
-    "@whiskeysockets/baileys": "^6.7.6",
+    "@whiskeysockets/baileys": "6.7.9",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.2",
     "bull": "^4.8.2",

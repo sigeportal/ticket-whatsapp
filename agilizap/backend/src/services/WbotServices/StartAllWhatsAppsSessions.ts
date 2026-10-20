@@ -1,6 +1,9 @@
 import ListWhatsAppsService from "../WhatsappService/ListWhatsAppsService";
 import { StartWhatsAppSession } from "./StartWhatsAppSession";
 import * as Sentry from "@sentry/node";
+import fs from "fs";
+import path from "path";
+import { getSessionDir } from "../../helpers/authState";
 
 export const StartAllWhatsAppsSessions = async (
   companyId: number
@@ -9,7 +12,13 @@ export const StartAllWhatsAppsSessions = async (
     const whatsapps = await ListWhatsAppsService({ companyId });
     if (whatsapps.length > 0) {
       whatsapps.forEach(whatsapp => {
-        StartWhatsAppSession(whatsapp, companyId);
+        const sessionDir = getSessionDir(whatsapp.id);
+        const hasSessionFiles = fs.existsSync(path.join(sessionDir, "creds.json"));
+
+        // Inicia automaticamente apenas canais que estavam conectados ou possuem credenciais salvas
+        if (whatsapp.status !== "DISCONNECTED" || hasSessionFiles) {
+          StartWhatsAppSession(whatsapp, companyId);
+        }
       });
     }
   } catch (e) {

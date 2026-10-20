@@ -101,9 +101,6 @@ const useStyles = makeStyles((theme) => ({
     textAlign: "right",
     padding: theme.spacing(1),
   },
-  fullWidth: {
-    width: "100%",
-  },
   fileInput: {
   	background: "red",
   },

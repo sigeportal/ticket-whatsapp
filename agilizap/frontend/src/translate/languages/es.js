@@ -141,7 +141,6 @@ whatsappModal: {
     expiresInactiveMessage: "Mensaje de cierre por inactividad",
     greetingMessage: "Mensaje de saludo",
     complationMessage: "Mensaje de conclusión",
-    sendIdQueue: "Fila",
   },
   buttons: {
     okAdd: "Agregar",

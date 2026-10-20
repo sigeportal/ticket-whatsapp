@@ -41,11 +41,13 @@ export function TagsFilter({ onFiltered }) {
         renderTags={(value, getTagProps) =>
           value.map((option, index) => (
             <Chip
-              variant="outlined"
               style={{
-                backgroundColor: option.color || "#eee",
-                textShadow: "1px 1px 1px #000",
-                color: "white",
+                backgroundColor: option.color ? `${option.color}25` : "rgba(16, 185, 129, 0.15)",
+                color: option.color || "#10b981",
+                border: `1px solid ${option.color ? `${option.color}50` : "rgba(16, 185, 129, 0.3)"}`,
+                fontWeight: 600,
+                fontSize: "0.75rem",
+                borderRadius: 6,
               }}
               label={option.name}
               {...getTagProps({ index })}

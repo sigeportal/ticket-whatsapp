@@ -60,11 +60,13 @@ export function UsersFilter({ onFiltered, initialUsers }) {
         renderTags={(value, getUserProps) =>
           value.map((option, index) => (
             <Chip
-              variant="outlined"
               style={{
-                backgroundColor: "#bfbfbf",
-                textShadow: "1px 1px 1px #000",
-                color: "white",
+                backgroundColor: "rgba(148, 163, 184, 0.15)",
+                color: "#64748b",
+                border: "1px solid rgba(148, 163, 184, 0.3)",
+                fontWeight: 600,
+                fontSize: "0.75rem",
+                borderRadius: 6,
               }}
               label={option.name}
               {...getUserProps({ index })}

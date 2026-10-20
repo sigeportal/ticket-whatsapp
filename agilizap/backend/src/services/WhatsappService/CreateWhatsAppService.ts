@@ -27,6 +27,7 @@ interface Request {
   timeUseBotQueues?: number;
   expiresTicket?: number;
   expiresInactiveMessage?: string;
+  number?: string;
 }
 
 interface Response {
@@ -54,7 +55,8 @@ const CreateWhatsAppService = async ({
   maxUseBotQueues = 3,
   timeUseBotQueues = 0,
   expiresTicket = 0,
-  expiresInactiveMessage = ""
+  expiresInactiveMessage = "",
+  number = ""
 }: Request): Promise<Response> => {
   const company = await Company.findOne({
     where: {
@@ -165,7 +167,8 @@ const CreateWhatsAppService = async ({
       maxUseBotQueues,
       timeUseBotQueues,
       expiresTicket,
-      expiresInactiveMessage
+      expiresInactiveMessage,
+      number
     },
     { include: ["queues"] }
   );

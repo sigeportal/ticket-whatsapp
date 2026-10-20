@@ -7,6 +7,7 @@ import { Link as RouterLink } from "react-router-dom";
 import { toast } from "react-toastify";
 import { Formik, Form, Field } from "formik";
 import usePlans from "../../hooks/usePlans";
+import PortAiLogo from "../../components/PortAiLogo";
 import Avatar from "@material-ui/core/Avatar";
 import Button from "@material-ui/core/Button";
 import CssBaseline from "@material-ui/core/CssBaseline";
@@ -152,18 +153,12 @@ const SignUp = () => {
 		fetchData();
 	}, []);
 
-	const logo = `${process.env.REACT_APP_BACKEND_URL}/public/logotipos/signup.png`;
-    const randomValue = Math.random(); // Generate a random number
-  
-    const logoWithRandom = `${logo}?r=${randomValue}`;
-
-
 	return (
 		<Container component="main" maxWidth="xs">
 			<CssBaseline />
 			<div className={classes.paper}>
-				<div>
-				<img style={{ margin: "0 auto", width: "80%" }} src={logoWithRandom} alt={`${process.env.REACT_APP_NAME_SYSTEM}`} />
+				<div style={{ textAlign: "center", marginBottom: 20 }}>
+					<PortAiLogo variant="full" width={220} height={75} />
 				</div>
 				{/*<Typography component="h1" variant="h5">
 					{i18n.t("signup.title")}

@@ -11,6 +11,7 @@ interface Request {
   name: string;
   number: string;
   isGroup: boolean;
+  isLid?: boolean;
   email?: string;
   profilePicUrl?: string;
   companyId: number;
@@ -23,6 +24,7 @@ const CreateOrUpdateContactService = async ({
   number: rawNumber,
   profilePicUrl,
   isGroup,
+  isLid = false,
   email = "",
   companyId,
   extraInfo = [],
@@ -41,7 +43,7 @@ const CreateOrUpdateContactService = async ({
   });
 
   if (contact) {
-    contact.update({ profilePicUrl });
+    contact.update({ profilePicUrl, ...(isLid ? { isLid: true } : {}) });
     console.log(contact.whatsappId)
     if (isNil(contact.whatsappId === null)) {
       contact.update({
@@ -59,6 +61,7 @@ const CreateOrUpdateContactService = async ({
       profilePicUrl,
       email,
       isGroup,
+      isLid,
       extraInfo,
       companyId,
       whatsappId

@@ -4,6 +4,7 @@ import {
   BelongsTo,
   Column,
   CreatedAt,
+  DataType,
   ForeignKey,
   Model,
   PrimaryKey,
@@ -28,9 +29,15 @@ class Prompt extends Model<Prompt> {
   @Column
   prompt: string;
 
-  @AllowNull(false)
+  @AllowNull(true)
   @Column
   apiKey: string;
+
+  @Column({ defaultValue: "gemini" })
+  provider: string;
+
+  @Column({ defaultValue: "gemini-3.5-flash-lite" })
+  model: string;
 
   @Column({ defaultValue: 10 })
   maxMessages: number;
@@ -38,7 +45,7 @@ class Prompt extends Model<Prompt> {
   @Column({ defaultValue: 100 })
   maxTokens: number;
 
-  @Column({ defaultValue: 1 })
+  @Column({ type: DataType.FLOAT, defaultValue: 0.7 })
   temperature: number;
 
   @Column({ defaultValue: 0 })

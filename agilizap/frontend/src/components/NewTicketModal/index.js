@@ -26,14 +26,88 @@ import { toast } from "react-toastify";
 //import ShowTicketOpen from "../ShowTicketOpenModal";
 
 const useStyles = makeStyles((theme) => ({
+  dialogPaper: {
+    borderRadius: 16,
+    maxWidth: 460,
+    width: "100%",
+    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
+    border: `1px solid ${
+      theme.palette.type === "dark"
+        ? "rgba(16, 185, 129, 0.2)"
+        : "rgba(226, 232, 240, 0.9)"
+    }`,
+    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.35)",
+  },
+  dialogTitle: {
+    padding: "18px 24px 14px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottom: `1px solid ${
+      theme.palette.type === "dark"
+        ? "rgba(16, 185, 129, 0.15)"
+        : "#f1f5f9"
+    }`,
+  },
+  titleText: {
+    fontSize: "1.125rem",
+    fontWeight: 800,
+    color: theme.palette.type === "dark" ? "#f0fdf4" : "#0f172a",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  },
+  dialogContent: {
+    padding: "20px 24px",
+  },
+  dialogActions: {
+    padding: "14px 24px 18px",
+    borderTop: `1px solid ${
+      theme.palette.type === "dark"
+        ? "rgba(16, 185, 129, 0.15)"
+        : "#f1f5f9"
+    }`,
+    gap: 10,
+  },
+  btnCancel: {
+    borderRadius: 10,
+    padding: "7px 18px",
+    fontWeight: 600,
+    fontSize: "0.84rem",
+    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+    borderColor: theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.15)" : "rgba(226, 232, 240, 0.9)",
+    "&:hover": {
+      backgroundColor: theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.06)" : "#f8fafc",
+    },
+  },
+  btnSave: {
+    borderRadius: 10,
+    padding: "7px 22px",
+    fontWeight: 700,
+    fontSize: "0.84rem",
+    background: "linear-gradient(135deg, #10b981 0%, #0d9488 100%) !important",
+    color: "#ffffff !important",
+    boxShadow: "0 2px 8px rgba(16, 185, 129, 0.25)",
+    "&:hover": {
+      background: "linear-gradient(135deg, #059669 0%, #047857 100%) !important",
+      boxShadow: "0 4px 12px rgba(16, 185, 129, 0.4)",
+    },
+    "&.Mui-disabled": {
+      backgroundColor: "rgba(148, 163, 184, 0.2) !important",
+      color: "#94a3b8 !important",
+      boxShadow: "none",
+    },
+  },
   online: {
     fontSize: 11,
-    color: "#25d366"
+    fontWeight: 700,
+    color: "#10b981",
   },
   offline: {
     fontSize: 11,
-    color: "#e1306c"
-  }
+    fontWeight: 700,
+    color: "#ef4444",
+  },
 }));
 
 const filter = createFilterOptions({
@@ -286,12 +360,20 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
         onClose={handleCloseContactModal}
         onSave={handleAddNewContactTicket}
       ></ContactModal>
-      <Dialog open={modalOpen} onClose={handleClose}>
-        <DialogTitle id="form-dialog-title">
-          {i18n.t("newTicketModal.title")}
+      <Dialog 
+        open={modalOpen} 
+        onClose={handleClose}
+        classes={{ paper: classes.dialogPaper }}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle className={classes.dialogTitle} disableTypography>
+          <Typography className={classes.titleText}>
+            {i18n.t("newTicketModal.title")}
+          </Typography>
         </DialogTitle>
-        <DialogContent dividers>
-          <Grid style={{ width: 300 }} container spacing={2}>
+        <DialogContent className={classes.dialogContent}>
+          <Grid container spacing={2}>
             {/* CONTATO */}
             {renderContactAutocomplete()}
             {/* FILA */}
@@ -321,7 +403,7 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
                     return "Selecione uma fila"
                   }
                   const queue = user.queues.find(q => q.id === selectedQueue)
-                  return queue.name
+                  return queue ? queue.name : "Selecione uma fila"
                 }}
               >
                 {user.queues?.length > 0 &&
@@ -360,7 +442,7 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
                     return "Selecione uma Conexão"
                   }
                   const whatsapp = whatsapps.find(w => w.id === selectedWhatsapp)
-                  return whatsapp.name
+                  return whatsapp ? whatsapp.name : "Selecione uma Conexão"
                 }}
               >
                 {whatsapps?.length > 0 &&
@@ -382,10 +464,10 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions>
+        <DialogActions className={classes.dialogActions}>
           <Button
             onClick={handleClose}
-            color="secondary"
+            className={classes.btnCancel}
             disabled={loading}
             variant="outlined"
           >
@@ -394,9 +476,9 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
           <ButtonWithSpinner
             variant="contained"
             type="button"
+            className={classes.btnSave}
             disabled={!selectedContact}
             onClick={() => handleSaveTicket(selectedContact.id)}
-            color="primary"
             loading={loading}
           >
             {i18n.t("newTicketModal.buttons.ok")}

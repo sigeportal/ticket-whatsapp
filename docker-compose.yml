@@ -1,0 +1,106 @@
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: ticket-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-agilizap}
+      POSTGRES_USER: ${DB_USER:-agilizap}
+      POSTGRES_PASSWORD: ${DB_PASS:-agilizap_db_pass_alterar}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-agilizap} -d ${DB_NAME:-agilizap}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: ticket-redis
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-agilizap_redis_pass_alterar}"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-agilizap_redis_pass_alterar}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./agilizap/backend
+      dockerfile: Dockerfile
+    container_name: ticket-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      BACKEND_URL: ${BACKEND_URL:-http://localhost:8080}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      PROXY_PORT: ${PROXY_PORT:-}
+      PORT: 8080
+      DB_DIALECT: ${DB_DIALECT:-postgres}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-agilizap}
+      DB_PASS: ${DB_PASS:-agilizap_db_pass_alterar}
+      DB_NAME: ${DB_NAME:-agilizap}
+      JWT_SECRET: ${JWT_SECRET:-kZaOTd+YZpjRUyyuQUpigJaEMk4vcW4YOymKPZX0Ts8=}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dBSXqFg9TaNUEDXVp6fhMTRLBysP+j2DSqf7+raxD3A=}
+      REDIS_URI: redis://:${REDIS_PASSWORD:-agilizap_redis_pass_alterar}@redis:6379
+      REDIS_OPT_LIMITER_MAX: ${REDIS_OPT_LIMITER_MAX:-1}
+      REDIS_OPT_LIMITER_DURATION: ${REDIS_OPT_LIMITER_DURATION:-3000}
+      USER_LIMIT: ${USER_LIMIT:-10}
+      CONNECTIONS_LIMIT: ${CONNECTIONS_LIMIT:-10}
+      CLOSED_SEND_BY_ME: ${CLOSED_SEND_BY_ME:-true}
+      AI_PROVIDER: ${AI_PROVIDER:-gemini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASS: ${MAIL_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      GERENCIANET_SANDBOX: ${GERENCIANET_SANDBOX:-false}
+      GERENCIANET_CLIENT_ID: ${GERENCIANET_CLIENT_ID:-}
+      GERENCIANET_CLIENT_SECRET: ${GERENCIANET_CLIENT_SECRET:-}
+      GERENCIANET_PIX_CERT: ${GERENCIANET_PIX_CERT:-}
+      GERENCIANET_PIX_KEY: ${GERENCIANET_PIX_KEY:-}
+    volumes:
+      - backend_public:/app/public
+      - backend_sessions:/app/sessions
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./agilizap/frontend
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_BACKEND_URL: ${BACKEND_URL:-http://localhost:8080}
+        REACT_APP_HOURS_CLOSE_TICKETS_AUTO: ${REACT_APP_HOURS_CLOSE_TICKETS_AUTO:-24}
+        REACT_APP_NAME_SYSTEM: ${REACT_APP_NAME_SYSTEM:-Agilizap}
+    container_name: ticket-frontend
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  backend_public:
+  backend_sessions:

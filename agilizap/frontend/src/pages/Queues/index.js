@@ -30,14 +30,74 @@ import { SocketContext } from "../../context/Socket/SocketContext";
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(1),
+    padding: theme.spacing(1.5),
     overflowY: "scroll",
+    borderRadius: 14,
+    border: `1px solid ${
+      theme.palette.type === "dark"
+        ? "rgba(16, 185, 129, 0.18)"
+        : "rgba(226, 232, 240, 0.9)"
+    }`,
+    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
+    boxShadow:
+      theme.palette.type === "dark"
+        ? "0 4px 20px -2px rgba(0, 0, 0, 0.4)"
+        : "0 1px 3px rgba(0, 0, 0, 0.05)",
     ...theme.scrollbarStyles,
   },
   customTableCell: {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+  },
+  colorPreview: {
+    width: 36,
+    height: 20,
+    borderRadius: 6,
+    border: "1px solid rgba(255, 255, 255, 0.25)",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+  },
+  addButton: {
+    borderRadius: 10,
+    fontWeight: 700,
+    fontSize: "0.84rem",
+    padding: "8px 20px",
+    background: "linear-gradient(135deg, #10b981 0%, #0d9488 100%)",
+    color: "#ffffff",
+    boxShadow: "0 2px 8px rgba(16, 185, 129, 0.25)",
+    "&:hover": {
+      background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+      boxShadow: "0 4px 12px rgba(16, 185, 129, 0.4)",
+    },
+  },
+  actionButtonEdit: {
+    color: theme.palette.type === "dark" ? "#34d399" : "#059669",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(16, 185, 129, 0.12)"
+        : "rgba(16, 185, 129, 0.08)",
+    borderRadius: 8,
+    padding: 6,
+    marginRight: 6,
+    transition: "all 0.2s ease",
+    "&:hover": {
+      backgroundColor: "#10b981",
+      color: "#ffffff",
+    },
+  },
+  actionButtonDelete: {
+    color: theme.palette.type === "dark" ? "#f87171" : "#dc2626",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(239, 68, 68, 0.12)"
+        : "rgba(239, 68, 68, 0.08)",
+    borderRadius: 8,
+    padding: 6,
+    transition: "all 0.2s ease",
+    "&:hover": {
+      backgroundColor: "#ef4444",
+      color: "#ffffff",
+    },
   },
 }));
 
@@ -185,7 +245,7 @@ const Queues = () => {
         <MainHeaderButtonsWrapper>
           <Button
             variant="contained"
-            color="primary"
+            className={classes.addButton}
             onClick={handleOpenQueueModal}
           >
             {i18n.t("queues.buttons.add")}
@@ -225,11 +285,9 @@ const Queues = () => {
                   <TableCell align="center">
                     <div className={classes.customTableCell}>
                       <span
+                        className={classes.colorPreview}
                         style={{
                           backgroundColor: queue.color,
-                          width: 60,
-                          height: 20,
-                          alignSelf: "center",
                         }}
                       />
                     </div>
@@ -259,19 +317,21 @@ const Queues = () => {
                   <TableCell align="center">
                     <IconButton
                       size="small"
+                      className={classes.actionButtonEdit}
                       onClick={() => handleEditQueue(queue)}
                     >
-                      <Edit />
+                      <Edit fontSize="small" />
                     </IconButton>
 
                     <IconButton
                       size="small"
+                      className={classes.actionButtonDelete}
                       onClick={() => {
                         setSelectedQueue(queue);
                         setConfirmModalOpen(true);
                       }}
                     >
-                      <DeleteOutline />
+                      <DeleteOutline fontSize="small" />
                     </IconButton>
                   </TableCell>
                 </TableRow>

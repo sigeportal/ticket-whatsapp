@@ -5,8 +5,10 @@ import ShowPromptService from "./ShowPromptService";
 
 interface PromptData {
     name: string;
-    apiKey: string;
+    apiKey?: string;
     prompt: string;
+    provider?: string;
+    model?: string;
     maxTokens?: number;
     temperature?: number;
     promptTokens?: number;
@@ -21,24 +23,32 @@ interface PromptData {
 }
 
 const CreatePromptService = async (promptData: PromptData): Promise<Prompt> => {
-    const { name, apiKey, prompt, queueId,maxMessages,companyId } = promptData;
+    const { name, apiKey, prompt, queueId, maxMessages, companyId } = promptData;
 
     const promptSchema = Yup.object().shape({
         name: Yup.string().required("ERR_PROMPT_NAME_INVALID"),
         prompt: Yup.string().required("ERR_PROMPT_INTELLIGENCE_INVALID"),
-        apiKey: Yup.string().required("ERR_PROMPT_APIKEY_INVALID"),
+        apiKey: Yup.string().nullable().notRequired(),
         queueId: Yup.number().required("ERR_PROMPT_QUEUEID_INVALID"),
         maxMessages: Yup.number().required("ERR_PROMPT_MAX_MESSAGES_INVALID"),
         companyId: Yup.number().required("ERR_PROMPT_companyId_INVALID")
     });
 
     try {
-        await promptSchema.validate({ name, apiKey, prompt, queueId,maxMessages,companyId });
+        await promptSchema.validate({ name, apiKey, prompt, queueId, maxMessages, companyId });
     } catch (err) {
         throw new AppError(`${JSON.stringify(err, undefined, 2)}`);
     }
 
-    let promptTable = await Prompt.create(promptData);
+    const provider = promptData.provider || "gemini";
+    const model = promptData.model || (provider === "gemini" ? "gemini-3.5-flash-lite" : "gpt-4o-mini");
+
+    let promptTable = await Prompt.create({
+        ...promptData,
+        temperature: promptData.temperature !== undefined ? Number(promptData.temperature) : 0.7,
+        provider,
+        model
+    });
     promptTable = await ShowPromptService({ promptId: promptTable.id, companyId });
 
     return promptTable;

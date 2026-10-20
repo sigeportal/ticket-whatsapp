@@ -7,19 +7,15 @@ import SearchIcon from "@material-ui/icons/Search";
 import InputBase from "@material-ui/core/InputBase";
 import Tabs from "@material-ui/core/Tabs";
 import Tab from "@material-ui/core/Tab";
-import Badge from "@material-ui/core/Badge";
 import MoveToInboxIcon from "@material-ui/icons/MoveToInbox";
 import CheckBoxIcon from "@material-ui/icons/CheckBox";
 import api from "../../services/api";
 import FormControlLabel from "@material-ui/core/FormControlLabel";
 import Switch from "@material-ui/core/Switch";
-
-import PlaylistAddCheckOutlinedIcon from '@material-ui/icons/PlaylistAddCheckOutlined';
-
-
-import {
-  Add as AddIcon,
-} from "@material-ui/icons";
+import PlaylistAddCheckOutlinedIcon from "@material-ui/icons/PlaylistAddCheckOutlined";
+import AddIcon from "@material-ui/icons/Add";
+import Tooltip from "@material-ui/core/Tooltip";
+import { Button, Snackbar, IconButton } from "@material-ui/core";
 
 import NewTicketModal from "../NewTicketModal";
 import TicketsList from "../TicketsListCustom";
@@ -29,176 +25,249 @@ import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../Can";
 import TicketsQueueSelect from "../TicketsQueueSelect";
-import { Button, Snackbar, IconButton } from "@material-ui/core";
 import { TagsFilter } from "../TagsFilter";
 import { UsersFilter } from "../UsersFilter";
 
-const useStyles = makeStyles(theme => ({
-	ticketsWrapper: {
-		position: "relative",
-		display: "flex",
-		height: "100%",
-		flexDirection: "column",
-		overflow: "hidden",
-		borderTopRightRadius: 0,
-		borderBottomRightRadius: 0,
-		borderRadius:0,
-	},
+const useStyles = makeStyles((theme) => ({
+  ticketsWrapper: {
+    position: "relative",
+    display: "flex",
+    height: "100%",
+    flexDirection: "column",
+    overflow: "hidden",
+    borderRadius: 0,
+    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
+    borderRight: `1px solid ${
+      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.18)" : "rgba(226, 232, 240, 0.9)"
+    }`,
+  },
 
+  tabsHeader: {
+    flex: "none",
+    backgroundColor: theme.palette.type === "dark" ? "#07130e" : "#f8fafc",
+    borderBottom: `1px solid ${
+      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.15)" : "#e2e8f0"
+    }`,
+  },
 
-	tabsHeader: {
-		flex: "none",
-		backgroundColor: theme.palette.tabHeaderBackground,
-	},
+  tabsIndicator: {
+    backgroundColor: theme.palette.type === "dark" ? "#25d366" : "#10b981",
+    height: 3,
+    borderRadius: "3px 3px 0 0",
+  },
 
-	tabsInternal: {
-		flex: "none",
-		backgroundColor: theme.palette.tabHeaderBackground
-	},
+  tab: {
+    minWidth: 0,
+    minHeight: 46,
+    flex: 1,
+    padding: "8px 10px",
+    textTransform: "none",
+    fontWeight: 600,
+    fontSize: "0.82rem",
+    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+    transition: "all 0.2s ease",
+    "&$tabSelected": {
+      color: theme.palette.type === "dark" ? "#34d399 !important" : "#059669 !important",
+      fontWeight: 700,
+    },
+    "&:hover": {
+      color: theme.palette.type === "dark" ? "#34d399" : "#10b981",
+      opacity: 1,
+    },
+  },
 
-	settingsIcon: {
-		alignSelf: "center",
-		marginLeft: "auto",
-		padding: 8,
-	},
+  tabSelected: {
+    color: theme.palette.type === "dark" ? "#34d399 !important" : "#059669 !important",
+  },
+
+  subTabsContainer: {
+    flex: "none",
+    backgroundColor: theme.palette.type === "dark" ? "#07130e" : "#f1f5f9",
+    padding: "4px 8px",
+    borderBottom: `1px solid ${
+      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.15)" : "#e2e8f0"
+    }`,
+  },
+
+  subTabs: {
+    minHeight: 38,
+  },
+
+  subTab: {
+    minHeight: 36,
+    padding: "6px 12px",
+    textTransform: "none",
+    fontWeight: 600,
+    fontSize: "0.82rem",
+    borderRadius: 8,
+    minWidth: "auto",
+    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+    transition: "all 0.2s ease",
+    "&$tabSelected": {
+      color: "#10b981",
+      backgroundColor:
+        theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.12)" : "#ffffff",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+    },
+  },
+
+  badgeOpen: {
+    backgroundColor: "rgba(16, 185, 129, 0.15)",
+    color: "#059669",
+    borderRadius: 12,
+    padding: "2px 8px",
+    fontSize: "0.72rem",
+    fontWeight: 700,
+    marginLeft: 6,
+  },
+
+  badgePending: {
+    backgroundColor: "rgba(245, 158, 11, 0.15)",
+    color: "#d97706",
+    borderRadius: 12,
+    padding: "2px 8px",
+    fontSize: "0.72rem",
+    fontWeight: 700,
+    marginLeft: 6,
+  },
+
+  ticketOptionsBox: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: theme.palette.type === "dark" ? "#07130e" : "#f8fafc",
+    padding: "8px 12px",
+    gap: "8px",
+    borderBottom: `1px solid ${
+      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.15)" : "#e2e8f0"
+    }`,
+  },
+
+  serachInputWrapper: {
+    flex: 1,
+    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
+    display: "flex",
+    alignItems: "center",
+    borderRadius: 10,
+    padding: "5px 12px",
+    transition: "all 0.2s ease",
+    border: `1px solid ${
+      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.2)" : "rgba(226, 232, 240, 0.9)"
+    }`,
+    "&:focus-within": {
+      borderColor: "#10b981",
+      boxShadow: "0 0 0 3px rgba(16, 185, 129, 0.15)",
+    },
+  },
+
+  searchIcon: {
+    color: "#10b981",
+    marginRight: 8,
+    fontSize: 20,
+  },
+
+  searchInput: {
+    flex: 1,
+    fontSize: "0.86rem",
+    color: theme.palette.type === "dark" ? "#e2e8f0" : "#1e293b",
+  },
+
+  newTicketButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 9,
+    backgroundColor: theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.15)" : "#ecfdf5",
+    color: theme.palette.type === "dark" ? "#34d399" : "#059669",
+    border: `1px solid ${
+      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.3)" : "rgba(16, 185, 129, 0.25)"
+    }`,
+    transition: "all 0.2s ease",
+    "&:hover": {
+      backgroundColor: "#10b981",
+      color: "#ffffff",
+      boxShadow: "0 2px 8px rgba(16, 185, 129, 0.35)",
+    },
+  },
+
+  closeAllButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 9,
+    backgroundColor: theme.palette.type === "dark" ? "rgba(239, 68, 68, 0.12)" : "#fef2f2",
+    color: theme.palette.type === "dark" ? "#f87171" : "#dc2626",
+    border: `1px solid ${
+      theme.palette.type === "dark" ? "rgba(239, 68, 68, 0.25)" : "rgba(239, 68, 68, 0.2)"
+    }`,
+    transition: "all 0.2s ease",
+    "&:hover": {
+      backgroundColor: "#ef4444",
+      color: "#ffffff",
+      boxShadow: "0 2px 8px rgba(239, 68, 68, 0.35)",
+    },
+  },
+
+  switchLabel: {
+    fontSize: "0.78rem",
+    fontWeight: 600,
+    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+  },
+
+  customSwitch: {
+    "& .MuiSwitch-switchBase.Mui-checked": {
+      color: "#10b981",
+      "&:hover": {
+        backgroundColor: "rgba(16, 185, 129, 0.08)",
+      },
+    },
+    "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+      backgroundColor: "#10b981",
+    },
+  },
+
   snackbar: {
     display: "flex",
     justifyContent: "space-between",
-    backgroundColor: theme.palette.primary.main,
-    color: "white",
-    borderRadius: 30,
-    [theme.breakpoints.down("sm")]: {
-      fontSize: "0.8em",
-    },
-    [theme.breakpoints.up("md")]: {
-      fontSize: "1em",
-    },
+    alignItems: "center",
+    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#1e293b",
+    color: "#ffffff",
+    borderRadius: 12,
+    border: `1px solid ${
+      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.25)" : "transparent"
+    }`,
+    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
+    padding: "8px 16px",
   },
 
   yesButton: {
-    backgroundColor: "#FFF",
-    color: "rgba(0, 100, 0, 1)",
-    padding: "4px 4px",
-    fontSize: "1em",
+    backgroundColor: "#10b981",
+    color: "#ffffff",
+    padding: "4px 12px",
+    fontSize: "0.8rem",
     fontWeight: "bold",
-    textTransform: "uppercase",
+    borderRadius: 8,
     marginRight: theme.spacing(1),
     "&:hover": {
-      backgroundColor: "darkGreen",
-      color: "#FFF",
+      backgroundColor: "#059669",
     },
-    borderRadius: 30,
   },
+
   noButton: {
-    backgroundColor: "#FFF",
-    color: "rgba(139, 0, 0, 1)",
-    padding: "4px 4px",
-    fontSize: "1em",
+    backgroundColor: "#ef4444",
+    color: "#ffffff",
+    padding: "4px 12px",
+    fontSize: "0.8rem",
     fontWeight: "bold",
-    textTransform: "uppercase",
+    borderRadius: 8,
     "&:hover": {
-      backgroundColor: "darkRed",
-      color: "#FFF",
+      backgroundColor: "#dc2626",
     },
-    borderRadius: 30,
   },
-
-	tab: {
-		minWidth: 120,
-		width: 120,
-	},
-
-	internalTab: {
-		minWidth: 120,
-		width: 120,
-		padding: 5
-	},
-
-	ticketOptionsBox: {
-		display: "flex",
-		justifyContent: "space-between",
-		alignItems: "center",
-		background: theme.palette.optionsBackground,
-		padding: theme.spacing(1),
-	},
-
-	ticketSearchLine: {
-		padding: theme.spacing(1),
-	},
-
-	serachInputWrapper: {
-		flex: 1,
-		background: theme.palette.total,
-		display: "flex",
-		borderRadius: 40,
-		padding: 4,
-		marginRight: theme.spacing(1),
-	},
-
-	searchIcon: {
-		color: "grey",
-		marginLeft: 6,
-		marginRight: 6,
-		alignSelf: "center",
-	},
-
-	searchInput: {
-		flex: 1,
-		border: "none",
-		borderRadius: 30,
-	},
-
-	insiderTabPanel: {
-		height: '100%',
-		marginTop: "-72px",
-		paddingTop: "72px"
-	},
-
-	insiderDoubleTabPanel: {
-		display:"flex",
-		flexDirection: "column",
-		marginTop: "-72px",
-		paddingTop: "72px",
-		height: "100%"
-	},
-
-	labelContainer: {
-		width: "auto",
-		padding: 0
-	},
-	iconLabelWrapper: {
-		flexDirection: "row",
-		'& > *:first-child': {
-			marginBottom: '3px !important',
-			marginRight: 16
-		}
-	},
-	insiderTabLabel: {
-		[theme.breakpoints.down(1600)]: {
-			display:'none'
-		}
-	},
-	smallFormControl: {
-		'& .MuiOutlinedInput-input': {
-			padding: "12px 10px",
-		},
-		'& .MuiInputLabel-outlined': {
-			marginTop: "-6px"
-		}
-	}
 }));
 
 const TicketsManagerTabs = () => {
   const classes = useStyles();
   const history = useHistory();
-  
-  const [isHoveredAll, setIsHoveredAll] = useState(false);
-  const [isHoveredNew, setIsHoveredNew] = useState(false);
-  const [isHoveredResolve, setIsHoveredResolve] = useState(false);
-  const [isHoveredOpen, setIsHoveredOpen] = useState(false);
-  const [isHoveredClosed, setIsHoveredClosed] = useState(false);
 
-  
   const [searchParam, setSearchParam] = useState("");
   const [tab, setTab] = useState("open");
   const [tabOpen, setTabOpen] = useState("open");
@@ -224,7 +293,7 @@ const TicketsManagerTabs = () => {
   }, []);
 
   useEffect(() => {
-    if (tab === "search") {
+    if (tab === "search" && searchInputRef.current) {
       searchInputRef.current.focus();
     }
   }, [tab]);
@@ -280,13 +349,12 @@ const TicketsManagerTabs = () => {
 
   const CloseAllTicket = async () => {
     try {
-      const { data } = await api.post("/tickets/closeAll", {
+      await api.post("/tickets/closeAll", {
         status: tabOpen,
         selectedQueueIds,
       });
 
       handleSnackbarClose();
-
     } catch (err) {
       console.log("Error: ", err);
     }
@@ -305,7 +373,6 @@ const TicketsManagerTabs = () => {
       <NewTicketModal
         modalOpen={newTicketModalOpen}
         onClose={(ticket) => {
-          
           handleCloseOrOpenTicket(ticket);
         }}
       />
@@ -314,27 +381,38 @@ const TicketsManagerTabs = () => {
           value={tab}
           onChange={handleChangeTab}
           variant="fullWidth"
-          indicatorColor="primary"
-          textColor="primary"
-          aria-label="icon label tabs example"
+          classes={{ indicator: classes.tabsIndicator }}
+          aria-label="tickets manager tabs"
         >
           <Tab
             value={"open"}
-            icon={<MoveToInboxIcon />}
-            label={i18n.t("tickets.tabs.open.title")}
-            classes={{ root: classes.tab }}
+            label={
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <MoveToInboxIcon style={{ fontSize: 18 }} />
+                <span>{i18n.t("tickets.tabs.open.title")}</span>
+              </div>
+            }
+            classes={{ root: classes.tab, selected: classes.tabSelected }}
           />
           <Tab
             value={"closed"}
-            icon={<CheckBoxIcon />}
-            label={i18n.t("tickets.tabs.closed.title")}
-            classes={{ root: classes.tab }}
+            label={
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <CheckBoxIcon style={{ fontSize: 18 }} />
+                <span>{i18n.t("tickets.tabs.closed.title")}</span>
+              </div>
+            }
+            classes={{ root: classes.tab, selected: classes.tabSelected }}
           />
           <Tab
             value={"search"}
-            icon={<SearchIcon />}
-            label={i18n.t("tickets.tabs.search.title")}
-            classes={{ root: classes.tab }}
+            label={
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <SearchIcon style={{ fontSize: 18 }} />
+                <span>{i18n.t("tickets.tabs.search.title")}</span>
+              </div>
+            }
+            classes={{ root: classes.tab, selected: classes.tabSelected }}
           />
         </Tabs>
       </Paper>
@@ -378,58 +456,42 @@ const TicketsManagerTabs = () => {
                 </>
               }
             />
-            <Badge
-              color="primary"
-              invisible={
-                isHoveredAll ||
-                !isHoveredNew ||
-                isHoveredResolve ||
-                isHoveredOpen ||
-                isHoveredClosed
-              }
-              badgeContent={i18n.t("Novo")}
-              classes={{ badge: classes.tabsBadge }}
-            >
+            <Tooltip title={i18n.t("Novo Ticket") || "Novo Ticket"}>
               <IconButton
-                onMouseEnter={() => setIsHoveredNew(true)}
-                onMouseLeave={() => setIsHoveredNew(false)}
-                className={classes.button}
+                size="small"
+                className={classes.newTicketButton}
                 onClick={() => {
                   setNewTicketModalOpen(true);
                 }}
               >
-                <AddIcon className={classes.icon} />
+                <AddIcon fontSize="small" />
               </IconButton>
-            </Badge>
-			{user.profile === "admin" && (
-              <Badge
-                color="primary"
-                invisible={
-                  isHoveredAll ||
-                  isHoveredNew ||
-                  !isHoveredResolve ||
-                  isHoveredOpen ||
-                  isHoveredClosed
+            </Tooltip>
+            {user.profile === "admin" && (
+              <Tooltip
+                title={
+                  i18n.t("tickets.inbox.closedAll") || "Finalizar Todos"
                 }
-                badgeContent={i18n.t("tickets.inbox.closedAll")}
-                classes={{ badge: classes.tabsBadge }}
               >
                 <IconButton
-                  onMouseEnter={() => setIsHoveredResolve(true)}
-                  onMouseLeave={() => setIsHoveredResolve(false)}
-                  className={classes.button}
+                  size="small"
+                  className={classes.closeAllButton}
                   onClick={handleSnackbarOpen}
                 >
-                  <PlaylistAddCheckOutlinedIcon style={{ color: "green" }} />
+                  <PlaylistAddCheckOutlinedIcon fontSize="small" />
                 </IconButton>
-              </Badge>
-			   )}
+              </Tooltip>
+            )}
             <Can
               role={user.profile}
               perform="tickets-manager:showall"
               yes={() => (
                 <FormControlLabel
-                  label={i18n.t("tickets.buttons.showAll")}
+                  label={
+                    <span className={classes.switchLabel}>
+                      {i18n.t("tickets.buttons.showAll")}
+                    </span>
+                  }
                   labelPlacement="start"
                   control={
                     <Switch
@@ -439,7 +501,7 @@ const TicketsManagerTabs = () => {
                         setShowAllTickets((prevState) => !prevState)
                       }
                       name="showAllTickets"
-                      color="primary"
+                      className={classes.customSwitch}
                     />
                   }
                 />
@@ -455,39 +517,40 @@ const TicketsManagerTabs = () => {
         />
       </Paper>
       <TabPanel value={tab} name="open" className={classes.ticketsWrapper}>
-        <Tabs
-          value={tabOpen}
-          onChange={handleChangeTabOpen}
-          indicatorColor="primary"
-          textColor="primary"
-          variant="fullWidth"
-        >
-          <Tab
-            label={
-              <Badge
-                className={classes.badge}
-                badgeContent={openCount}
-                color="primary"
-              >
-                {i18n.t("ticketsList.assignedHeader")}
-              </Badge>
-            }
-            value={"open"}
-          />
-          <Tab
-            label={
-              <Badge
-                className={classes.badge}
-                badgeContent={pendingCount}
-                color="secondary"
-              >
-                {i18n.t("ticketsList.pendingHeader")}
-              </Badge>
-            }
-            value={"pending"}
-          />
-        </Tabs>
-        <Paper className={classes.ticketsWrapper}>
+        <div className={classes.subTabsContainer}>
+          <Tabs
+            value={tabOpen}
+            onChange={handleChangeTabOpen}
+            classes={{ indicator: classes.tabsIndicator, root: classes.subTabs }}
+            variant="fullWidth"
+          >
+            <Tab
+              label={
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span>{i18n.t("ticketsList.assignedHeader")}</span>
+                  {openCount > 0 && (
+                    <span className={classes.badgeOpen}>{openCount}</span>
+                  )}
+                </div>
+              }
+              value={"open"}
+              classes={{ root: classes.subTab, selected: classes.tabSelected }}
+            />
+            <Tab
+              label={
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span>{i18n.t("ticketsList.pendingHeader")}</span>
+                  {pendingCount > 0 && (
+                    <span className={classes.badgePending}>{pendingCount}</span>
+                  )}
+                </div>
+              }
+              value={"pending"}
+              classes={{ root: classes.subTab, selected: classes.tabSelected }}
+            />
+          </Tabs>
+        </div>
+        <Paper elevation={0} className={classes.ticketsWrapper}>
           <TicketsList
             status="open"
             showAll={showAllTickets}

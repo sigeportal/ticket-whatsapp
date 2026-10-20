@@ -6,7 +6,7 @@ import {
     BarElement,
     Title,
     Tooltip,
-    Legend,
+    Legend
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -17,7 +17,6 @@ import Typography from "@material-ui/core/Typography";
 import api from '../../services/api';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
-import './button.css';
 
 ChartJS.register(
     CategoryScale,
@@ -36,29 +35,27 @@ export const options = {
             display: false,
         },
         title: {
-            display: true,
-            text: 'Gráfico de Conversas',
-            position: 'left',
+            display: false,
         },
         datalabels: {
-            display: true,
-            anchor: 'start',
-            offset: -30,
-            align: "start",
-            color: "#fff",
-            textStrokeColor: "#000",
-            textStrokeWidth: 2,
-            font: {
-                size: 20,
-                weight: "bold"
-
+            display: false,
+        },
+    },
+    scales: {
+        x: {
+            grid: {
+                display: false,
             },
-        }
+        },
+        y: {
+            grid: {
+                color: 'rgba(148, 163, 184, 0.1)',
+            },
+        },
     },
 };
 
 export const ChartsDate = () => {
-
     const [initialDate, setInitialDate] = useState(new Date());
     const [finalDate, setFinalDate] = useState(new Date());
     const [ticketsData, setTicketsData] = useState({ data: [], count: 0 });
@@ -70,15 +67,12 @@ export const ChartsDate = () => {
     }, []);
 
     const dataCharts = {
-
-        labels: ticketsData && ticketsData?.data.length > 0 && ticketsData?.data.map((item) => (item.hasOwnProperty('horario') ? `Das ${item.horario}:00 as ${item.horario}:59` : item.data)),
+        labels: ticketsData && ticketsData?.data.length > 0 && ticketsData?.data.map((item) => (item.hasOwnProperty('horario') ? `Das ${item.horario}:00 às ${item.horario}:59` : item.data)),
         datasets: [
             {
-                // label: 'Dataset 1',
-                data: ticketsData?.data.length > 0 && ticketsData?.data.map((item, index) => {
-                    return item.total
-                }),
-                backgroundColor: '#2DDD7F',
+                data: ticketsData?.data.length > 0 && ticketsData?.data.map((item) => item.total),
+                backgroundColor: '#10b981',
+                borderRadius: 6,
             },
         ],
     };
@@ -90,23 +84,30 @@ export const ChartsDate = () => {
         } catch (error) {
             toast.error('Erro ao buscar informações dos tickets');
         }
-    }
+    };
 
     return (
         <>
-            <Typography component="h2" variant="h6" color="primary" gutterBottom>
-                Total ({ticketsData?.count})
+            <Typography
+                component="h2"
+                style={{
+                    fontSize: "1.05rem",
+                    fontWeight: 700,
+                    letterSpacing: "-0.01em",
+                    fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+                    marginBottom: 16,
+                }}
+            >
+                Total de Atendimentos por Período ({ticketsData?.count || 0})
             </Typography>
 
-            <Stack direction={'row'} spacing={2} alignItems={'center'} sx={{ my: 2, }} >
-
+            <Stack direction={'row'} spacing={2} alignItems={'center'} sx={{ mb: 2.5 }} flexWrap="wrap" gap={1}>
                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={brLocale}>
                     <DatePicker
                         value={initialDate}
                         onChange={(newValue) => { setInitialDate(newValue) }}
-                        label="Inicio"
-                        renderInput={(params) => <TextField fullWidth {...params} sx={{ width: '20ch' }} />}
-
+                        label="Início"
+                        renderInput={(params) => <TextField size="small" {...params} sx={{ width: '18ch' }} />}
                     />
                 </LocalizationProvider>
 
@@ -115,14 +116,29 @@ export const ChartsDate = () => {
                         value={finalDate}
                         onChange={(newValue) => { setFinalDate(newValue) }}
                         label="Fim"
-                        renderInput={(params) => <TextField fullWidth {...params} sx={{ width: '20ch' }} />}
+                        renderInput={(params) => <TextField size="small" {...params} sx={{ width: '18ch' }} />}
                     />
                 </LocalizationProvider>
 
-                <Button className="buttonHover" onClick={handleGetTicketsInformation} variant='contained' >Filtrar</Button>
-
+                <Button
+                    onClick={handleGetTicketsInformation}
+                    variant='contained'
+                    sx={{
+                        backgroundColor: "#10b981",
+                        "&:hover": { backgroundColor: "#059669" },
+                        textTransform: "none",
+                        borderRadius: "10px",
+                        fontWeight: 700,
+                        boxShadow: "none",
+                        height: 40,
+                        px: 2.5,
+                    }}
+                >
+                    Filtrar
+                </Button>
             </Stack>
-            <Bar options={options} data={dataCharts} style={{ maxWidth: '100%', maxHeight: '280px', }} />
+
+            <Bar options={options} data={dataCharts} style={{ maxWidth: '100%', maxHeight: '280px' }} />
         </>
     );
-}
+};

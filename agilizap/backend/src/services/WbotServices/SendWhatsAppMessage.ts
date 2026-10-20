@@ -5,8 +5,10 @@ import GetTicketWbot from "../../helpers/GetTicketWbot";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 
+import Contact from "../../models/Contact";
 import formatBody from "../../helpers/Mustache";
 import { map_msg } from "../../utils/global";
+import { getRecipientJid } from "../../helpers/GetRecipientJid";
 
 interface Request {
   body: string;
@@ -24,9 +26,8 @@ const SendWhatsAppMessage = async ({
   let options = {};
   const wbot = await GetTicketWbot(ticket);
 
-
-  const number = `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"
-    }`;
+  const contact = ticket.contact || (ticket.contactId ? await Contact.findByPk(ticket.contactId) : null);
+  const destinationJid = getRecipientJid(ticket, contact);
 
 
   if (quotedMsg) {
@@ -52,8 +53,8 @@ const SendWhatsAppMessage = async ({
   }
 
   try {
-    const sentMessage = await wbot.sendMessage(number, {
-      text: formatBody(body, ticket.contact),
+    const sentMessage = await wbot.sendMessage(destinationJid, {
+      text: formatBody(body, contact || ticket.contact),
       // text: body, //formatBody(body, ticket.contact),
       contextInfo: { forwardingScore: isForwarded ? 2 : 0, isForwarded: isForwarded ? true : false }
     },
@@ -62,7 +63,7 @@ const SendWhatsAppMessage = async ({
       }
     );
 
-    await ticket.update({ lastMessage: formatBody(body, ticket.contact) });
+    await ticket.update({ lastMessage: formatBody(body, contact || ticket.contact) });
     return sentMessage;
   } catch (err) {
     Sentry.captureException(err);

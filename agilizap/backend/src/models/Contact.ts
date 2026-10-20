@@ -47,6 +47,10 @@ class Contact extends Model<Contact> {
   @Column
   isGroup: boolean;
 
+  @Default(false)
+  @Column
+  isLid: boolean;
+
   @CreatedAt
   createdAt: Date;
 

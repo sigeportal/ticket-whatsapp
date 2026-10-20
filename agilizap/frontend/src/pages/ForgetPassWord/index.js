@@ -24,14 +24,13 @@ import { toast } from 'react-toastify';
 import toastError from '../../errors/toastError';
 import 'react-toastify/dist/ReactToastify.css';
 import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
+import PortAiLogo from "../../components/PortAiLogo";
 
-
-const logo = `${process.env.REACT_APP_BACKEND_URL}/public/logotipos/login.png`;
 const useStyles = makeStyles((theme) => ({
   root: {
     width: "100vw",
     height: "100vh",
-    background: "black", //Cor de fundo
+    background: "linear-gradient(135deg, #07130e 0%, #0b1e16 45%, #064e3b 100%)",
     backgroundRepeat: "no-repeat",
     backgroundSize: "100% 100%",
     backgroundPosition: "center",
@@ -168,12 +167,8 @@ const handleSendEmail = async (values) => {
       <Container component="main" maxWidth="xs">
         <CssBaseline />
         <div className={classes.paper}>
-          <div>
-            <img
-              style={{ margin: "0 auto", height: "80px", width: "100%" }}
-              src={logo}
-              alt="Whats"
-            />
+          <div style={{ marginBottom: 20 }}>
+            <PortAiLogo variant="full" width={220} height={75} themeMode="light" />
           </div>
           <Typography component="h1" variant="h5">
             {i18n.t("Redefinir senha")}

@@ -1,4 +1,5 @@
 import Baileys from "../../models/Baileys";
+import { deleteSessionFiles } from "../../helpers/authState";
 
 const DeleteBaileysService = async (id: string | number): Promise<void> => {
   const baileysData = await Baileys.findOne({
@@ -10,6 +11,8 @@ const DeleteBaileysService = async (id: string | number): Promise<void> => {
   if (baileysData) {
     await baileysData.destroy();
   }
+
+  await deleteSessionFiles(id);
 };
 
 export default DeleteBaileysService;

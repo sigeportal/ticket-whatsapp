@@ -18,17 +18,6 @@ import Typography from "@material-ui/core/Typography";
 import api from '../../services/api';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
-import { makeStyles } from "@material-ui/core/styles";
-import './button.css';
-
-const useStyles = makeStyles((theme) => ({
-    container: {
-        paddingTop: theme.spacing(1),
-        paddingBottom: theme.padding,
-        paddingLeft: theme.spacing(1),
-        paddingRight: theme.spacing(2),
-    }
-}));
 
 ChartJS.register(
     CategoryScale,
@@ -48,29 +37,35 @@ export const options = {
             display: false,
         },
         title: {
-            display: true,
-            text: 'Gráfico de Conversas',
-            position: 'left',
+            display: false,
         },
         datalabels: {
             display: true,
-            anchor: 'start',
-            offset: -30,
-            align: "start",
-            color: "#fff",
-            textStrokeColor: "#000",
-            textStrokeWidth: 2,
+            anchor: 'end',
+            align: 'top',
+            color: '#10b981',
             font: {
-                size: 20,
-                weight: "bold"
-
+                size: 13,
+                weight: 'bold',
+                family: "'Plus Jakarta Sans', system-ui, sans-serif",
             },
-        }
+        },
+    },
+    scales: {
+        x: {
+            grid: {
+                display: false,
+            },
+        },
+        y: {
+            grid: {
+                color: 'rgba(148, 163, 184, 0.1)',
+            },
+        },
     },
 };
 
 export const ChatsUser = () => {
-    // const classes = useStyles();
     const [initialDate, setInitialDate] = useState(new Date());
     const [finalDate, setFinalDate] = useState(new Date());
     const [ticketsData, setTicketsData] = useState({ data: [] });
@@ -82,44 +77,47 @@ export const ChatsUser = () => {
     }, []);
 
     const dataCharts = {
-
         labels: ticketsData && ticketsData?.data.length > 0 && ticketsData?.data.map((item) => item.nome),
         datasets: [
             {
-                data: ticketsData?.data.length > 0 && ticketsData?.data.map((item, index) => {
-                    return item.quantidade
-                }),
-                backgroundColor: '#2DDD7F',
+                data: ticketsData?.data.length > 0 && ticketsData?.data.map((item) => item.quantidade),
+                backgroundColor: '#10b981',
+                borderRadius: 6,
             },
-
         ],
     };
 
     const handleGetTicketsInformation = async () => {
         try {
-
             const { data } = await api.get(`/dashboard/ticketsUsers?initialDate=${format(initialDate, 'yyyy-MM-dd')}&finalDate=${format(finalDate, 'yyyy-MM-dd')}&companyId=${companyId}`);
             setTicketsData(data);
         } catch (error) {
             toast.error('Erro ao obter informações da conversa');
         }
-    }
+    };
 
     return (
         <>
-            <Typography component="h2" variant="h6" color="primary" gutterBottom>
-                Total de Conversas por Usuários
+            <Typography
+                component="h2"
+                style={{
+                    fontSize: "1.05rem",
+                    fontWeight: 700,
+                    letterSpacing: "-0.01em",
+                    fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+                    marginBottom: 16,
+                }}
+            >
+                Total de Conversas por Atendente
             </Typography>
 
-            <Stack direction={'row'} spacing={2} alignItems={'center'} sx={{ my: 2, }} >
-
+            <Stack direction={'row'} spacing={2} alignItems={'center'} sx={{ mb: 2.5 }} flexWrap="wrap" gap={1}>
                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={brLocale}>
                     <DatePicker
                         value={initialDate}
                         onChange={(newValue) => { setInitialDate(newValue) }}
-                        label="Inicio"
-                        renderInput={(params) => <TextField fullWidth {...params} sx={{ width: '20ch' }} />}
-
+                        label="Início"
+                        renderInput={(params) => <TextField size="small" {...params} sx={{ width: '18ch' }} />}
                     />
                 </LocalizationProvider>
 
@@ -128,14 +126,29 @@ export const ChatsUser = () => {
                         value={finalDate}
                         onChange={(newValue) => { setFinalDate(newValue) }}
                         label="Fim"
-                        renderInput={(params) => <TextField fullWidth {...params} sx={{ width: '20ch' }} />}
+                        renderInput={(params) => <TextField size="small" {...params} sx={{ width: '18ch' }} />}
                     />
                 </LocalizationProvider>
 
-                <Button className="buttonHover" onClick={handleGetTicketsInformation} variant='contained'>Filtrar</Button>
-
+                <Button
+                    onClick={handleGetTicketsInformation}
+                    variant='contained'
+                    sx={{
+                        backgroundColor: "#10b981",
+                        "&:hover": { backgroundColor: "#059669" },
+                        textTransform: "none",
+                        borderRadius: "10px",
+                        fontWeight: 700,
+                        boxShadow: "none",
+                        height: 40,
+                        px: 2.5,
+                    }}
+                >
+                    Filtrar
+                </Button>
             </Stack>
-            <Bar options={options} data={dataCharts} style={{ maxWidth: '100%', maxHeight: '280px', }} />
+
+            <Bar options={options} data={dataCharts} style={{ maxWidth: '100%', maxHeight: '280px' }} />
         </>
     );
-}
+};

@@ -2,15 +2,14 @@ import React, { useState, useEffect, useContext, useRef } from "react";
 import withWidth, { isWidthUp } from "@material-ui/core/withWidth";
 import "emoji-mart/css/emoji-mart.css";
 import { Picker } from "emoji-mart";
-import MicRecorder from "mic-recorder-to-mp3";
+import MicRecorder from "../../helpers/MicRecorder";
 import clsx from "clsx";
-import { isNil } from "lodash";
+import { isNil, isString, isEmpty, isObject, has } from "lodash";
 import { Reply } from "@material-ui/icons";
 import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
 import InputBase from "@material-ui/core/InputBase";
 import CircularProgress from "@material-ui/core/CircularProgress";
-import { green, grey } from "@material-ui/core/colors";
 import AttachFileIcon from "@material-ui/icons/AttachFile";
 import IconButton from "@material-ui/core/IconButton";
 import MoodIcon from "@material-ui/icons/Mood";
@@ -20,67 +19,119 @@ import ClearIcon from "@material-ui/icons/Clear";
 import MicIcon from "@material-ui/icons/Mic";
 import CheckCircleOutlineIcon from "@material-ui/icons/CheckCircleOutline";
 import HighlightOffIcon from "@material-ui/icons/HighlightOff";
-import { FormControlLabel, Switch } from "@material-ui/core";
+import { FormControlLabel, Switch, Tooltip } from "@material-ui/core";
 import Autocomplete from "@material-ui/lab/Autocomplete";
-import { isString, isEmpty, isObject, has } from "lodash";
+import axios from "axios";
+import Compressor from "compressorjs";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
-import axios from "axios";
-
 import RecordingTimer from "./RecordingTimer";
 import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import { ForwardMessageContext } from "../../context/ForwarMessage/ForwardMessageContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import toastError from "../../errors/toastError";
-
-import Compressor from 'compressorjs';
 import LinearWithValueLabel from "./ProgressBarCustom";
-
 import useQuickMessages from "../../hooks/useQuickMessages";
 
 const Mp3Recorder = new MicRecorder({ bitRate: 128 });
 
 const useStyles = makeStyles((theme) => ({
   mainWrapper: {
-    backgroundColor: theme.palette.bordabox, //DARK MODE Multiconversa//
+    backgroundColor: theme.palette.type === "dark" ? "#14181f" : "#f8fafc",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    borderTop: "1px solid rgba(0, 0, 0, 0.12)",
+    borderTop: `1px solid ${
+      theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.08)" : "#e2e8f0"
+    }`,
+    position: "relative",
+    width: "100%",
   },
 
   newMessageBox: {
-    backgroundColor: theme.palette.newmessagebox, //DARK MODE Multiconversa//
+    backgroundColor: theme.palette.type === "dark" ? "#07130e" : "#f1f5f9",
     width: "100%",
     display: "flex",
-    padding: "7px",
+    padding: "8px 12px",
     alignItems: "center",
+    gap: "6px",
+    borderTop: `1px solid ${
+      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.15)" : "#e2e8f0"
+    }`,
   },
 
   messageInputWrapper: {
-    padding: 6,
-    marginRight: 7,
-    backgroundColor: theme.palette.inputdigita, //DARK MODE Multiconversa//
+    padding: "3px 14px",
+    backgroundColor: theme.palette.type === "dark" ? "#0d2219" : "#ffffff",
     display: "flex",
-    borderRadius: 20,
+    borderRadius: 24,
     flex: 1,
+    alignItems: "center",
+    border: `1px solid ${
+      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.2)" : "#e2e8f0"
+    }`,
+    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+    transition: "all 0.2s ease",
+    "&:focus-within": {
+      borderColor: theme.palette.type === "dark" ? "#25d366" : "#10b981",
+      boxShadow: "0 0 0 3px rgba(16, 185, 129, 0.15)",
+      backgroundColor: theme.palette.type === "dark" ? "#122c21" : "#ffffff",
+    },
   },
 
   messageInput: {
-    paddingLeft: 10,
+    paddingLeft: 4,
     flex: 1,
     border: "none",
+    fontSize: "0.9rem",
+    color: theme.palette.type === "dark" ? "#f1f5f9" : "#1e293b",
   },
 
-  sendMessageIcons: {
-    color: "grey",
+  iconButton: {
+    padding: 8,
+    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+    transition: "all 0.2s ease",
+    "&:hover": {
+      color: "#10b981",
+      backgroundColor: "rgba(16, 185, 129, 0.08)",
+    },
+  },
+
+  sendFloatingButton: {
+    backgroundColor: "#10b981",
+    color: "#ffffff",
+    width: 40,
+    height: 40,
+    borderRadius: "50%",
+    boxShadow: "0 2px 6px rgba(16, 185, 129, 0.35)",
+    transition: "all 0.2s ease",
+    padding: 8,
+    "&:hover": {
+      backgroundColor: "#059669",
+      transform: "scale(1.05)",
+    },
+    "&:disabled": {
+      backgroundColor: theme.palette.type === "dark" ? "#334155" : "#cbd5e1",
+      color: "#94a3b8",
+      boxShadow: "none",
+    },
+  },
+
+  micButton: {
+    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+    padding: 8,
+    transition: "all 0.2s ease",
+    "&:hover": {
+      color: "#10b981",
+      backgroundColor: "rgba(16, 185, 129, 0.08)",
+    },
   },
 
   ForwardMessageIcons: {
-    color: grey[700],
-    transform: 'scaleX(-1)'
+    color: "#ffffff",
+    transform: "scaleX(-1)",
   },
 
   uploadInput: {
@@ -89,93 +140,108 @@ const useStyles = makeStyles((theme) => ({
 
   viewMediaInputWrapper: {
     display: "flex",
-    padding: "10px 13px",
+    padding: "10px 16px",
     position: "relative",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#eee",
-    borderTop: "1px solid rgba(0, 0, 0, 0.12)",
+    backgroundColor: theme.palette.type === "dark" ? "#1e242d" : "#f1f5f9",
+    borderTop: `1px solid ${
+      theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.08)" : "#e2e8f0"
+    }`,
+    width: "100%",
   },
 
   emojiBox: {
     position: "absolute",
-    bottom: 63,
-    width: 40,
-    borderTop: "1px solid #e8e8e8",
-  },
-
-  circleLoading: {
-    color: green[500],
-    opacity: "70%",
-    position: "absolute",
-    top: "20%",
-    left: "50%",
-    marginLeft: -12,
+    bottom: 64,
+    left: 12,
+    zIndex: 100,
+    boxShadow: "0 10px 25px rgba(0, 0, 0, 0.25)",
+    borderRadius: 16,
+    overflow: "hidden",
+    border: `1px solid ${
+      theme.palette.type === "dark" ? "rgba(255,255,255,0.1)" : "#e2e8f0"
+    }`,
   },
 
   audioLoading: {
-    color: green[500],
-    opacity: "70%",
+    color: "#10b981",
+    opacity: "80%",
   },
 
   recorderWrapper: {
     display: "flex",
     alignItems: "center",
-    alignContent: "middle",
+    gap: "8px",
+    backgroundColor: theme.palette.type === "dark" ? "#222731" : "#ffffff",
+    borderRadius: 24,
+    padding: "2px 10px",
+    border: "1px solid rgba(239, 68, 68, 0.3)",
+    boxShadow: "0 1px 4px rgba(239, 68, 68, 0.1)",
   },
 
   cancelAudioIcon: {
-    color: "red",
+    color: "#ef4444",
   },
 
   sendAudioIcon: {
-    color: "green",
+    color: "#10b981",
   },
 
   replyginMsgWrapper: {
     display: "flex",
     width: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 8,
-    paddingLeft: 73,
-    paddingRight: 7,
+    padding: "8px 12px 0 12px",
   },
 
   replyginMsgContainer: {
     flex: 1,
-    marginRight: 5,
     overflowY: "hidden",
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
-    borderRadius: "7.5px",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(255, 255, 255, 0.05)"
+        : "rgba(0, 0, 0, 0.04)",
+    borderRadius: 10,
+    borderLeft: "4px solid #10b981",
     display: "flex",
-    position: "relative",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "6px 12px",
   },
 
   replyginMsgBody: {
-    padding: 10,
-    height: "auto",
-    display: "block",
-    whiteSpace: "pre-wrap",
+    fontSize: "0.82rem",
+    lineHeight: "1.3",
+    color: theme.palette.type === "dark" ? "#cbd5e1" : "#475569",
     overflow: "hidden",
-  },
-
-  replyginContactMsgSideColor: {
-    flex: "none",
-    width: "4px",
-    backgroundColor: "#35cd96",
-  },
-
-  replyginSelfMsgSideColor: {
-    flex: "none",
-    width: "4px",
-    backgroundColor: "#6bcbef",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    flex: 1,
   },
 
   messageContactName: {
-    display: "flex",
-    color: "#6bcbef",
-    fontWeight: 500,
+    fontSize: "0.8rem",
+    fontWeight: 700,
+    color: "#10b981",
+    marginBottom: 2,
+  },
+
+  switchLabel: {
+    fontSize: "0.78rem",
+    fontWeight: 600,
+    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+  },
+
+  customSwitch: {
+    "& .MuiSwitch-switchBase.Mui-checked": {
+      color: "#10b981",
+      "&:hover": {
+        backgroundColor: "rgba(16, 185, 129, 0.08)",
+      },
+    },
+    "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+      backgroundColor: "#10b981",
+    },
   },
 }));
 
@@ -184,14 +250,19 @@ const EmojiOptions = (props) => {
   const classes = useStyles();
   return (
     <>
-      <IconButton
-        aria-label="emojiPicker"
-        component="span"
-        disabled={disabled}
-        onClick={(e) => setShowEmoji((prevState) => !prevState)}
-      >
-        <MoodIcon className={classes.sendMessageIcons} />
-      </IconButton>
+      <Tooltip title="Emojis">
+        <span>
+          <IconButton
+            aria-label="emojiPicker"
+            component="span"
+            disabled={disabled}
+            className={classes.iconButton}
+            onClick={() => setShowEmoji((prevState) => !prevState)}
+          >
+            <MoodIcon />
+          </IconButton>
+        </span>
+      </Tooltip>
       {showEmoji ? (
         <div className={classes.emojiBox}>
           <Picker
@@ -208,11 +279,16 @@ const EmojiOptions = (props) => {
 
 const SignSwitch = (props) => {
   const { width, setSignMessage, signMessage } = props;
+  const classes = useStyles();
   if (isWidthUp("md", width)) {
     return (
       <FormControlLabel
-        style={{ marginRight: 7, color: "gray" }}
-        label={i18n.t("messagesInput.signMessage")}
+        style={{ marginRight: 6 }}
+        label={
+          <span className={classes.switchLabel}>
+            {i18n.t("messagesInput.signMessage")}
+          </span>
+        }
         labelPlacement="start"
         control={
           <Switch
@@ -221,8 +297,8 @@ const SignSwitch = (props) => {
             onChange={(e) => {
               setSignMessage(e.target.checked);
             }}
-            name="showAllTickets"
-            color="primary"
+            name="signMessage"
+            className={classes.customSwitch}
           />
         }
       />
@@ -245,13 +321,18 @@ const FileInput = (props) => {
         onChange={handleChangeMedias}
       />
       <label htmlFor="upload-button">
-        <IconButton
-          aria-label="upload"
-          component="span"
-          disabled={disableOption()}
-        >
-          <AttachFileIcon className={classes.sendMessageIcons} />
-        </IconButton>
+        <Tooltip title={i18n.t("messagesInput.attach") || "Anexar arquivo"}>
+          <span>
+            <IconButton
+              aria-label="upload"
+              component="span"
+              disabled={disableOption()}
+              className={classes.iconButton}
+            >
+              <AttachFileIcon />
+            </IconButton>
+          </span>
+        </Tooltip>
       </label>
     </>
   );
@@ -268,60 +349,79 @@ const ActionButtons = (props) => {
     handleUploadAudio,
     handleStartRecording,
     handleOpenModalForward,
-    showSelectMessageCheckbox
+    showSelectMessageCheckbox,
   } = props;
   const classes = useStyles();
+
   if (inputMessage || showSelectMessageCheckbox) {
     return (
       <IconButton
-      aria-label="sendMessage"
-      component="span"
-      onClick={showSelectMessageCheckbox ? handleOpenModalForward : handleSendMessage}
-      disabled={loading}
-    >
-      {showSelectMessageCheckbox ?
-        <Reply className={classes.ForwardMessageIcons} /> : <SendIcon className={classes.sendMessageIcons} />}      </IconButton>
-  );
-} else if (recording) {
+        aria-label="sendMessage"
+        component="span"
+        className={classes.sendFloatingButton}
+        onClick={
+          showSelectMessageCheckbox ? handleOpenModalForward : handleSendMessage
+        }
+        disabled={loading}
+      >
+        {showSelectMessageCheckbox ? (
+          <Reply className={classes.ForwardMessageIcons} />
+        ) : (
+          <SendIcon fontSize="small" />
+        )}
+      </IconButton>
+    );
+  } else if (recording) {
     return (
       <div className={classes.recorderWrapper}>
-        <IconButton
-          aria-label="cancelRecording"
-          component="span"
-          fontSize="large"
-          disabled={loading}
-          onClick={handleCancelAudio}
-        >
-          <HighlightOffIcon className={classes.cancelAudioIcon} />
-        </IconButton>
+        <Tooltip title="Cancelar gravação">
+          <IconButton
+            aria-label="cancelRecording"
+            component="span"
+            size="small"
+            disabled={loading}
+            onClick={handleCancelAudio}
+          >
+            <HighlightOffIcon className={classes.cancelAudioIcon} />
+          </IconButton>
+        </Tooltip>
+
         {loading ? (
           <div>
-            <CircularProgress className={classes.audioLoading} />
+            <CircularProgress size={20} className={classes.audioLoading} />
           </div>
         ) : (
           <RecordingTimer />
         )}
 
-        <IconButton
-          aria-label="sendRecordedAudio"
-          component="span"
-          onClick={handleUploadAudio}
-          disabled={loading}
-        >
-          <CheckCircleOutlineIcon className={classes.sendAudioIcon} />
-        </IconButton>
+        <Tooltip title="Enviar áudio">
+          <IconButton
+            aria-label="sendRecordedAudio"
+            component="span"
+            size="small"
+            onClick={handleUploadAudio}
+            disabled={loading}
+          >
+            <CheckCircleOutlineIcon className={classes.sendAudioIcon} />
+          </IconButton>
+        </Tooltip>
       </div>
     );
   } else {
     return (
-      <IconButton
-        aria-label="showRecorder"
-        component="span"
-        disabled={loading || ticketStatus !== "open"}
-        onClick={handleStartRecording}
-      >
-        <MicIcon className={classes.sendMessageIcons} />
-      </IconButton>
+      <Tooltip title="Gravar áudio">
+        <span>
+          <IconButton
+            aria-label="showRecorder"
+            component="span"
+            className={classes.micButton}
+            disabled={loading || ticketStatus !== "open"}
+            onClick={handleStartRecording}
+          >
+            <MicIcon />
+          </IconButton>
+        </span>
+      </Tooltip>
     );
   }
 };
@@ -337,7 +437,6 @@ const CustomInput = (props) => {
     handleInputPaste,
     disableOption,
     handleQuickAnswersClick,
-    replyingMessage
   } = props;
   const classes = useStyles();
   const [quickMessages, setQuickMessages] = useState([]);
@@ -407,7 +506,6 @@ const CustomInput = (props) => {
     return i18n.t("messagesInput.placeholderClosed");
   };
 
-
   const setInputRef = (input) => {
     if (input) {
       input.focus();
@@ -432,17 +530,24 @@ const CustomInput = (props) => {
           }
         }}
         onChange={(event, opt) => {
-         
           if (isObject(opt) && has(opt, "value") && isNil(opt.mediaPath)) {
             setInputMessage(opt.value);
             setTimeout(() => {
-              inputRef.current.scrollTop = inputRef.current.scrollHeight;
+              if (inputRef.current) {
+                inputRef.current.scrollTop = inputRef.current.scrollHeight;
+              }
             }, 200);
-          } else if (isObject(opt) && has(opt, "value") && !isNil(opt.mediaPath)) {
+          } else if (
+            isObject(opt) &&
+            has(opt, "value") &&
+            !isNil(opt.mediaPath)
+          ) {
             handleQuickAnswersClick(opt);
 
             setTimeout(() => {
-              inputRef.current.scrollTop = inputRef.current.scrollHeight;
+              if (inputRef.current) {
+                inputRef.current.scrollTop = inputRef.current.scrollHeight;
+              }
             }, 200);
           }
         }}
@@ -493,14 +598,19 @@ const MessageInputCustom = (props) => {
   const {
     selectedMessages,
     setForwardMessageModalOpen,
-    showSelectMessageCheckbox } = useContext(ForwardMessageContext);
+    showSelectMessageCheckbox,
+  } = useContext(ForwardMessageContext);
 
   useEffect(() => {
-    inputRef.current.focus();
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
   }, [replyingMessage]);
 
   useEffect(() => {
-    inputRef.current.focus();
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
     return () => {
       setInputMessage("");
       setShowEmoji(false);
@@ -509,22 +619,14 @@ const MessageInputCustom = (props) => {
     };
   }, [ticketId, setReplyingMessage]);
 
-  // const handleChangeInput = e => {
-  // 	if (isObject(e) && has(e, 'value')) {
-  // 		setInputMessage(e.value);
-  // 	} else {
-  // 		setInputMessage(e.target.value)
-  // 	}
-  // };
-
   const handleOpenModalForward = () => {
     if (selectedMessages.length === 0) {
-      setForwardMessageModalOpen(false)
+      setForwardMessageModalOpen(false);
       toastError(i18n.t("messagesList.header.notMessage"));
       return;
     }
     setForwardMessageModalOpen(true);
-  }
+  };
 
   const handleAddEmoji = (e) => {
     let emoji = e.native;
@@ -554,7 +656,7 @@ const MessageInputCustom = (props) => {
       const formData = new FormData();
       const filename = `${new Date().getTime()}.${extension}`;
       formData.append("medias", blob, filename);
-      formData.append("body",  message);
+      formData.append("body", message);
       formData.append("fromMe", true);
 
       await api.post(`/messages/${ticketId}`, formData);
@@ -564,7 +666,7 @@ const MessageInputCustom = (props) => {
     }
     setLoading(false);
   };
-  
+
   const handleQuickAnswersClick = async (value) => {
     if (value.mediaPath) {
       try {
@@ -575,7 +677,6 @@ const MessageInputCustom = (props) => {
         handleUploadQuickMessageMedia(data, value.value);
         setInputMessage("");
         return;
-        //  handleChangeMedias(response)
       } catch (err) {
         toastError(err);
       }
@@ -592,77 +693,47 @@ const MessageInputCustom = (props) => {
     const formData = new FormData();
     formData.append("fromMe", true);
 
-    medias.forEach(async (media, idx) => {
-
+    medias.forEach(async (media) => {
       const file = media;
 
-      if (!file) { return; }
+      if (!file) {
+        return;
+      }
 
-      if (media?.type.split('/')[0] == 'image') {
+      if (media?.type.split("/")[0] === "image") {
         new Compressor(file, {
           quality: 0.7,
-
           async success(media) {
-            //const formData = new FormData();
-            // The third parameter is required for server
-            //formData.append('file', result, result.name);
-
             formData.append("medias", media);
             formData.append("body", media.name);
-
           },
           error(err) {
-            alert('erro')
             console.log(err.message);
           },
-
         });
       } else {
         formData.append("medias", media);
         formData.append("body", media.name);
-
       }
+    });
 
-
-    },);
-
-    setTimeout(async()=> {
-
+    setTimeout(async () => {
       try {
         await api.post(`/messages/${ticketId}`, formData, {
           onUploadProgress: (event) => {
-            let progress = Math.round(
-              (event.loaded * 100) / event.total
-            );
+            let progress = Math.round((event.loaded * 100) / event.total);
             setPercentLoading(progress);
-            console.log(
-              `A imagem  está ${progress}% carregada... `
-            );
           },
-        })
-          .then((response) => {
-            setLoading(false)
-            setMedias([])
-            setPercentLoading(0);
-            console.log(
-              `A imagem á foi enviada para o servidor!`
-
-            );
-          })
-          .catch((err) => {
-            console.error(
-              `Houve um problema ao realizar o upload da imagem.`
-            );
-            console.log(err);
-          });
+        });
+        setLoading(false);
+        setMedias([]);
+        setPercentLoading(0);
       } catch (err) {
+        setLoading(false);
         toastError(err);
       }
-
-
-    },2000)
-
-  }
+    }, 2000);
+  };
 
   const handleSendMessage = async () => {
     if (inputMessage.trim() === "") return;
@@ -744,28 +815,24 @@ const MessageInputCustom = (props) => {
     return (
       <div className={classes.replyginMsgWrapper}>
         <div className={classes.replyginMsgContainer}>
-          <span
-            className={clsx(classes.replyginContactMsgSideColor, {
-              [classes.replyginSelfMsgSideColor]: !message.fromMe,
-            })}
-          ></span>
-          <div className={classes.replyginMsgBody}>
+          <div>
             {!message.fromMe && (
-              <span className={classes.messageContactName}>
+              <div className={classes.messageContactName}>
                 {message.contact?.name}
-              </span>
+              </div>
             )}
-            {message.body}
+            <div className={classes.replyginMsgBody}>{message.body}</div>
           </div>
+          <IconButton
+            aria-label="cancelReply"
+            component="span"
+            size="small"
+            disabled={loading || ticketStatus !== "open"}
+            onClick={() => setReplyingMessage(null)}
+          >
+            <ClearIcon fontSize="small" />
+          </IconButton>
         </div>
-        <IconButton
-          aria-label="showRecorder"
-          component="span"
-          disabled={loading || ticketStatus !== "open"}
-          onClick={() => setReplyingMessage(null)}
-        >
-          <ClearIcon className={classes.sendMessageIcons} />
-        </IconButton>
       </div>
     );
   };
@@ -776,29 +843,26 @@ const MessageInputCustom = (props) => {
         <IconButton
           aria-label="cancel-upload"
           component="span"
-          onClick={(e) => setMedias([])}
+          onClick={() => setMedias([])}
         >
-          <CancelIcon className={classes.sendMessageIcons} />
+          <CancelIcon />
         </IconButton>
 
         {loading ? (
           <div>
-            {/*<CircularProgress className={classes.circleLoading} />*/}
             <LinearWithValueLabel progress={percentLoading} />
           </div>
         ) : (
-          <span>
-            {medias[0]?.name}
-            {/* <img src={media.preview} alt=""></img> */}
-          </span>
+          <span>{medias[0]?.name}</span>
         )}
         <IconButton
           aria-label="send-upload"
           component="span"
           onClick={handleUploadMedia}
           disabled={loading}
+          className={classes.sendFloatingButton}
         >
-          <SendIcon className={classes.sendMessageIcons} />
+          <SendIcon fontSize="small" />
         </IconButton>
       </Paper>
     );
@@ -831,7 +895,6 @@ const MessageInputCustom = (props) => {
             ticketStatus={ticketStatus}
             inputMessage={inputMessage}
             setInputMessage={setInputMessage}
-            // handleChangeInput={handleChangeInput}
             handleSendMessage={handleSendMessage}
             handleInputPaste={handleInputPaste}
             disableOption={disableOption}
@@ -858,4 +921,3 @@ const MessageInputCustom = (props) => {
 };
 
 export default withWidth()(MessageInputCustom);
-

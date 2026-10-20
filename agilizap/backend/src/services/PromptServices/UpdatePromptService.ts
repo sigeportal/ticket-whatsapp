@@ -6,8 +6,10 @@ import ShowPromptService from "./ShowPromptService";
 interface PromptData {
     id?: number;
     name: string;
-    apiKey: string;
+    apiKey?: string;
     prompt: string;
+    provider?: string;
+    model?: string;
     maxTokens?: number;
     temperature?: number;
     promptTokens?: number;
@@ -37,12 +39,12 @@ const UpdatePromptService = async ({
     const promptSchema = Yup.object().shape({
         name: Yup.string().required("ERR_PROMPT_NAME_INVALID"),
         prompt: Yup.string().required("ERR_PROMPT_PROMPT_INVALID"),
-        apiKey: Yup.string().required("ERR_PROMPT_APIKEY_INVALID"),
+        apiKey: Yup.string().nullable().notRequired(),
         queueId: Yup.number().required("ERR_PROMPT_QUEUEID_INVALID"),
         maxMessages: Yup.number().required("ERR_PROMPT_MAX_MESSAGES_INVALID")
     });
 
-    const { name, apiKey, prompt, maxTokens, temperature, promptTokens, completionTokens, totalTokens, queueId, maxMessages, voice, voiceKey, voiceRegion } = promptData;
+    const { name, apiKey, prompt, provider, model, maxTokens, temperature, promptTokens, completionTokens, totalTokens, queueId, maxMessages, voice, voiceKey, voiceRegion } = promptData;
 
     try {
         await promptSchema.validate({ name, apiKey, prompt, maxTokens, temperature, promptTokens, completionTokens, totalTokens, queueId, maxMessages });
@@ -50,7 +52,23 @@ const UpdatePromptService = async ({
         throw new AppError(`${JSON.stringify(err, undefined, 2)}`);
     }
 
-    await promptTable.update({ name, apiKey, prompt, maxTokens, temperature, promptTokens, completionTokens, totalTokens, queueId, maxMessages, voice, voiceKey, voiceRegion });
+    await promptTable.update({
+        name,
+        apiKey,
+        prompt,
+        provider: provider || promptTable.provider || "gemini",
+        model: model || promptTable.model || "gemini-3.5-flash-lite",
+        maxTokens,
+        temperature: temperature !== undefined ? Number(temperature) : promptTable.temperature,
+        promptTokens,
+        completionTokens,
+        totalTokens,
+        queueId,
+        maxMessages,
+        voice,
+        voiceKey,
+        voiceRegion
+    });
     await promptTable.reload();
     return promptTable;
 };

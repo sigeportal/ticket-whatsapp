@@ -80,9 +80,72 @@ const reducer = (state, action) => {
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(1),
-    overflowY: "scroll",
+    borderRadius: 16,
+    overflowY: "auto",
+    border: `1px solid ${
+      theme.palette.type === "dark"
+        ? "rgba(16, 185, 129, 0.18)"
+        : "rgba(226, 232, 240, 0.9)"
+    }`,
+    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
+    boxShadow:
+      theme.palette.type === "dark"
+        ? "0 4px 20px -2px rgba(0, 0, 0, 0.5)"
+        : "0 4px 20px -2px rgba(0, 0, 0, 0.04)",
     ...theme.scrollbarStyles,
+  },
+  searchInput: {
+    minWidth: 260,
+    "& .MuiOutlinedInput-root": {
+      borderRadius: 12,
+      paddingLeft: 4,
+    },
+    "& .MuiOutlinedInput-input": {
+      padding: "9px 14px",
+      fontSize: "0.875rem",
+    },
+  },
+  actionEdit: {
+    padding: 7,
+    borderRadius: 8,
+    color: "#10b981",
+    backgroundColor: "rgba(16, 185, 129, 0.1)",
+    marginRight: 6,
+    transition: "all 0.2s ease",
+    "&:hover": {
+      backgroundColor: "#10b981",
+      color: "#ffffff",
+      transform: "scale(1.05)",
+    },
+  },
+  actionDelete: {
+    padding: 7,
+    borderRadius: 8,
+    color: "#ef4444",
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    transition: "all 0.2s ease",
+    "&:hover": {
+      backgroundColor: "#ef4444",
+      color: "#ffffff",
+      transform: "scale(1.05)",
+    },
+  },
+  roleBadge: {
+    padding: "3px 10px",
+    borderRadius: 12,
+    fontSize: "0.75rem",
+    fontWeight: 700,
+    textTransform: "uppercase",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(16, 185, 129, 0.15)"
+        : "rgba(16, 185, 129, 0.1)",
+    color: theme.palette.type === "dark" ? "#34d399" : "#059669",
+    border: `1px solid ${
+      theme.palette.type === "dark"
+        ? "rgba(16, 185, 129, 0.25)"
+        : "rgba(16, 185, 129, 0.2)"
+    }`,
   },
 }));
 
@@ -215,12 +278,15 @@ const Users = () => {
           <TextField
             placeholder={i18n.t("contacts.searchPlaceholder")}
             type="search"
+            variant="outlined"
+            size="small"
+            className={classes.searchInput}
             value={searchParam}
             onChange={handleSearch}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon style={{ color: "gray" }} />
+                  <SearchIcon style={{ color: "#10b981", fontSize: 20 }} />
                 </InputAdornment>
               ),
             }}
@@ -229,6 +295,12 @@ const Users = () => {
             variant="contained"
             color="primary"
             onClick={handleOpenUserModal}
+            startIcon={
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            }
           >
             {i18n.t("users.buttons.add")}
           </Button>
@@ -236,13 +308,13 @@ const Users = () => {
       </MainHeader>
       <Paper
         className={classes.mainPaper}
-        variant="outlined"
+        elevation={0}
         onScroll={handleScroll}
       >
         <Table size="small">
           <TableHead>
             <TableRow>
-			<TableCell align="center">
+              <TableCell align="center">
                 {i18n.t("users.table.id")}
               </TableCell>
               <TableCell align="center">{i18n.t("users.table.status")}</TableCell>
@@ -262,27 +334,33 @@ const Users = () => {
             <>
               {users.map((user) => (
                 <TableRow key={user.id}>
-				  <TableCell align="center">{user.id}</TableCell>
-				  <TableCell align="center"><UserStatusIcon user={user} /></TableCell>
-                  <TableCell align="center">{user.name}</TableCell>
-                  <TableCell align="center">{user.email}</TableCell>
-                  <TableCell align="center">{user.profile}</TableCell>
+                  <TableCell align="center" style={{ fontWeight: 600 }}>#{user.id}</TableCell>
+                  <TableCell align="center"><UserStatusIcon user={user} /></TableCell>
+                  <TableCell align="center" style={{ fontWeight: 700 }}>{user.name}</TableCell>
+                  <TableCell align="center" style={{ opacity: 0.85 }}>{user.email}</TableCell>
+                  <TableCell align="center">
+                    <span className={classes.roleBadge}>{user.profile}</span>
+                  </TableCell>
                   <TableCell align="center">
                     <IconButton
                       size="small"
+                      className={classes.actionEdit}
                       onClick={() => handleEditUser(user)}
+                      title="Editar Usuário"
                     >
-                      <EditIcon />
+                      <EditIcon fontSize="small" />
                     </IconButton>
 
                     <IconButton
                       size="small"
+                      className={classes.actionDelete}
                       onClick={(e) => {
                         setConfirmModalOpen(true);
                         setDeletingUser(user);
                       }}
+                      title="Excluir Usuário"
                     >
-                      <DeleteOutlineIcon />
+                      <DeleteOutlineIcon fontSize="small" />
                     </IconButton>
                   </TableCell>
                 </TableRow>

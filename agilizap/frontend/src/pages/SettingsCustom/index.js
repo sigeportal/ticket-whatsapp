@@ -32,18 +32,43 @@ const useStyles = makeStyles((theme) => ({
     ...theme.scrollbarStyles,
     overflowY: "scroll",
     flex: 1,
+    borderRadius: 14,
+    border: `1px solid ${
+      theme.palette.type === "dark"
+        ? "rgba(16, 185, 129, 0.18)"
+        : "rgba(226, 232, 240, 0.9)"
+    }`,
+    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
+    boxShadow:
+      theme.palette.type === "dark"
+        ? "0 4px 20px -2px rgba(0, 0, 0, 0.4)"
+        : "0 1px 3px rgba(0, 0, 0, 0.05)",
   },
   tab: {
-    backgroundColor: theme.palette.options,
-    borderRadius: 4,
+    backgroundColor: theme.palette.type === "dark" ? "#07130e" : "#f8fafc",
+    borderBottom: `1px solid ${
+      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.15)" : "#e2e8f0"
+    }`,
+    "& .MuiTab-root": {
+      fontWeight: 600,
+      fontSize: "0.85rem",
+      textTransform: "none",
+      minHeight: 48,
+    },
+    "& .MuiTabs-indicator": {
+      backgroundColor: "#10b981",
+      height: 3,
+      borderRadius: "3px 3px 0 0",
+    },
   },
   paper: {
     ...theme.scrollbarStyles,
     overflowY: "scroll",
-    padding: theme.spacing(2),
+    padding: theme.spacing(3),
     display: "flex",
     alignItems: "center",
     width: "100%",
+    backgroundColor: "transparent",
   },
   container: {
     width: "100%",

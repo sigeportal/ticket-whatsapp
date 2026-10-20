@@ -187,14 +187,13 @@ export const update = async (
   const ticketData: TicketData = req.body;
   const { companyId } = req.user;
 
-  const { ticket } = await UpdateTicketService({
+  const result = await UpdateTicketService({
     ticketData,
     ticketId,
     companyId
   });
 
-
-  return res.status(200).json(ticket);
+  return res.status(200).json(result?.ticket || result);
 };
 
 export const remove = async (

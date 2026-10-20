@@ -26,7 +26,28 @@ const useStyles = makeStyles((theme) => ({
         boxShadow: "none !important",
     },
     icons: {
-        color: "#fff",
+        color: theme.mode === "light" ? "#1e293b" : "#f0fdf4",
+        backgroundColor:
+            theme.mode === "light"
+                ? "rgba(0, 0, 0, 0.04)"
+                : "rgba(255, 255, 255, 0.06)",
+        border:
+            theme.mode === "light"
+                ? "1px solid rgba(226, 232, 240, 0.9)"
+                : "1px solid rgba(16, 185, 129, 0.18)",
+        padding: 8,
+        borderRadius: 10,
+        marginLeft: 3,
+        marginRight: 3,
+        transition: "all 0.2s ease-in-out",
+        "&:hover": {
+            backgroundColor:
+                theme.mode === "light"
+                    ? "rgba(16, 185, 129, 0.12)"
+                    : "rgba(37, 211, 102, 0.18)",
+            color: theme.mode === "light" ? "#065f46" : "#25d366",
+            transform: "translateY(-1px)",
+        },
     },
     customBadge: {
         backgroundColor: "#f44336",

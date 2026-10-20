@@ -7,8 +7,10 @@ import ffmpegPath from "@ffmpeg-installer/ffmpeg";
 import AppError from "../../errors/AppError";
 import GetTicketWbot from "../../helpers/GetTicketWbot";
 import Ticket from "../../models/Ticket";
+import Contact from "../../models/Contact";
 import mime from "mime-types";
 import formatBody from "../../helpers/Mustache";
+import { getRecipientJid } from "../../helpers/GetRecipientJid";
 
 interface Request {
   media: Express.Multer.File;
@@ -19,14 +21,28 @@ interface Request {
 
 const publicFolder = path.resolve(__dirname, "..", "..", "..", "public");
 
+const getFfmpegPath = (): string => {
+  try {
+    if (ffmpegPath?.path && fs.existsSync(ffmpegPath.path)) {
+      return ffmpegPath.path;
+    }
+  } catch (e) {
+    // ignore
+  }
+  return "ffmpeg";
+};
+
 const processAudio = async (audio: string): Promise<string> => {
   const outputAudio = `${publicFolder}/${new Date().getTime()}.mp3`;
+  const ffmpegCmd = getFfmpegPath();
   return new Promise((resolve, reject) => {
     exec(
-      `${ffmpegPath.path} -i ${audio} -vn -ab 128k -ar 44100 -f ipod ${outputAudio} -y`,
+      `${ffmpegCmd} -i ${audio} -vn -ab 128k -ar 44100 -f ipod ${outputAudio} -y`,
       (error, _stdout, _stderr) => {
         if (error) reject(error);
-        fs.unlinkSync(audio);
+        try {
+          fs.unlinkSync(audio);
+        } catch (e) {}
         resolve(outputAudio);
       }
     );
@@ -35,12 +51,15 @@ const processAudio = async (audio: string): Promise<string> => {
 
 const processAudioFile = async (audio: string): Promise<string> => {
   const outputAudio = `${publicFolder}/${new Date().getTime()}.mp3`;
+  const ffmpegCmd = getFfmpegPath();
   return new Promise((resolve, reject) => {
     exec(
-      `${ffmpegPath.path} -i ${audio} -vn -ar 44100 -ac 2 -b:a 192k ${outputAudio}`,
+      `${ffmpegCmd} -i ${audio} -vn -ar 44100 -ac 2 -b:a 192k ${outputAudio}`,
       (error, _stdout, _stderr) => {
         if (error) reject(error);
-        fs.unlinkSync(audio);
+        try {
+          fs.unlinkSync(audio);
+        } catch (e) {}
         resolve(outputAudio);
       }
     );
@@ -179,8 +198,11 @@ const SendWhatsAppMedia = async ({
       };
     }
 
+    const contact = ticket.contact || (ticket.contactId ? await Contact.findByPk(ticket.contactId) : null);
+    const destinationJid = getRecipientJid(ticket, contact);
+
     const sentMessage = await wbot.sendMessage(
-      `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
+      destinationJid,
       {
         ...options
       }

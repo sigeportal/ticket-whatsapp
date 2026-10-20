@@ -95,9 +95,49 @@ const reducer = (state, action) => {
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(1),
+    padding: theme.spacing(1.5),
     overflowY: "scroll",
+    borderRadius: 14,
+    border: `1px solid ${
+      theme.palette.type === "dark"
+        ? "rgba(16, 185, 129, 0.18)"
+        : "rgba(226, 232, 240, 0.9)"
+    }`,
+    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
+    boxShadow:
+      theme.palette.type === "dark"
+        ? "0 4px 20px -2px rgba(0, 0, 0, 0.4)"
+        : "0 1px 3px rgba(0, 0, 0, 0.05)",
     ...theme.scrollbarStyles,
+  },
+  searchInput: {
+    backgroundColor: theme.palette.type === "dark" ? "#07130e" : "#f8fafc",
+    borderRadius: 10,
+    "& .MuiOutlinedInput-root": {
+      borderRadius: 10,
+      border: `1px solid ${
+        theme.palette.type === "dark"
+          ? "rgba(16, 185, 129, 0.2)"
+          : "rgba(226, 232, 240, 0.9)"
+      }`,
+      "&.Mui-focused": {
+        borderColor: "#10b981",
+        boxShadow: "0 0 0 3px rgba(16, 185, 129, 0.15)",
+      },
+    },
+  },
+  addButton: {
+    borderRadius: 10,
+    fontWeight: 700,
+    fontSize: "0.84rem",
+    padding: "8px 18px",
+    background: "linear-gradient(135deg, #10b981 0%, #0d9488 100%)",
+    color: "#ffffff",
+    boxShadow: "0 2px 8px rgba(16, 185, 129, 0.25)",
+    "&:hover": {
+      background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+      boxShadow: "0 4px 12px rgba(16, 185, 129, 0.4)",
+    },
   },
 }));
 
@@ -266,18 +306,21 @@ const Schedules = () => {
             placeholder={i18n.t("contacts.searchPlaceholder")}
             type="search"
             value={searchParam}
+            size="small"
+            variant="outlined"
+            className={classes.searchInput}
             onChange={handleSearch}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon style={{ color: "gray" }} />
+                  <SearchIcon style={{ color: "#10b981", fontSize: 20 }} />
                 </InputAdornment>
               ),
             }}
           />
           <Button
             variant="contained"
-            color="primary"
+            className={classes.addButton}
             onClick={handleOpenScheduleModal}
           >
             {i18n.t("schedules.buttons.add")}

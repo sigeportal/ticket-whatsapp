@@ -30,6 +30,7 @@ interface WhatsappData {
   timeUseBotQueues?: number;
   expiresTicket?: number;
   expiresInactiveMessage?: string;
+  number?: string;
 }
 
 interface QueryParams {
@@ -62,7 +63,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     maxUseBotQueues,
     timeUseBotQueues,
     expiresTicket,
-    expiresInactiveMessage
+    expiresInactiveMessage,
+    number
   }: WhatsappData = req.body;
   const { companyId } = req.user;
 
@@ -84,7 +86,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     maxUseBotQueues,
     timeUseBotQueues,
     expiresTicket,
-    expiresInactiveMessage
+    expiresInactiveMessage,
+    number
   });
 
   StartWhatsAppSession(whatsapp, companyId);

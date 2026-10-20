@@ -27,6 +27,42 @@ const useStyles = makeStyles(theme => ({
 		display: "flex",
 		flexWrap: "wrap",
 	},
+	dialogPaper: {
+		borderRadius: 16,
+		maxWidth: 500,
+		width: "100%",
+		backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
+		border: `1px solid ${
+			theme.palette.type === "dark"
+				? "rgba(16, 185, 129, 0.2)"
+				: "rgba(226, 232, 240, 0.9)"
+		}`,
+		boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.35)",
+	},
+	btnCancel: {
+		borderRadius: 10,
+		padding: "7px 18px",
+		fontWeight: 600,
+		fontSize: "0.84rem",
+		color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+		borderColor: theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.15)" : "rgba(226, 232, 240, 0.9)",
+		"&:hover": {
+			backgroundColor: theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.06)" : "#f8fafc",
+		},
+	},
+	btnSave: {
+		borderRadius: 10,
+		padding: "7px 22px",
+		fontWeight: 700,
+		fontSize: "0.84rem",
+		background: "linear-gradient(135deg, #10b981 0%, #0d9488 100%) !important",
+		color: "#ffffff !important",
+		boxShadow: "0 2px 8px rgba(16, 185, 129, 0.25)",
+		"&:hover": {
+			background: "linear-gradient(135deg, #059669 0%, #047857 100%) !important",
+			boxShadow: "0 4px 12px rgba(16, 185, 129, 0.4)",
+		},
+	},
 	textField: {
 		marginRight: theme.spacing(1),
 		flex: 1,
@@ -128,7 +164,7 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 
 	return (
 		<div className={classes.root}>
-			<Dialog open={open} onClose={handleClose} maxWidth="lg" scroll="paper">
+			<Dialog open={open} onClose={handleClose} classes={{ paper: classes.dialogPaper }} maxWidth="xs" fullWidth scroll="paper">
 				<DialogTitle id="form-dialog-title">
 					{contactId
 						? `${i18n.t("contactModal.title.edit")}`
@@ -249,7 +285,7 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 							<DialogActions>
 								<Button
 									onClick={handleClose}
-									color="secondary"
+									className={classes.btnCancel}
 									disabled={isSubmitting}
 									variant="outlined"
 								>
@@ -257,10 +293,9 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 								</Button>
 								<Button
 									type="submit"
-									color="primary"
 									disabled={isSubmitting}
 									variant="contained"
-									className={classes.btnWrapper}
+									className={`${classes.btnWrapper} ${classes.btnSave}`}
 								>
 									{contactId
 										? `${i18n.t("contactModal.buttons.okEdit")}`

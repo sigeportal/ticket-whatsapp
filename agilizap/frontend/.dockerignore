@@ -1,8 +1,10 @@
 node_modules
 build
-npm-debug.log
 .env
 .env.*
-!.env.exemple
-coverage
-.DS_Store
+!*.example
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.git
+.gitignore
