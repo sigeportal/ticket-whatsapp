@@ -11,6 +11,10 @@ const ShowTicketService = async (
   id: string | number,
   companyId: number
 ): Promise<Ticket> => {
+  if (!id || id === 'undefined' || isNaN(Number(id))) {
+    throw new AppError('ERR_NO_TICKET_FOUND', 404);
+  }
+
   const ticket = await Ticket.findByPk(id, {
     include: [
       {

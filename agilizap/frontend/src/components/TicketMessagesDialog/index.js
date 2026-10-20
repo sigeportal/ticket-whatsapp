@@ -56,7 +56,8 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function TicketMessagesDialog({ open, handleClose, ticketId }) {
+export default function TicketMessagesDialog({ open, handleClose, ticketId, ticketid, ticket: propTicket }) {
+  const actualTicketId = ticketId || ticketid || propTicket?.id;
   const history = useHistory();
   const classes = useStyles();
 
@@ -76,7 +77,7 @@ export default function TicketMessagesDialog({ open, handleClose, ticketId }) {
       delayDebounceFn = setTimeout(() => {
         const fetchTicket = async () => {
           try {
-            const { data } = await api.get("/tickets/" + ticketId);
+            const { data } = await api.get("/tickets/" + actualTicketId);
             const { queueId } = data;
             const { queues, profile } = user;
 
@@ -103,7 +104,7 @@ export default function TicketMessagesDialog({ open, handleClose, ticketId }) {
         clearTimeout(delayDebounceFn);
       }
     };
-  }, [ticketId, user, history, open]);
+  }, [actualTicketId, user, history, open]);
 
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
@@ -141,7 +142,7 @@ export default function TicketMessagesDialog({ open, handleClose, ticketId }) {
         socket.disconnect();
       }
     };
-  }, [ticketId, ticket, history, open, socketManager]);
+  }, [actualTicketId, ticket, history, open, socketManager]);
 
   const handleDrawerOpen = () => {
     setDrawerOpen(true);

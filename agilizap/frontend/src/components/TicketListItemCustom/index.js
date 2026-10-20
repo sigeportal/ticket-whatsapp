@@ -499,7 +499,7 @@ const TicketListItemCustom = ({ ticket }) => {
       <TicketMessagesDialog
         open={openTicketMessageDialog}
         handleClose={() => setOpenTicketMessageDialog(false)}
-        ticketid={ticket.id}
+        ticketId={ticket.id}
       ticket={ticket}
       />
 
