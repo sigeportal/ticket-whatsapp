@@ -101,7 +101,7 @@ export const ClosedAllOpenTickets = async (companyId: number): Promise<void> => 
               userId: ticket.userId,
             })
 
-            io.to("open").emit(`company-${companyId}-ticket`, {
+            io.to(`company-${companyId}-open`).to(`queue-${ticket.queueId}-open`).emit(`company-${companyId}-ticket`, {
               action: "delete",
               ticketId: showTicket.id
             });

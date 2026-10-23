@@ -37,3 +37,9 @@ agilizap/backend/public/*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Isolated local security tools and pre-existing-change snapshot
+.security-work/
+
+# Backend dependency lock is part of the security implementation
+!agilizap/backend/package-lock.json

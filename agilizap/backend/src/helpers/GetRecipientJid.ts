@@ -18,10 +18,10 @@ export const getRecipientJid = (
     return `${rawNumber}@g.us`;
   }
 
-  // Se o contato for explicitamente LID ou se tiver identificador de LID WhatsApp (15+ dígitos sem começar com DDI 55)
+  // Se o contato for explicitamente LID ou se tiver identificador de LID WhatsApp (14+ dígitos sem começar com DDI 55)
   if (
     targetContact?.isLid ||
-    (rawNumber.length >= 15 && !rawNumber.startsWith("55"))
+    (rawNumber.length >= 14 && !rawNumber.startsWith("55"))
   ) {
     return `${rawNumber}@lid`;
   }

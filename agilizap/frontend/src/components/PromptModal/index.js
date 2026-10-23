@@ -23,7 +23,7 @@ import toastError from "../../errors/toastError";
 const useStyles = makeStyles(theme => ({
   dialogPaper: {
     borderRadius: 16,
-    maxHeight: "calc(100vh - 48px)",
+    maxHeight: "calc(100vh - 64px)",
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",

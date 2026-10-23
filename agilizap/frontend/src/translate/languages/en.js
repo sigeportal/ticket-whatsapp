@@ -369,6 +369,14 @@ const messages = {
 				},
 			},
 			backendErrors: {
+        ERR_TICKET_ALREADY_CLAIMED: "This ticket has already been claimed by another attendant.",
+        ERR_CANNOT_ACCEPT_TICKET_OTHER_USER: "Cannot accept a ticket assigned to another user.",
+        ERR_RESTRICTED_ATTENDANT_QUEUE: "You do not have permission for this queue.",
+        ERR_RESTRICTED_SUPERVISOR_QUEUE: "Queue outside your assigned supervision.",
+        ERR_CONNECTION_DISCONNECTED: "WhatsApp connection disconnected. Please check connections.",
+        ERR_AI_BUDGET_EXCEEDED: "Monthly AI budget limit reached for this company.",
+        ERR_AUDIO_TOO_LONG: "Audio exceeds the 10-minute maximum limit.",
+        ERR_BACKUP_INTEGRITY_COMPROMISED: "Integrity check failed: backup is corrupted or tampered.",
 				ERR_NO_OTHER_WHATSAPP:
 					"There must be at lest one default WhatsApp connection.",
 				ERR_NO_DEF_WAPP_FOUND:

@@ -1,3 +1,4 @@
+import { confinedPath } from "./security/media";
 import * as Sentry from "@sentry/node";
 import BullQueue from "bull";
 import { addSeconds, differenceInSeconds } from "date-fns";
@@ -20,6 +21,7 @@ import ContactList from "./models/ContactList";
 import ContactListItem from "./models/ContactListItem";
 import Plan from "./models/Plan";
 import Schedule from "./models/Schedule";
+import { reconcileOverdueSchedules } from "./services/ScheduleServices/ScheduleReconciliationService";
 import User from "./models/User";
 import Whatsapp from "./models/Whatsapp";
 import ShowFileService from "./services/FileServices/ShowService";
@@ -163,8 +165,8 @@ async function handleSendMessage(job) {
                   await ticket.reload();
 
                   const io = getIO();
-                  io.to(ticket.status)
-                    .to("notification")
+                  io.to(`company-${ticket.companyId}-${ticket.status}`).to(`queue-${ticket.queueId}-${ticket.status}`)
+                    .to(`company-${ticket.companyId}-notification`).to(`queue-${ticket.queueId}-notification`)
                     .to(ticket.id.toString())
                     .emit(`company-${companyId}-ticket`, {
                       action: "update",
@@ -217,29 +219,42 @@ async function handleCloseTicketsAutomatic() {
 
 async function handleVerifySchedules(job) {
   try {
+    // 1. Reconcile any schedules that became overdue during downtime / interruption
+    await reconcileOverdueSchedules({ gracePeriodSeconds: 60 });
+
+    // 2. Query schedules due in the current window (between -60s and +30s)
     const { count, rows: schedules } = await Schedule.findAndCountAll({
       where: {
         status: "PENDENTE",
         sentAt: null,
         sendAt: {
-          [Op.gte]: moment().format("YYYY-MM-DD HH:mm:ss"),
-          [Op.lte]: moment().add("30", "seconds").format("YYYY-MM-DD HH:mm:ss")
+          [Op.gte]: moment().subtract(60, "seconds").format("YYYY-MM-DD HH:mm:ss"),
+          [Op.lte]: moment().add(30, "seconds").format("YYYY-MM-DD HH:mm:ss")
         }
       },
       include: [{ model: Contact, as: "contact" }]
     });
+
     if (count > 0) {
-      schedules.map(async schedule => {
+      for (const schedule of schedules) {
         await schedule.update({
           status: "AGENDADA"
         });
-        sendScheduledMessages.add(
+
+        // Dynamic delay based on actual sendAt without arbitrary 40-second lag
+        const delay = Math.max(0, moment(schedule.sendAt).diff(moment()));
+
+        await sendScheduledMessages.add(
           "SendMessage",
-          { schedule },
-          { delay: 40000 }
+          { schedule: { id: schedule.id, companyId: schedule.companyId } },
+          {
+            jobId: `schedule-${schedule.id}`,
+            delay,
+            removeOnComplete: true
+          }
         );
-        logger.info(`Disparo agendado para: ${schedule.contact.name}`);
-      });
+        logger.info(`Disparo agendado para: ${schedule.contact?.name || schedule.id} com delay ${delay}ms`);
+      }
     }
   } catch (e: any) {
     Sentry.captureException(e);
@@ -249,45 +264,87 @@ async function handleVerifySchedules(job) {
 }
 
 async function handleSendScheduledMessage(job) {
-  const {
-    data: { schedule }
-  } = job;
+  const { schedule } = job.data;
+  const scheduleId = schedule?.id;
+  if (!scheduleId) return;
+
   let scheduleRecord: Schedule | null = null;
 
   try {
-    scheduleRecord = await Schedule.findByPk(schedule.id);
+    scheduleRecord = await Schedule.findByPk(scheduleId);
   } catch (e) {
     Sentry.captureException(e);
-    logger.info(`Erro ao tentar consultar agendamento: ${schedule.id}`);
+    logger.info(`Erro ao tentar consultar agendamento: ${scheduleId}`);
+    return;
+  }
+
+  if (!scheduleRecord) {
+    logger.info(`Agendamento #${scheduleId} não encontrado (pode ter sido excluído). Abortando.`);
+    return;
+  }
+
+  // Guard against cancelled, already sent, in review or rescheduled
+  if (scheduleRecord.status === "CANCELADA") {
+    logger.info(`Agendamento #${scheduleId} cancelado. Ignorando envio.`);
+    return;
+  }
+
+  if (scheduleRecord.status === "ENVIADA" || scheduleRecord.sentAt !== null) {
+    logger.info(`Agendamento #${scheduleId} já enviado. Evitando duplicação.`);
+    return;
+  }
+
+  if (scheduleRecord.status === "EM_REVISAO") {
+    logger.warn(`Agendamento #${scheduleId} está em revisão humana. Não disparar automaticamente.`);
+    return;
+  }
+
+  // If rescheduled to the future (more than 30s ahead), revert to PENDENTE
+  if (moment(scheduleRecord.sendAt).isAfter(moment().add(30, "seconds"))) {
+    logger.info(`Agendamento #${scheduleId} foi reagendado para o futuro. Retornando a PENDENTE.`);
+    await scheduleRecord.update({ status: "PENDENTE" });
+    return;
   }
 
   try {
-    const whatsapp = await GetDefaultWhatsApp(schedule.companyId);
+    const contact = await Contact.findByPk(scheduleRecord.contactId);
+    if (!contact || contact.companyId !== scheduleRecord.companyId) throw new Error("ERR_NO_PERMISSION");
+    const whatsapp = await GetDefaultWhatsApp(scheduleRecord.companyId);
 
     let filePath = null;
-    if (schedule.mediaPath) {
-      filePath = path.resolve("public", schedule.mediaPath);
+    if (scheduleRecord.mediaPath) {
+      filePath = confinedPath(path.resolve(__dirname, "..", "public"), scheduleRecord.mediaPath);
     }
 
     await SendMessage(whatsapp, {
-      number: schedule.contact.number,
-      body: formatBody(schedule.body, schedule.contact),
+      number: contact.number,
+      body: formatBody(scheduleRecord.body, contact),
       mediaPath: filePath
     });
 
-    await scheduleRecord?.update({
-      sentAt: moment().format("YYYY-MM-DD HH:mm"),
+    await scheduleRecord.update({
+      sentAt: moment().toDate(),
       status: "ENVIADA"
     });
 
-    logger.info(`Mensagem agendada enviada para: ${schedule.contact.name}`);
+    logger.info(`Mensagem agendada enviada para: ${contact.name}`);
     sendScheduledMessages.clean(15000, "completed");
   } catch (e: any) {
     Sentry.captureException(e);
-    await scheduleRecord?.update({
-      status: "ERRO"
-    });
-    logger.error("SendScheduledMessage -> SendMessage: error", e.message);
+    const retries = (scheduleRecord.retries || 0) + 1;
+    if (retries < 3) {
+      await scheduleRecord.update({
+        retries,
+        status: "PENDENTE"
+      });
+      logger.warn(`Erro temporário ao enviar agendamento #${scheduleId}. Tentativa ${retries}/3 agendada.`);
+    } else {
+      await scheduleRecord.update({
+        retries,
+        status: "ERRO"
+      });
+      logger.error(`Tentativas esgotadas para agendamento #${scheduleId}. Status marcado como ERRO.`);
+    }
     throw e;
   }
 }
@@ -332,12 +389,12 @@ async function handleVerifyCampaigns(job) {
 }
 
 async function getCampaign(id) {
-  return await Campaign.findByPk(id, {
+  const campaign = await Campaign.findByPk(id, {
     include: [
       {
         model: ContactList,
         as: "contactList",
-        attributes: ["id", "name"],
+        attributes: ["id", "name", "companyId"],
         include: [
           {
             model: ContactListItem,
@@ -350,7 +407,7 @@ async function getCampaign(id) {
       {
         model: Whatsapp,
         as: "whatsapp",
-        attributes: ["id", "name"]
+        attributes: ["id", "name", "companyId"]
       },
       {
         model: CampaignShipping,
@@ -359,11 +416,14 @@ async function getCampaign(id) {
       }
     ]
   });
+  if (!campaign || campaign.contactList && campaign.contactList.companyId !== campaign.companyId ||
+      campaign.whatsapp && campaign.whatsapp.companyId !== campaign.companyId) throw new Error("ERR_NO_PERMISSION");
+  return campaign;
 }
 
 async function getContact(id) {
   return await ContactListItem.findByPk(id, {
-    attributes: ["id", "name", "number", "email"]
+    attributes: ["id", "name", "number", "email", "companyId", "contactListId"]
   });
 }
 
@@ -601,6 +661,7 @@ async function handlePrepareContact(job) {
       job.data;
     const campaign = await getCampaign(campaignId);
     const contact = await getContact(contactId);
+    if (!contact || contact.companyId !== campaign.companyId || contact.contactListId !== campaign.contactListId) throw new Error("ERR_NO_PERMISSION");
 
     const campaignShipping: any = {};
     campaignShipping.number = contact.number;
@@ -713,6 +774,8 @@ async function handleDispatchCampaign(job) {
       }
     );
 
+    if (!campaignShipping || campaignShipping.campaignId !== campaign.id ||
+        campaignShipping.contact?.companyId !== campaign.companyId) throw new Error("ERR_NO_PERMISSION");
     const chatId = `${campaignShipping.number}@s.whatsapp.net`;
 
     let body = campaignShipping.message;
@@ -725,9 +788,9 @@ async function handleDispatchCampaign(job) {
       try {
         const publicFolder = path.resolve(__dirname, "..", "public");
         const files = await ShowFileService(campaign.fileListId, campaign.companyId)
-        const folder = path.resolve(publicFolder, "fileList", String(files.id))
+        const folder = confinedPath(publicFolder, `fileList/${files.id}`)
         for (const [index, file] of files.options.entries()) {
-          const options = await getMessageOptions(file.path, path.resolve(folder, file.path), file.name);
+          const options = await getMessageOptions(file.path, confinedPath(folder, file.path), file.name);
           await wbot.sendMessage(chatId, { ...options });
         };
       } catch (error) {
@@ -737,7 +800,7 @@ async function handleDispatchCampaign(job) {
 
     if (campaign.mediaPath) {
       const publicFolder = path.resolve(__dirname, "..", "public");
-      const filePath = path.join(publicFolder, campaign.mediaPath);
+      const filePath = confinedPath(publicFolder, campaign.mediaPath);
 
       const options = await getMessageOptions(campaign.mediaName, filePath, body);
       if (Object.keys(options).length) {
@@ -873,6 +936,30 @@ handleCloseTicketsAutomatic()
 
 handleInvoiceCreate()
 
+
+async function handleVerifyQueueWait(job: any) {
+  try {
+    const { checkAndTriggerQueueWaitAlerts } = await import("./services/TicketServices/QueueWaitAlertService");
+    await checkAndTriggerQueueWaitAlerts();
+  } catch (err: any) {
+    logger.error(`queueMonitor -> handleVerifyQueueWait -> error: ${err.message}`);
+  }
+}
+
+export async function stopQueueProcess(): Promise<void> {
+  logger.info("Encerrando processamento de filas Bull de forma ordenada...");
+  const closePromises = [
+    messageQueue.close().catch((e: any) => logger.warn(`Erro ao fechar messageQueue: ${e.message}`)),
+    scheduleMonitor.close().catch((e: any) => logger.warn(`Erro ao fechar scheduleMonitor: ${e.message}`)),
+    sendScheduledMessages.close().catch((e: any) => logger.warn(`Erro ao fechar sendScheduledMessages: ${e.message}`)),
+    campaignQueue.close().catch((e: any) => logger.warn(`Erro ao fechar campaignQueue: ${e.message}`)),
+    userMonitor.close().catch((e: any) => logger.warn(`Erro ao fechar userMonitor: ${e.message}`)),
+    queueMonitor.close().catch((e: any) => logger.warn(`Erro ao fechar queueMonitor: ${e.message}`))
+  ];
+  await Promise.allSettled(closePromises);
+  logger.info("Todas as filas Bull foram encerradas.");
+}
+
 export async function startQueueProcess() {
   logger.info("Iniciando processamento de filas");
 
@@ -892,7 +979,7 @@ export async function startQueueProcess() {
 
   userMonitor.process("VerifyLoginStatus", handleLoginStatus);
 
-  //queueMonitor.process("VerifyQueueStatus", handleVerifyQueue);
+  queueMonitor.process("VerifyQueueStatus", handleVerifyQueueWait);
 
 
 

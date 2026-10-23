@@ -4,6 +4,7 @@ import CheckContactOpenTickets from "../../helpers/CheckContactOpenTickets";
 import SetTicketMessagesAsRead from "../../helpers/SetTicketMessagesAsRead";
 import { getIO } from "../../libs/socket";
 import Ticket from "../../models/Ticket";
+import User from "../../models/User";
 import Setting from "../../models/Setting";
 import Queue from "../../models/Queue";
 import ShowTicketService from "./ShowTicketService";
@@ -19,6 +20,7 @@ import Whatsapp from "../../models/Whatsapp";
 import { Op } from "sequelize";
 import AppError from "../../errors/AppError";
 import { logger } from "../../utils/logger";
+import { logAuditEvent } from "../../security/audit";
 
 interface TicketData {
   status?: string;
@@ -37,6 +39,7 @@ interface Request {
   ticketData: TicketData;
   ticketId: string | number;
   companyId: number;
+  userId?: number;
 }
 
 interface Response {
@@ -48,7 +51,8 @@ interface Response {
 const UpdateTicketService = async ({
   ticketData,
   ticketId,
-  companyId
+  companyId,
+  userId: requestUserId
 }: Request): Promise<Response> => {
 
   try {
@@ -72,8 +76,6 @@ const UpdateTicketService = async ({
       }
     });
 
-
-
     const ticket = await ShowTicketService(ticketId, companyId);
     const ticketTraking = await FindOrCreateATicketTrakingService({
       ticketId,
@@ -82,35 +84,64 @@ const UpdateTicketService = async ({
     });
 
     if (isNil(whatsappId)) {
-      whatsappId = ticket.whatsappId.toString();
+      whatsappId = ticket.whatsappId ? ticket.whatsappId.toString() : null;
     }
 
     await SetTicketMessagesAsRead(ticket);
 
-    const oldStatus = ticket.status;
+        const oldStatus = ticket.status;
     const oldUserId = ticket.user?.id;
     const oldQueueId = ticket.queueId;
 
-    if (oldStatus === "closed" || Number(whatsappId) !== ticket.whatsappId) {
-      // let otherTicket = await Ticket.findOne({
-      //   where: {
-      //     contactId: ticket.contactId,
-      //     status: { [Op.or]: ["open", "pending", "group"] },
-      //     whatsappId
-      //   }
-      // });
-      // if (otherTicket) {
-      //     otherTicket = await ShowTicketService(otherTicket.id, companyId)
+    // Concurrency & validation guards
+    if (status === "closed" && oldStatus === "closed") {
+      throw new AppError("ERR_TICKET_ALREADY_CLOSED", 400);
+    }
 
-      //     await ticket.update({status: "closed"})
+    if (!isNil(queueId) && queueId !== oldQueueId) {
+      const queueExists = await Queue.findOne({ where: { id: queueId, companyId } });
+      if (!queueExists) throw new AppError("ERR_INVALID_QUEUE", 400);
+    }
 
-      //     io.to(oldStatus).emit(`company-${companyId}-ticket`, {
-      //       action: "delete",
-      //       ticketId: ticket.id
-      //     });
+    if (!isNil(userId) && userId !== oldUserId) {
+      const userExists = await User.findOne({ where: { id: userId, companyId } });
+      if (!userExists) throw new AppError("ERR_INVALID_USER", 400);
+    }
 
-      //     return { ticket: otherTicket, oldStatus, oldUserId }
-      // }
+    if (!isNil(whatsappId) && Number(whatsappId) !== ticket.whatsappId) {
+      const wappExists = await Whatsapp.findOne({ where: { id: Number(whatsappId), companyId } });
+      if (!wappExists) throw new AppError("ERR_INVALID_WHATSAPP", 400);
+    }
+
+    // Atomic conditional claim when an attendant is accepting an unassigned or pending ticket
+    const isClaiming = (status === "open" && !isNil(userId)) || (!isNil(userId) && isNil(oldUserId));
+    if (isClaiming && oldUserId !== userId) {
+      if (!isNil(oldUserId) && oldUserId !== userId) {
+        throw new AppError("ERR_TICKET_ALREADY_CLAIMED", 409);
+      }
+
+      // Atomic conditional update to prevent race conditions between concurrent attendants
+      const [affectedRows] = await Ticket.update(
+        { userId, status: status || "open" },
+        {
+          where: {
+            id: ticket.id,
+            companyId,
+            [Op.or]: [
+              { userId: null },
+              { userId: userId }
+            ]
+          }
+        }
+      );
+
+      if (affectedRows === 0) {
+        throw new AppError("ERR_TICKET_ALREADY_CLAIMED", 409);
+      }
+    }
+
+    const hasNewWhatsappId = !isNil(ticketData.whatsappId) && Number(ticketData.whatsappId) !== ticket.whatsappId;
+    if (oldStatus === "closed" || hasNewWhatsappId) {
       await CheckContactOpenTickets(ticket.contact.id, whatsappId);
       chatbot = null;
       queueOptionId = null;
@@ -172,15 +203,13 @@ const UpdateTicketService = async ({
         integrationId: null,
         useIntegration: false,
         typebotStatus: false,
-        typebotSessionId: null
+        typebotSessionId: null,
+        closedAt: new Date()
       });
 
       ticketTraking.finishedAt = moment().toDate();
       ticketTraking.whatsappId = ticket.whatsappId;
       ticketTraking.userId = ticket.userId;
-
-      /*    queueId = null;
-            userId = null; */
     }
 
     if (queueId !== undefined && queueId !== null) {
@@ -256,7 +285,7 @@ const UpdateTicketService = async ({
       }
     }
 
-    await ticket.update({
+    const updatePayload: any = {
       status,
       queueId,
       userId,
@@ -264,7 +293,20 @@ const UpdateTicketService = async ({
       chatbot,
       queueOptionId,
       lastMessage: lastMessage !== null ? lastMessage : ticket.lastMessage
-    });
+    };
+
+    if (status === "closed") {
+      updatePayload.closedAt = ticket.closedAt || new Date();
+      updatePayload.currentWaitEpisodeId = null;
+      try {
+        const { resolveQueueWaitAlert } = await import("./QueueWaitAlertService");
+        await resolveQueueWaitAlert(ticket.id, requestUserId || ticket.userId);
+      } catch (e) {}
+    } else if (oldStatus === "closed" && status !== undefined && status !== "closed") {
+      updatePayload.closedAt = null;
+    }
+
+    await ticket.update(updatePayload);
 
     await ticket.reload();
 
@@ -290,10 +332,46 @@ const UpdateTicketService = async ({
 
     await ticketTraking.save();
 
-    if (ticket.status !== oldStatus || ticket.user?.id !== oldUserId) {
+    // Audit logs for critical ticket transitions
+    const actorId = requestUserId || ticket.userId;
+    if (status === "closed" && oldStatus !== "closed") {
+      await logAuditEvent({
+        companyId,
+        userId: actorId,
+        resource: "ticket",
+        action: "close",
+        result: "success",
+        targetId: ticket.id,
+        details: { oldStatus, queueId: ticket.queueId, previousUserId: oldUserId }
+      });
+    } else if (oldStatus === "closed" && status !== undefined && status !== "closed") {
+      await logAuditEvent({
+        companyId,
+        userId: actorId,
+        resource: "ticket",
+        action: "reopen",
+        result: "success",
+        targetId: ticket.id,
+        details: { newStatus: status, queueId: ticket.queueId }
+      });
+    }
+
+    if ((oldQueueId !== queueId && !isNil(queueId)) || (oldUserId !== userId && !isNil(userId))) {
+      await logAuditEvent({
+        companyId,
+        userId: actorId,
+        resource: "ticket",
+        action: "transfer",
+        result: "success",
+        targetId: ticket.id,
+        details: { oldQueueId, newQueueId: queueId, oldUserId, newUserId: userId }
+      });
+    }
+
+    if (ticket.status !== oldStatus || ticket.user?.id !== oldUserId || ticket.queueId !== oldQueueId) {
 
       io.to(`company-${companyId}-${oldStatus}`)
-        .to(`queue-${ticket.queueId}-${oldStatus}`)
+        .to(`queue-${oldQueueId}-${oldStatus}`)
         .to(`user-${oldUserId}`)
         .emit(`company-${companyId}-ticket`, {
           action: "delete",
@@ -306,8 +384,6 @@ const UpdateTicketService = async ({
       .to(`queue-${ticket.queueId}-${ticket.status}`)
       .to(`queue-${ticket.queueId}-notification`)
       .to(ticketId.toString())
-      .to(`user-${ticket?.userId}`)
-      .to(`user-${oldUserId}`)
       .emit(`company-${companyId}-ticket`, {
         action: "update",
         ticket

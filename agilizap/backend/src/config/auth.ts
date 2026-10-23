@@ -1,6 +1,6 @@
+import "../bootstrap";
+import { requireSecret } from "../security/config";
 export default {
-  secret: process.env.JWT_SECRET || "mysecret",
-  expiresIn: "15m",
-  refreshSecret: process.env.JWT_REFRESH_SECRET || "myanothersecret",
-  refreshExpiresIn: "7d"
+  secret: requireSecret("JWT_SECRET"), expiresIn: "15m",
+  refreshSecret: requireSecret("JWT_REFRESH_SECRET"), refreshExpiresIn: "7d"
 };

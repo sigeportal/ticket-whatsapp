@@ -100,7 +100,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   });
 
   const io = getIO();
-  io.to(ticket.status).emit(`company-${companyId}-ticket`, {
+  io.to(`company-${companyId}-${ticket.status}`).to(`queue-${ticket.queueId}-${ticket.status}`).emit(`company-${companyId}-ticket`, {
     action: "update",
     ticket
   });
@@ -190,7 +190,8 @@ export const update = async (
   const result = await UpdateTicketService({
     ticketData,
     ticketId,
-    companyId
+    companyId,
+    userId: Number(req.user.id)
   });
 
   return res.status(200).json(result?.ticket || result);

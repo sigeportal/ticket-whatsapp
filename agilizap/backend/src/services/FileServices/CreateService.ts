@@ -53,6 +53,7 @@ const CreateService = async ({
   if(options && options.length > 0) {
     await Promise.all(
       options.map(async info => {
+        if (info.id || info.path) throw new AppError("ERR_NO_PERMISSION", 403);
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         await FilesOptions.upsert({ ...info, fileId: fileList.id });

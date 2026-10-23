@@ -1,51 +1,29 @@
-import sequelize from "sequelize";
-import database from "../../database";
+import { logger } from "../../utils/logger";
+import { Op, literal } from "sequelize";
 import { hash } from "bcryptjs";
-const ResetPassword = async (
-  email: string,
-  token: string,
-  password: string
-) => {
-  const { hasResult, data } = await filterUser(email, token);
-  if (!hasResult) {
-    return { status: 404, message: "Email não encontrado" };
+import User from "../../models/User";
+import AppError from "../../errors/AppError";
+import { validatePassword } from "../../security/policy";
+import { hashResetToken } from "../../security/passwordReset";
+import { disconnectUser } from "../../libs/socket";
+const ResetPassword = async (email: string, token: string, password: string): Promise<void> => {
+  validatePassword(password);
+  if (typeof email !== "string" || typeof token !== "string" || !/^[a-f0-9]{64}$/.test(token)) {
+    throw new AppError("ERR_INVALID_RESET_TOKEN", 400);
   }
-  if (hasResult === true) {
-    try {
-      const convertPassword: string = await hash(password, 8);
-      const { hasResults, datas } = await insertHasPassword(
-        email,
-        token,
-        convertPassword
-      );
-      if (datas.length === 0) {
-        return { status: 404, message: "Token não encontrado" };
-      }
-    } catch (err) {
-      console.log(err);
-    }
-  }
+  const passwordHash = await hash(password, 12);
+  // Conditional UPDATE consumes the token atomically; never check then write.
+  const [count, users] = await User.update({
+    passwordHash, mustChangePassword: false, resetTokenHash: null, resetTokenExpiresAt: null,
+    tokenVersion: literal('"tokenVersion" + 1') as any
+  }, {
+    where: { email, resetTokenHash: hashResetToken(token), resetTokenExpiresAt: { [Op.gt]: new Date() } },
+    returning: true
+  });
+  if (count !== 1) throw new AppError("ERR_INVALID_RESET_TOKEN", 400);
+  users.forEach(user => {
+    disconnectUser(user.id);
+    logger.info({ event: "password_reset_completed", companyId: user.companyId, targetId: user.id });
+  });
 };
 export default ResetPassword;
-const filterUser = async (email: string, token: string) => {
-  const sql = `SELECT * FROM "Users"  WHERE email = '${email}' AND "resetPassword" != ''`;
-  const result = await database.query(sql, {
-    type: sequelize.QueryTypes.SELECT
-  });
-  return { hasResult: result.length > 0, data: result };
-};
-const insertHasPassword = async (
-  email: string,
-  token: string,
-  convertPassword: string
-) => {
-  const sqlValida = `SELECT * FROM "Users"  WHERE email = '${email}' AND "resetPassword" = '${token}'`;
-  const resultado = await database.query(sqlValida, {
-    type: sequelize.QueryTypes.SELECT
-  });
-  const sqls = `UPDATE  "Users"  SET "passwordHash"= '${convertPassword}' , "resetPassword" = '' WHERE email= '${email}' AND "resetPassword" = '${token}'`;
-  const results = await database.query(sqls, {
-    type: sequelize.QueryTypes.UPDATE
-  });
-  return { hasResults: results.length > 0, datas: resultado };
-};

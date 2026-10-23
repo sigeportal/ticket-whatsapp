@@ -144,7 +144,7 @@ export const listPlan = async (req: Request, res: Response): Promise<Response> =
 
   const authHeader = req.headers.authorization;
   const [, token] = authHeader.split(" ");
-  const decoded = verify(token, authConfig.secret);
+  const decoded = req.user;
   const { id: requestUserId, profile, companyId } = decoded as TokenPayload;
   const requestUser = await User.findByPk(requestUserId);
 
@@ -165,7 +165,7 @@ export const indexPlan = async (req: Request, res: Response): Promise<Response> 
 
   const authHeader = req.headers.authorization;
   const [, token] = authHeader.split(" ");
-  const decoded = verify(token, authConfig.secret);
+  const decoded = req.user;
   const { id, profile, companyId } = decoded as TokenPayload;
   // const company = await Company.findByPk(companyId);
   const requestUser = await User.findByPk(id);

@@ -8,11 +8,11 @@ const planRoutes = express.Router();
 
 planRoutes.get("/plans", isAuth, PlanController.index);
 
-planRoutes.get("/plans/list", PlanController.list);
+planRoutes.get("/plans/list", isAuth, PlanController.list);
 
-planRoutes.get("/plans/all", PlanController.list);
+planRoutes.get("/plans/all", isAuth, PlanController.list);
 
-planRoutes.get("/plans/register", PlanController.register);
+planRoutes.get("/plans/register", isAuth, PlanController.register);
 
 planRoutes.get("/plans/:id", isAuth, PlanController.show);
 

@@ -1,0 +1,21 @@
+> backend@1.0.0 test:governance
+> node tests/governance/run.cjs
+
+PASS migration up executed inside isolated PostgreSQL/WASM
+PASS migration down/up reversibility verified
+PASS Auditoria: registro imutavel, higienizacao de segredos e gravacao segura
+PASS Auditoria: listagem e isolamento estrito entre empresas (Company 1 vs Company 2)
+PASS Auditoria: atendente tem acesso negado (403) e tentativa gera log com result denied
+PASS Auditoria: exportacao estruturada com filtros por recurso e acao
+ticketData { status: 'closed' }
+ticketData { status: 'open' }
+null
+PASS Ciclo de vida: fechamento grava closedAt, reabertura limpa closedAt e acoes sao auditadas
+PASS Ciclo de vida: dentro da tolerancia reabre; apos tolerancia cria NOVO ticket e preserva closedAt antigo
+PASS Legal Hold: protecao contra expurgo com justificativa obrigatoria, auditada e RBAC
+PASS Retencao: simulacao (dry-run) calcula conversas e anexos elegiveis sem apagar registros ou arquivos
+PASS Retencao: expurgo real de anexos (1 ano) e conversas (2 anos) preserva legal hold e unlinks arquivos
+PASS Titular LGPD: exportacao integral de dados cadastrais, tickets e mensagens com isolamento
+PASS Titular LGPD: anonimizacao bloqueada se houver legal hold e realizada com sucesso sem hold
+PASS Campanhas: opt-out bloqueia envios ao contato e atualiza listas com auditoria
+RESULT 12/12 passed; isolated PostgreSQL/WASM, zero external services

@@ -8,6 +8,9 @@ import Contact from "../../models/Contact";
 import Message from "../../models/Message";
 import Queue from "../../models/Queue";
 import { logger } from "../../utils/logger";
+import { sanitizeAIResponse } from "./AISanitizer";
+import { validateAudioForAI } from "./AIAudioValidator";
+import { checkCompanyAIBudget, recordAIUsage } from "./AIBudgetService";
 
 export interface AIRequestOptions {
   prompt: Prompt;
@@ -16,6 +19,7 @@ export interface AIRequestOptions {
   userMessage?: string;
   audioFilePath?: string;
   historyMessages?: Message[];
+  timeoutMs?: number;
 }
 
 export interface AIResponseResult {
@@ -23,15 +27,90 @@ export interface AIResponseResult {
   transferQueue: boolean;
   queueId?: number;
   summary?: string;
+  isFallback?: boolean;
+  fallbackReason?: string;
 }
 
 const sanitizeName = (name: string): string => {
-  let sanitized = name.split(" ")[0];
+  let sanitized = (name || "").split(" ")[0];
   sanitized = sanitized.replace(/[^a-zA-Z0-9]/g, "");
   return sanitized.substring(0, 60);
 };
 
-const buildValidGeminiHistory = (
+const VALID_TEXT_MEDIA_TYPES = new Set([
+  "chat",
+  "conversation",
+  "extendedTextMessage",
+  "editedMessage"
+]);
+
+const SESSION_GAP_MS = 4 * 60 * 60 * 1000; // 4 horas
+
+const isTransferBoundaryMessage = (m: Message): boolean => {
+  if (m.mediaType === "ai_summary") return true;
+  if (!m.fromMe || !m.body) return false;
+  const text = m.body.toLowerCase();
+  return (
+    text.includes("transferindo para atendimento humano") ||
+    text.includes("você foi direcionado para o setor") ||
+    text.includes("você foi encaminhado(a) para a nossa equipe")
+  );
+};
+
+export const extractCurrentSessionMessages = (
+  historyMessages: Message[] | undefined,
+  currentMessage: string,
+  maxCount: number = 15
+): Message[] => {
+  if (!historyMessages || historyMessages.length === 0) {
+    return [];
+  }
+
+  const chronological = [...historyMessages].sort((a, b) => {
+    const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return timeA - timeB;
+  });
+
+  let sessionStartIdx = 0;
+  for (let i = 0; i < chronological.length; i++) {
+    const msg = chronological[i];
+    if (isTransferBoundaryMessage(msg)) {
+      sessionStartIdx = i + 1;
+      continue;
+    }
+    if (i > sessionStartIdx) {
+      const prevTime = chronological[i - 1].createdAt
+        ? new Date(chronological[i - 1].createdAt).getTime()
+        : 0;
+      const currTime = msg.createdAt ? new Date(msg.createdAt).getTime() : 0;
+      if (prevTime > 0 && currTime > 0 && currTime - prevTime > SESSION_GAP_MS) {
+        sessionStartIdx = i;
+      }
+    }
+  }
+
+  const sessionMsgs = chronological.slice(sessionStartIdx);
+
+  const validTextMsgs = sessionMsgs.filter(m => {
+    if (!m.body || m.body.trim() === "") return false;
+    if (m.mediaType === "ai_summary" || m.mediaType === "reactionMessage") return false;
+    return VALID_TEXT_MEDIA_TYPES.has(m.mediaType) || !m.getDataValue?.("mediaUrl");
+  });
+
+  if (
+    validTextMsgs.length > 0 &&
+    !validTextMsgs[validTextMsgs.length - 1].fromMe &&
+    currentMessage &&
+    validTextMsgs[validTextMsgs.length - 1].body.trim() === currentMessage.trim()
+  ) {
+    validTextMsgs.pop();
+  }
+
+  return validTextMsgs.slice(-Math.min(maxCount, validTextMsgs.length));
+};
+
+export const buildValidGeminiHistory = (
   historyMessages: Message[] | undefined,
   currentMessage: string,
   maxCount: number = 15
@@ -41,30 +120,24 @@ const buildValidGeminiHistory = (
     parts: Array<{ text: string }>;
   }> = [];
 
-  if (!historyMessages || historyMessages.length === 0) {
+  const sliced = extractCurrentSessionMessages(
+    historyMessages,
+    currentMessage,
+    maxCount
+  );
+
+  if (sliced.length === 0) {
     return history;
   }
-
-  // Filtrar mensagens de chat excluindo a mensagem atual se já estiver no banco
-  const filtered = historyMessages.filter((m, idx) => {
-    if (idx === historyMessages.length - 1 && !m.fromMe && m.body === currentMessage) {
-      return false;
-    }
-    return m.mediaType === "chat" && m.body && m.body.trim() !== "";
-  });
-
-  const sliced = filtered.slice(-Math.min(maxCount, filtered.length));
 
   for (const m of sliced) {
     const role: "user" | "model" = m.fromMe ? "model" : "user";
     const text = m.body.trim();
 
-    // A conversa do Gemini DEVE iniciar com 'user'. Ignora mensagens do modelo no topo.
     if (history.length === 0 && role === "model") {
       continue;
     }
 
-    // O Gemini proíbe mensagens consecutivas do mesmo papel (ex: user seguido de user)
     if (history.length > 0 && history[history.length - 1].role === role) {
       history[history.length - 1].parts[0].text += `\n${text}`;
     } else {
@@ -75,7 +148,6 @@ const buildValidGeminiHistory = (
     }
   }
 
-  // Antes de chat.sendMessage(currentMessage), o histórico não pode terminar com 'user'
   if (history.length > 0 && history[history.length - 1].role === "user") {
     history.pop();
   }
@@ -83,17 +155,61 @@ const buildValidGeminiHistory = (
   return history;
 };
 
+const withTimeout = <T>(promise: Promise<T>, ms: number, message: string): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(message)), ms)
+    )
+  ]);
+};
+
 export const generateAIResponse = async (
   options: AIRequestOptions
 ): Promise<AIResponseResult> => {
-  const { prompt, ticket, contact, userMessage, audioFilePath, historyMessages } = options;
+  const { prompt, ticket, contact, userMessage, audioFilePath, historyMessages, timeoutMs } = options;
+
+  const defaultTimeout = timeoutMs || (process.env.AI_TIMEOUT_MS ? parseInt(process.env.AI_TIMEOUT_MS, 10) : 20000);
+
+  // 1. Validar orçamento de IA da empresa (D-07)
+  const budgetCheck = await checkCompanyAIBudget(ticket.companyId);
+  if (!budgetCheck.allowed) {
+    logger.warn(`[AIService] Transferência humana imediata: orçamento de IA esgotado na empresa ${ticket.companyId}`);
+    return {
+      text: "Estou direcionando seu atendimento para a nossa equipe humana. Um instante, por favor.",
+      transferQueue: true,
+      queueId: prompt.queueId,
+      summary: `*Motivo:* Teto orçamentário mensal de IA atingido na empresa.\n*Mensagem do cliente:* ${userMessage || "Sem texto"}\n*Ação:* Atendimento humano assumiu automaticamente.`,
+      isFallback: true,
+      fallbackReason: "MONTHLY_BUDGET_EXCEEDED"
+    };
+  }
+
+  // 2. Validar áudio no servidor se houver áudio enviado (D-07: max 10 min e 20 MB)
+  if (audioFilePath) {
+    const audioValidation = await validateAudioForAI(audioFilePath);
+    if (!audioValidation.valid) {
+      logger.warn(`[AIService] Áudio excedeu limites da IA: ${audioValidation.reason} (${audioValidation.durationSeconds}s, ${audioValidation.sizeBytes} bytes). Encaminhando para humano.`);
+      return {
+        text: "Identificamos que seu áudio possui mais de 10 minutos. Para melhor te atender, estou transferindo diretamente para nossa equipe humana.",
+        transferQueue: true,
+        queueId: prompt.queueId,
+        summary: `*Motivo:* Áudio superior a 10 minutos ou 20 MB enviado pelo cliente (${Math.round((audioValidation.durationSeconds || 0) / 60)} min).\n*Ação:* Atendimento humano requerido para audição completa.`,
+        isFallback: true,
+        fallbackReason: audioValidation.reason
+      };
+    }
+  }
 
   const provider = (prompt.provider || process.env.AI_PROVIDER || "gemini").toLowerCase();
+
+  // Preservar o modelo escolhido configurado pelo usuário no Prompt sem substituição silenciosa
   const modelName =
-    prompt.model ||
-    (provider === "gemini"
-      ? process.env.GEMINI_MODEL || "gemini-1.5-flash"
-      : process.env.OPENAI_MODEL || "gpt-4o-mini");
+    prompt.model && prompt.model.trim() !== ""
+      ? prompt.model.trim()
+      : provider === "gemini"
+      ? process.env.GEMINI_MODEL || "gemini-3.5-flash-lite"
+      : process.env.OPENAI_MODEL || "gpt-4o-mini";
 
   const apiKey =
     prompt.apiKey && prompt.apiKey.trim() !== ""
@@ -106,12 +222,17 @@ export const generateAIResponse = async (
     logger.warn(
       `[AIService] Chave de API não configurada para o provedor ${provider} (Prompt ID: ${prompt.id})`
     );
-    throw new Error(
-      `Chave de API não configurada para ${provider}. Configure no Prompt ou nas variáveis de ambiente.`
-    );
+    return {
+      text: "Estou transferindo seu atendimento para a nossa equipe humana. Por favor, aguarde um instante.",
+      transferQueue: true,
+      queueId: prompt.queueId,
+      summary: `*Motivo:* Chave de API de IA não configurada para ${provider}.\n*Ação:* Atendimento humano requerido.`,
+      isFallback: true,
+      fallbackReason: "MISSING_API_KEY"
+    };
   }
 
-  const clientName = sanitizeName(contact.name || "Amigo(a)");
+  const clientName = sanitizeName(contact?.name || "Amigo(a)");
 
   let companyQueues: Queue[] = [];
   try {
@@ -124,35 +245,63 @@ export const generateAIResponse = async (
     logger.warn(`[AIService] Erro ao buscar filas da empresa: ${e}`);
   }
 
+  const currentSessionMessages = extractCurrentSessionMessages(
+    historyMessages,
+    userMessage || "",
+    prompt.maxMessages || 15
+  );
+  const assistantTurnsCount = currentSessionMessages.filter(m => m.fromMe).length;
+
   const queueOptionsText = companyQueues.length > 0
-    ? `SETORES/FILAS DISPONÍVEIS PARA ATENDIMENTO HUMANO:
+    ? `SETORES/FILAS DISPONÍVEIS PARA ENCAMINHAMENTO:
 ${companyQueues.map(q => `- ${q.name}`).join("\n")}
 
-Ao realizar a transferência para atendimento humano, escolha o setor mais adequado ao assunto:
-${companyQueues.map(q => `* Se for assunto de ${q.name.toLowerCase()}: inclua ao final 'Ação: Transferir para a fila [${q.name}]'`).join("\n")}
-* Se o cliente pedir apenas atendimento humano geral ou não especificar o assunto: inclua 'Ação: Transferir para a fila [Atendimento]' (ou a fila geral padrão).`
-    : `Ao transferir, inclua 'Ação: Transferir para o setor de atendimento' ao final.`;
+Ao realizar o encaminhamento para a equipe humana, escolha o setor mais adequado ao assunto:
+${companyQueues.map(q => `* Se for assunto de ${q.name.toLowerCase()}: inclua ao final da mensagem 'Ação: Transferir para a fila [${q.name}]'`).join("\n")}
+* Se não tiver certeza do setor específico: inclua ao final 'Ação: Transferir para a fila [${companyQueues[0].name}]'.`
+    : `Ao encaminhar, inclua 'Ação: Transferir para o setor de atendimento' ao final.`;
 
-  const promptSystem = `Nas respostas utilize o nome ${clientName} para identificar o cliente.
-Sua resposta deve usar no máximo ${prompt.maxTokens || 500} tokens e cuide para não truncar o final.
-Sempre que possível, mencione o nome do cliente de forma amigável e educada.
+  const turnControlRule =
+    assistantTurnsCount === 0
+      ? `- Esta é a PRIMEIRA interação desta conversa. Cumprimente ${clientName} de forma breve e cordial.`
+      : assistantTurnsCount === 1
+      ? `- ATENÇÃO: Você JÁ cumprimentou ${clientName} anteriormente nesta conversa. É PROIBIDO iniciar a resposta com "Olá", "Oi", "Bom dia/Boa tarde" ou se apresentar novamente! Vá direto ao ponto.
+- Se o cliente já informou o problema, a rotina/tela e o erro (ou se for assunto financeiro/comercial claro), TRANSFIRA IMEDIATAMENTE agora. Caso falte saber qual é o erro/tela, faça NO MÁXIMO 1 pergunta direta e objetiva.`
+      : `- ATENÇÃO MÁXIMA (LIMITE DE TRIAGEM ATINGIDO - ${assistantTurnsCount} interações anteriores): É TERMINANTEMENTE PROIBIDO iniciar com "Olá" e PROIBIDO fazer novas perguntas! Com base nas informações que o cliente já passou no histórico, ENCAMINHE IMEDIATAMENTE nesta resposta para o setor responsável, incluindo a ação de transferência e o bloco [RESUMO_IA].`;
 
-REGRA CRÍTICA DE TRANSFERÊNCIA PARA ATENDIMENTO HUMANO:
-- Você é a recepcionista e assistente virtual inteligente da empresa. Seu papel é tirar dúvidas, prestar informações e acolher o cliente.
-- Somente adicione uma ação de transferência se o cliente solicitar EXPLICITAMENTE para falar com uma pessoa, humano ou atendente (exemplos: "quero uma pessoa", "atendente", "falar com humano", "atendimento humano", "quero falar com alguém"), ou se for estritamente necessário passar para um atendente humano.
-- NUNCA adicione a ação de transferência se você estiver apenas perguntando, sugerindo ou oferecendo a opção ao cliente. Nesses casos, apenas ofereça a opção cordialmente sem adicionar a ação.
-- Ao realizar a transferência solicitada, responda cordialmente avisando o cliente que está realizando o encaminhamento para o setor correspondente e inclua a ação de transferência ao final.
-- Sempre que você realizar a transferência para atendimento humano, você DEVE gerar OBRIGATORIAMENTE no final da resposta o seguinte bloco:
-[RESUMO_IA]
-*Motivo:* (Explique em 1 linha o motivo do contato)
-*Tratado pela IA:* (O que o cliente perguntou e o que já foi respondido/esclarecido)
-*Necessidade/Ação:* (O que o atendente humano precisa fazer ou resolver)
-[/RESUMO_IA]
-O bloco [RESUMO_IA] é de uso interno da equipe e não será enviado para o WhatsApp do cliente.
+  const promptSystem = `Você atua como Assistente de Triagem e Encaminhamento Rápido para atendimento.
+O nome do cliente é ${clientName}. Sua resposta deve ser curta, objetiva e usar no máximo ${prompt.maxTokens || 500} tokens.
 
+DIRETRIZES DA EMPRESA:
+${prompt.prompt}
+
+REGRAS CRÍTICAS DE TRIAGEM E ENCAMINHAMENTO INSTANTÂNEO (PRIORIDADE MÁXIMA):
+1. SEU PAPEL É APENAS TRIAGEM E ENCAMINHAMENTO:
+   - NÃO tente resolver problemas técnicos do sistema sozinho, NÃO dê diagnósticos técnicos e NÃO tente ensinar o cliente a consertar o erro.
+   - Seu único objetivo é acolher rapidamente, coletar o contexto essencial do problema em no máximo 1 ou 2 perguntas rápidas e transferir imediatamente para o setor responsável com um resumo claro para o atendente.
+
+2. CONTROLE DE CONVERSA E ANTI-REPETIÇÃO:
+${turnControlRule}
+   - NUNCA repita uma pergunta que você já fez ou que o cliente já respondeu no histórico.
+   - Se o cliente demonstrar pressa, frustração, não souber responder qual é o erro ou pedir um atendente, TRANSFIRA IMEDIATAMENTE sem fazer mais perguntas.
+
+3. QUANDO PERGUNTAR VS. QUANDO TRANSFERIR IMEDIATAMENTE:
+   - Se o cliente enviou apenas uma saudação ou mensagem vaga: pergunte de forma simples e direta qual problema está ocorrendo.
+   - Se o cliente relatou um problema no sistema mas ainda não disse qual tela/rotina ou qual erro aparece: faça APENAS UMA pergunta curta.
+   - Assim que você tiver o contexto mínimo: TRANSFIRA IMEDIATAMENTE!
+
+4. FORMATO OBRIGATÓRIO AO TRANSFERIR:
+   - Quando for transferir, avise o cliente de forma breve que já registrou as informações e está encaminhando agora para o setor responsável.
+   - Inclua OBRIGATORIAMENTE a linha de ação de transferência:
 ${queueOptionsText}
-
-${prompt.prompt}`;
+   - E inclua OBRIGATORIAMENTE no final da resposta o bloco de resumo estruturado para o atendente humano:
+[RESUMO_IA]
+*Setor:* (Nome do setor de destino)
+*Problema/Solicitação:* (Resumo direto do que o cliente precisa)
+*Rotina/Erro:* (Tela do sistema e mensagem de erro informada pelo cliente, ou "Não aplicável")
+*Impacto/Urgência:* (Ex: Crítico - Sistema parado / Normal)
+[/RESUMO_IA]
+O bloco [RESUMO_IA] e a linha 'Ação: Transferir...' são de uso interno do sistema e serão ocultados automaticamente do WhatsApp do cliente.`;
 
   let responseRaw = "";
 
@@ -160,28 +309,23 @@ ${prompt.prompt}`;
     if (provider === "gemini") {
       const genAI = new GoogleGenerativeAI(apiKey);
 
-      let primaryModel = modelName;
-      if (
-        !primaryModel ||
-        primaryModel === "gemini-1.5-flash" ||
-        primaryModel === "gemini-1.5-pro" ||
-        primaryModel === "gemini-2.5-flash" ||
-        primaryModel === "gemini-2.5-flash-lite"
-      ) {
-        primaryModel = "gemini-3.5-flash-lite";
-      }
-
-      const fallbackModel = primaryModel === "gemini-3.5-flash-lite" ? "gemini-3.8-flash" : "gemini-3.5-flash-lite";
-
       const runWithModel = async (targetModel: string) => {
         const generativeModel = genAI.getGenerativeModel({
           model: targetModel,
           systemInstruction: promptSystem,
           generationConfig: {
             maxOutputTokens: prompt.maxTokens || 800,
-            temperature: prompt.temperature !== undefined ? prompt.temperature : 0.7
+            temperature: prompt.temperature !== undefined ? prompt.temperature : 0.4
           }
         });
+
+        const history = buildValidGeminiHistory(
+          historyMessages,
+          userMessage || "",
+          prompt.maxMessages || 15
+        );
+
+        const chat = generativeModel.startChat({ history });
 
         if (audioFilePath && fs.existsSync(audioFilePath)) {
           logger.info(`[AIService] Processando áudio nativo com Gemini (${targetModel}): ${audioFilePath}`);
@@ -192,7 +336,7 @@ ${prompt.prompt}`;
           else if (ext === ".wav") mimeType = "audio/wav";
           else if (ext === ".m4a") mimeType = "audio/m4a";
 
-          const result = await generativeModel.generateContent([
+          const result = await chat.sendMessage([
             {
               inlineData: {
                 mimeType,
@@ -200,37 +344,21 @@ ${prompt.prompt}`;
               }
             },
             {
-              text: "Por favor, ouça o áudio do cliente e responda cordialmente atendendo à sua solicitação conforme as instruções do sistema."
+              text: "Ouça o áudio enviado pelo cliente e siga as regras de triagem e encaminhamento do sistema."
             }
           ]);
           return result.response.text();
         } else {
-          const history = buildValidGeminiHistory(
-            historyMessages,
-            userMessage || "",
-            prompt.maxMessages || 15
-          );
-
-          const chat = generativeModel.startChat({ history });
           const result = await chat.sendMessage(userMessage || "");
           return result.response.text();
         }
       };
 
-      try {
-        responseRaw = await runWithModel(primaryModel);
-      } catch (primaryErr: any) {
-        const errStr = primaryErr?.message || "";
-        logger.warn(
-          `[AIService] Erro no modelo primário Gemini (${primaryModel}): ${errStr}. Tentando modelo fallback (${fallbackModel})...`
-        );
-        try {
-          responseRaw = await runWithModel(fallbackModel);
-        } catch (fallbackErr: any) {
-          logger.error(`[AIService] Modelo fallback (${fallbackModel}) também falhou: ${fallbackErr?.message || fallbackErr}`);
-          throw fallbackErr;
-        }
-      }
+      responseRaw = await withTimeout(
+        runWithModel(modelName),
+        defaultTimeout,
+        `Timeout de resposta da IA (${defaultTimeout}ms)`
+      );
     } else {
       // Provedor OpenAI
       const openai = new OpenAI({ apiKey });
@@ -239,59 +367,50 @@ ${prompt.prompt}`;
       if (audioFilePath && fs.existsSync(audioFilePath)) {
         logger.info(`[AIService] Transcrevendo áudio com Whisper (OpenAI): ${audioFilePath}`);
         const fileStream = fs.createReadStream(audioFilePath) as any;
-        const transcription = await openai.audio.transcriptions.create({
-          model: "whisper-1",
-          file: fileStream
-        });
+        const transcription = await withTimeout(
+          openai.audio.transcriptions.create({
+            model: "whisper-1",
+            file: fileStream
+          }),
+          defaultTimeout,
+          `Timeout de transcrição Whisper (${defaultTimeout}ms)`
+        );
         finalUserMessage = transcription.text;
       }
 
       const openAiMessages: Array<any> = [{ role: "system", content: promptSystem }];
 
-      if (historyMessages && historyMessages.length > 0) {
-        const sorted = historyMessages.slice(-Math.min(prompt.maxMessages || 15, historyMessages.length));
-        for (const m of sorted) {
-          if (m.mediaType === "chat" && m.body) {
-            openAiMessages.push({
-              role: m.fromMe ? "assistant" : "user",
-              content: m.body
-            });
-          }
-        }
+      for (const m of currentSessionMessages) {
+        openAiMessages.push({
+          role: m.fromMe ? "assistant" : "user",
+          content: m.body.trim()
+        });
       }
 
       openAiMessages.push({ role: "user", content: finalUserMessage });
 
-      const chat = await openai.chat.completions.create({
-        model: modelName,
-        messages: openAiMessages,
-        max_tokens: prompt.maxTokens || 500,
-        temperature: prompt.temperature !== undefined ? prompt.temperature : 0.7
-      });
+      const chat = await withTimeout(
+        openai.chat.completions.create({
+          model: modelName,
+          messages: openAiMessages,
+          max_tokens: prompt.maxTokens || 500,
+          temperature: prompt.temperature !== undefined ? prompt.temperature : 0.4
+        }),
+        defaultTimeout,
+        `Timeout de resposta OpenAI (${defaultTimeout}ms)`
+      );
 
       responseRaw = chat.choices[0]?.message?.content || "";
     }
 
-    let transfer = false;
+    // Sanitizar a resposta: extrai o resumo interno, comandos de transferência e evita vazamento de tags
+    const sanitized = sanitizeAIResponse(responseRaw);
+    let transfer = sanitized.transferAction.detected;
     let targetQueueId = prompt.queueId;
-    let summaryText = "";
+    let summaryText = sanitized.summary;
 
-    // Extrair o bloco de Resumo Interno da IA se presente
-    const matchSummary = responseRaw.match(/\[RESUMO_IA\]([\s\S]*?)\[\/RESUMO_IA\]/i);
-    if (matchSummary) {
-      summaryText = matchSummary[1].trim();
-      responseRaw = responseRaw.replace(matchSummary[0], "").trim();
-    }
-
-    // Detectar transferência dinâmica com nome da fila:
-    // Ex: "Ação: Transferir para a fila [Comercial]" ou "Ação: Transferir para o setor Suporte"
-    const matchDynamicQueue = responseRaw.match(/Ação:\s*Transferir para (?:a fila|o setor(?: de)?)\s*\[?([^\]\n\r.]+?)\]?(?:\.|$)/i);
-
-    if (matchDynamicQueue) {
-      transfer = true;
-      const targetName = matchDynamicQueue[1].trim().toLowerCase();
-      responseRaw = responseRaw.replace(matchDynamicQueue[0], "").trim();
-
+    if (sanitized.transferAction.detected && sanitized.transferAction.targetQueueName) {
+      const targetName = sanitized.transferAction.targetQueueName.toLowerCase();
       const matchedQueue = companyQueues.find(q =>
         q.name.toLowerCase() === targetName ||
         targetName.includes(q.name.toLowerCase()) ||
@@ -304,32 +423,43 @@ ${prompt.prompt}`;
       } else {
         logger.info(`[AIService] Fila '${targetName}' não encontrada exatamente. Usando fila padrão (id: ${prompt.queueId})`);
       }
-    } else if (responseRaw?.includes("Ação: Transferir para o setor de atendimento")) {
-      transfer = true;
-      responseRaw = responseRaw
-        .replace(/Ação:\s*Transferir para o setor de atendimento/gi, "")
-        .trim();
     }
 
-    // Fallback de resumo caso tenha transferido mas o modelo não incluiu a tag [RESUMO_IA]
+    // Fallback de resumo caso tenha transferido mas o modelo não incluiu o bloco [RESUMO_IA]
     if (transfer && (!summaryText || summaryText.trim() === "")) {
-      summaryText = `*Motivo:* Transferência solicitada para atendimento humano.\n*Última mensagem do cliente:* "${userMessage || "Sem mensagem de texto"}".\n*Necessidade/Ação:* Dar continuidade ao atendimento com o operador do setor.`;
+      const clientMsgs = currentSessionMessages
+        .filter(m => !m.fromMe && m.body)
+        .map(m => m.body.trim());
+      if (
+        userMessage &&
+        userMessage.trim() !== "" &&
+        (!clientMsgs.length || clientMsgs[clientMsgs.length - 1] !== userMessage.trim())
+      ) {
+        clientMsgs.push(userMessage.trim());
+      }
+      summaryText = `*Motivo:* Encaminhamento automático pós-triagem.\n*Relato do cliente:* ${clientMsgs.join(" | ") || "Sem mensagem de texto"}\n*Necessidade/Ação:* Dar continuidade ao atendimento com o operador do setor.`;
     }
+
+    // Registrar o uso de IA com sucesso
+    await recordAIUsage(ticket.companyId, 0.005);
 
     return {
-      text: responseRaw,
+      text: sanitized.clientText,
       transferQueue: transfer,
       queueId: targetQueueId,
       summary: summaryText
     };
   } catch (err: any) {
     logger.error(`[AIService] Erro ao processar requisição com ${provider}: ${err?.message || err}`);
-    if (err?.message?.includes("503") || err?.message?.includes("high demand") || err?.message?.includes("ResourceExhausted")) {
-      return {
-        text: "Olá! Nosso assistente virtual está com uma alta demanda de mensagens no momento. Por favor, aguarde um instante e envie sua mensagem novamente.",
-        transferQueue: false
-      };
-    }
-    throw err;
+
+    // AI-01: Em timeout, quota, resposta inválida ou indisponibilidade, transferir determinística e confiavelmente para fila humana
+    return {
+      text: "Estou transferindo seu atendimento para a nossa equipe humana. Por favor, aguarde um instante.",
+      transferQueue: true,
+      queueId: prompt.queueId,
+      summary: `*Motivo:* Falha no provedor de IA (${provider}): ${err?.message || "Indisponibilidade ou resposta inválida"}\n*Última mensagem do cliente:* ${userMessage || "Sem texto"}\n*Ação:* Atendimento humano requerido com urgência.`,
+      isFallback: true,
+      fallbackReason: err?.message || "PROVIDER_ERROR"
+    };
   }
 };

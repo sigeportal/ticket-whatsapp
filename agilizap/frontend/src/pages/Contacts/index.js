@@ -37,7 +37,7 @@ import NewTicketModal from "../../components/NewTicketModal";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { generateColor } from "../../helpers/colorGenerator";
 import { getInitials } from "../../helpers/getInitials";
-import {CSVLink} from "react-csv";
+
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_CONTACTS") {
@@ -480,11 +480,14 @@ function getDateLastMessage(contact) {
           >
             {i18n.t("contacts.buttons.importSheet")}
           </Button>
-          <CSVLink style={{ textDecoration: 'none' }} separator=";" filename={'whaticket.csv'} data={contacts.map((contact) => ({ name: contact.name, number: contact.number, email: contact.email }))}>
-            <Button variant="contained" className={classes.secondaryButton}> 
-              EXPORTAR CONTATOS 
-            </Button>
-          </CSVLink>
+          {user.profile === "admin" && <Button variant="contained" color="primary" onClick={async () => {
+            try {
+              const response = await api.get("/contacts/export", { responseType: "blob" });
+              const url = URL.createObjectURL(response.data);
+              const link = document.createElement("a"); link.href = url; link.download = "contatos.csv"; link.click();
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+            } catch (err) { toastError(err); }
+          }}>Exportar contatos</Button>}
           <Button
             variant="contained"
             className={classes.addButton}

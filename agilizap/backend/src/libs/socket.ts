@@ -1,177 +1,86 @@
 import { Server as SocketIO } from "socket.io";
 import { Server } from "http";
 import AppError from "../errors/AppError";
-import { logger } from "../utils/logger";
-import User from "../models/User";
-import Queue from "../models/Queue";
+import { loadSession } from "../security/session";
+import { canAccessTicket } from "../security/policy";
 import Ticket from "../models/Ticket";
-import { verify } from "jsonwebtoken";
-import authConfig from "../config/auth";
-import { CounterManager } from "./counter";
-
 let io: SocketIO;
-
-export const initIO = (httpServer: Server): SocketIO => {
-  io = new SocketIO(httpServer, {
-    cors: {
-      origin: process.env.FRONTEND_URL
-    }
-  });
-
-  io.on("connection", async socket => {
-    logger.info("Client Connected");
-    const { token } = socket.handshake.query;
-    let tokenData = null;
+export const disconnectUser = (id: number | string): void => {
+  io?.in(`user-${id}`).disconnectSockets(true);
+};
+export const enforceTicketRoomAccess = async (ticket: Ticket): Promise<void> => {
+  if (!io) return;
+  const sockets = await io.in(String(ticket.id)).fetchSockets();
+  for (const socket of sockets) {
     try {
-      tokenData = verify(token as string, authConfig.secret);
-      logger.debug(tokenData, "io-onConnection: tokenData");
-    } catch (error) {
-      logger.warn(`[libs/socket.ts] Error decoding token: ${error?.message}`);
-      socket.disconnect();
-      return io;
-    }
-    const counters = new CounterManager();
-
-    let user: User = null;
-    let userId = tokenData.id;
-
-    if (userId && userId !== "undefined" && userId !== "null") {
-      user = await User.findByPk(userId, { include: [ Queue ] });
-      if (user) {
-        user.online = true;
-        await user.save();
-      } else {
-        logger.info(`onConnect: User ${userId} not found`);
-        socket.disconnect();
-        return io;
+      const actor = await loadSession(socket.data.token);
+      if (!canAccessTicket(actor, ticket)) socket.leave(String(ticket.id));
+    } catch (_) { socket.disconnect(true); }
+  }
+};
+export const initIO = (httpServer: Server): SocketIO => {
+  io = new SocketIO(httpServer, { cors: { origin: process.env.FRONTEND_URL, credentials: true } });
+  io.use(async (socket, next) => {
+    try {
+      const token = socket.handshake.auth?.token;
+      const user = await loadSession(token);
+      socket.data.actor = user;
+      socket.data.token = token;
+      next();
+    } catch (_) { next(new Error("ERR_SESSION_EXPIRED")); }
+  });
+  io.on("connection", socket => {
+    let actor = socket.data.actor;
+    socket.join(`company-${actor.companyId}-mainchannel`);
+    socket.join(`user-${actor.id}`);
+    if (actor.profile === "admin") socket.join(`company-${actor.companyId}-admin`);
+    const fingerprint = (user: any) => `${user.profile}|${user.companyId}|${user.tokenVersion}|${user.queues.map((q: any) => q.id).sort().join(",")}`;
+    const initialAccess = fingerprint(actor);
+    const refresh = async () => {
+      const current = await loadSession(socket.data.token);
+      if (fingerprint(current) !== initialAccess) throw new Error("ERR_SESSION_EXPIRED");
+      actor = current;
+      for (const room of socket.rooms) {
+        if (/^\d+$/.test(room) && !canAccessTicket(actor, await Ticket.findByPk(room))) socket.leave(room);
       }
-    } else {
-      logger.info("onConnect: Missing userId");
-      socket.disconnect();
-      return io;
-    }
-
-    socket.join(`company-${user.companyId}-mainchannel`);
-    socket.join(`user-${user.id}`);
-
-    socket.on("joinChatBox", async (ticketId: string) => {
-      if (!ticketId || ticketId === "undefined") {
-        return;
-      }
-      Ticket.findByPk(ticketId).then(
-        (ticket) => {
-          if (ticket && ticket.companyId === user.companyId
-            && (ticket.userId === user.id || user.profile === "admin")) {
-            let c: number;
-            if ((c = counters.incrementCounter(`ticket-${ticketId}`)) === 1) {
-              socket.join(ticketId);
-            }
-            logger.debug(`joinChatbox[${c}]: Channel: ${ticketId} by user ${user.id}`)
-          } else {
-            logger.info(`Invalid attempt to join channel of ticket ${ticketId} by user ${user.id}`)
-          }
-        },
-        (error) => {
-          logger.error(error, `Error fetching ticket ${ticketId}`);
-        }
-      );
+    };
+    socket.use(async (_, next) => {
+      try { await refresh(); next(); } catch (_) { socket.disconnect(true); }
     });
-    
-    socket.on("leaveChatBox", async (ticketId: string) => {
-      if (!ticketId || ticketId === "undefined") {
-        return;
-      }
-
-      let c: number;
-      // o último que sair apaga a luz
-
-      if ((c = counters.decrementCounter(`ticket-${ticketId}`)) === 0) {
-        socket.leave(ticketId);
-      }
-      logger.debug(`leaveChatbox[${c}]: Channel: ${ticketId} by user ${user.id}`)
+    // Also expire idle sockets and remove obsolete queue subscriptions, with no client activity required.
+    const check = setInterval(async () => {
+      try {
+        const previous = actor.queues.map((q: any) => q.id).sort().join(",");
+        const profile = actor.profile;
+        await refresh();
+        if (previous !== actor.queues.map((q: any) => q.id).sort().join(",") || profile !== actor.profile) socket.disconnect(true);
+      } catch (_) { socket.disconnect(true); }
+    }, 10000);
+    socket.on("disconnect", () => clearInterval(check));
+    socket.on("joinChatBox", async (id: string) => {
+      try {
+        if (!/^\d+$/.test(String(id))) return;
+        const ticket = await Ticket.findByPk(id);
+        if (canAccessTicket(actor, ticket)) socket.join(String(ticket.id));
+      } catch (_) { socket.disconnect(true); }
     });
-
-    socket.on("joinNotification", async () => {
-      let c: number;
-      if ((c = counters.incrementCounter("notification")) === 1) {
-        if (user.profile === "admin") {
-          socket.join(`company-${user.companyId}-notification`);
-        } else {
-          user.queues.forEach((queue) => {
-            logger.debug(`User ${user.id} of company ${user.companyId} joined queue ${queue.id} channel.`);
-            socket.join(`queue-${queue.id}-notification`);
-          });
-          if (user.allTicket === "enabled") {
-            socket.join("queue-null-notification");
-          }
-
-        }
-      }
-      logger.debug(`joinNotification[${c}]: User: ${user.id}`);
-    });
-    
-    socket.on("leaveNotification", async () => {
-      let c: number;
-      if ((c = counters.decrementCounter("notification")) === 0) {
-        if (user.profile === "admin") {
-          socket.leave(`company-${user.companyId}-notification`);
-        } else {
-          user.queues.forEach((queue) => {
-            logger.debug(`User ${user.id} of company ${user.companyId} leaved queue ${queue.id} channel.`);
-            socket.leave(`queue-${queue.id}-notification`);
-          });
-          if (user.allTicket === "enabled") {
-            socket.leave("queue-null-notification");
-          }
-        }
-      }
-      logger.debug(`leaveNotification[${c}]: User: ${user.id}`);
-    });
- 
+    socket.on("leaveChatBox", (id: string) => { if (/^\d+$/.test(String(id))) socket.leave(String(id)); });
+    const rooms = (suffix: string): string[] => actor.profile === "admin"
+      ? [`company-${actor.companyId}-${suffix}`]
+      : actor.queues.filter((q: any) => q.companyId === actor.companyId).map((q: any) => `queue-${q.id}-${suffix}`);
+    socket.on("joinNotification", () => rooms("notification").forEach(room => socket.join(room)));
+    socket.on("leaveNotification", () => rooms("notification").forEach(room => socket.leave(room)));
     socket.on("joinTickets", (status: string) => {
-      if (counters.incrementCounter(`status-${status}`) === 1) {
-        if (user.profile === "admin") {
-          logger.debug(`Admin ${user.id} of company ${user.companyId} joined ${status} tickets channel.`);
-          socket.join(`company-${user.companyId}-${status}`);
-        } else if (status === "pending") {
-          user.queues.forEach((queue) => {
-            logger.debug(`User ${user.id} of company ${user.companyId} joined queue ${queue.id} pending tickets channel.`);
-            socket.join(`queue-${queue.id}-pending`);
-          });
-          if (user.allTicket === "enabled") {
-            socket.join("queue-null-pending");
-          }
-        } else {
-          logger.debug(`User ${user.id} cannot subscribe to ${status}`);
-        }
-      }
+      if (["pending", "open", "closed", "group"].includes(status)) rooms(status).forEach(room => socket.join(room));
     });
-    
     socket.on("leaveTickets", (status: string) => {
-      if (counters.decrementCounter(`status-${status}`) === 0) {
-        if (user.profile === "admin") {
-          logger.debug(`Admin ${user.id} of company ${user.companyId} leaved ${status} tickets channel.`);
-          socket.leave(`company-${user.companyId}-${status}`);
-        } else if (status === "pending") {
-          user.queues.forEach((queue) => {
-            logger.debug(`User ${user.id} of company ${user.companyId} leaved queue ${queue.id} pending tickets channel.`);
-            socket.leave(`queue-${queue.id}-pending`);
-          });
-          if (user.allTicket === "enabled") {
-            socket.leave("queue-null-pending");
-          }
-        }
-      }
+      if (["pending", "open", "closed", "group"].includes(status)) rooms(status).forEach(room => socket.leave(room));
     });
-    
     socket.emit("ready");
   });
   return io;
 };
-
 export const getIO = (): SocketIO => {
-  if (!io) {
-    throw new AppError("Socket IO not initialized");
-  }
+  if (!io) throw new AppError("Socket IO not initialized");
   return io;
 };

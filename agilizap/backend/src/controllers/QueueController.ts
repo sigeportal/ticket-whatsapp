@@ -1,3 +1,5 @@
+import { confinedPath } from "../security/media";
+import uploadConfig from "../config/upload";
 import { Request, Response } from "express";
 import { getIO } from "../libs/socket";
 import CreateQueueService from "../services/QueueService/CreateQueueService";
@@ -27,7 +29,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 
   const queues = await ListQueuesService({ companyId });
 
-  return res.status(200).json(queues);
+  return res.status(200).json(req.user.profile === "admin" ? queues : queues.filter(q => res.locals.actor.queues.some(a => a.id === q.id)).map(q => ({ id: q.id, name: q.name, color: q.color })));
 };
 
 export const mediaUpload = async (
@@ -60,7 +62,7 @@ export const deleteMedia = async (
 
   try {
     const queue = await Queue.findByPk(queueId);
-    const filePath = path.resolve("public", queue.mediaPath);
+    const filePath = confinedPath(uploadConfig.directory, queue.mediaPath);
     const fileExists = fs.existsSync(filePath);
     if (fileExists) {
       fs.unlinkSync(filePath);
@@ -93,12 +95,12 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   });
 
   const io = getIO();
-  io.emit(`company-${companyId}-queue`, {
+  io.to(`company-${companyId}-admin`).emit(`company-${companyId}-queue`, {
     action: "update",
     queue
   });
 
-  return res.status(200).json(queue);
+  return res.status(200).json(req.user.profile === "admin" ? queue : { id: queue.id, name: queue.name, color: queue.color });
 };
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
@@ -107,7 +109,7 @@ export const show = async (req: Request, res: Response): Promise<Response> => {
 
   const queue = await ShowQueueService(queueId, companyId);
 
-  return res.status(200).json(queue);
+  return res.status(200).json(req.user.profile === "admin" ? queue : { id: queue.id, name: queue.name, color: queue.color });
 };
 
 export const update = async (
@@ -130,7 +132,7 @@ export const update = async (
   }, companyId);
 
   const io = getIO();
-  io.emit(`company-${companyId}-queue`, {
+  io.to(`company-${companyId}-admin`).emit(`company-${companyId}-queue`, {
     action: "update",
     queue
   });
@@ -148,7 +150,7 @@ export const remove = async (
   await DeleteQueueService(queueId, companyId);
 
   const io = getIO();
-  io.emit(`company-${companyId}-queue`, {
+  io.to(`company-${companyId}-admin`).emit(`company-${companyId}-queue`, {
     action: "delete",
     queueId: +queueId
   });

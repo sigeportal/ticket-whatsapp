@@ -44,6 +44,20 @@ class Message extends Model<Message> {
 
   @Column(DataType.TEXT)
   body: string;
+
+  @Default("pending")
+  @Column(DataType.STRING)
+  status: string;
+
+  @Column(DataType.STRING)
+  operationId: string;
+
+  @Column(DataType.TEXT)
+  uncertainReason: string;
+
+  @Default(0)
+  @Column
+  retries: number;
   
   @Column(DataType.JSON)
   reactions: { type: string; userId: number; }[];

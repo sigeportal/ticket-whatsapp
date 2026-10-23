@@ -1,7 +1,8 @@
+import { randomBytes } from "crypto";
 import { WAMessage, AnyMessageContent } from "@whiskeysockets/baileys";
 import * as Sentry from "@sentry/node";
 import fs from "fs";
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import path from "path";
 import ffmpegPath from "@ffmpeg-installer/ffmpeg";
 import AppError from "../../errors/AppError";
@@ -33,13 +34,14 @@ const getFfmpegPath = (): string => {
 };
 
 const processAudio = async (audio: string): Promise<string> => {
-  const outputAudio = `${publicFolder}/${new Date().getTime()}.mp3`;
+  const outputAudio = `${publicFolder}/${randomBytes(24).toString("hex")}.mp3`;
   const ffmpegCmd = getFfmpegPath();
   return new Promise((resolve, reject) => {
-    exec(
-      `${ffmpegCmd} -i ${audio} -vn -ab 128k -ar 44100 -f ipod ${outputAudio} -y`,
+    execFile(
+      ffmpegCmd, ["-nostdin", "-threads", "1", "-i", audio, "-vn", "-ab", "128k", "-ar", "44100", "-f", "ipod", outputAudio],
+      { timeout: 60000, maxBuffer: 1024 * 1024 },
       (error, _stdout, _stderr) => {
-        if (error) reject(error);
+        if (error) { fs.rmSync(outputAudio, { force: true }); reject(error); return; }
         try {
           fs.unlinkSync(audio);
         } catch (e) {}
@@ -50,13 +52,14 @@ const processAudio = async (audio: string): Promise<string> => {
 };
 
 const processAudioFile = async (audio: string): Promise<string> => {
-  const outputAudio = `${publicFolder}/${new Date().getTime()}.mp3`;
+  const outputAudio = `${publicFolder}/${randomBytes(24).toString("hex")}.mp3`;
   const ffmpegCmd = getFfmpegPath();
   return new Promise((resolve, reject) => {
-    exec(
-      `${ffmpegCmd} -i ${audio} -vn -ar 44100 -ac 2 -b:a 192k ${outputAudio}`,
+    execFile(
+      ffmpegCmd, ["-nostdin", "-threads", "1", "-i", audio, "-vn", "-ar", "44100", "-ac", "2", "-b:a", "192k", outputAudio],
+      { timeout: 60000, maxBuffer: 1024 * 1024 },
       (error, _stdout, _stderr) => {
-        if (error) reject(error);
+        if (error) { fs.rmSync(outputAudio, { force: true }); reject(error); return; }
         try {
           fs.unlinkSync(audio);
         } catch (e) {}

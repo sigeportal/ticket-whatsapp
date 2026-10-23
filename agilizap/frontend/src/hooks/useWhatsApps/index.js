@@ -3,6 +3,7 @@ import toastError from "../../errors/toastError";
 
 import api from "../../services/api";
 import { SocketContext } from "../../context/Socket/SocketContext";
+import { AuthContext } from "../../context/Auth/AuthContext";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_WHATSAPPS") {
@@ -58,8 +59,14 @@ const useWhatsApps = () => {
   const [loading, setLoading] = useState(true);
 
   const socketManager = useContext(SocketContext);
+  const { user } = useContext(AuthContext);
 
   useEffect(() => {
+    if (user.profile !== "admin") {
+      dispatch({ type: "RESET" });
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const fetchSession = async () => {
       try {
@@ -72,9 +79,10 @@ const useWhatsApps = () => {
       }
     };
     fetchSession();
-  }, []);
+  }, [user.profile]);
 
   useEffect(() => {
+    if (user.profile !== "admin") return;
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
 
@@ -99,7 +107,7 @@ const useWhatsApps = () => {
     return () => {
       socket.disconnect();
     };
-  }, [socketManager]);
+  }, [socketManager, user.profile]);
 
   return { whatsApps, loading };
 };

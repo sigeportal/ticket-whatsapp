@@ -1,3 +1,5 @@
+import { confinedPath } from "../security/media";
+import uploadConfig from "../config/upload";
 import { Request, Response } from "express";
 import { getIO } from "../libs/socket";
 
@@ -8,6 +10,7 @@ import ListService from "../services/ScheduleServices/ListService";
 import UpdateService from "../services/ScheduleServices/UpdateService";
 import ShowService from "../services/ScheduleServices/ShowService";
 import DeleteService from "../services/ScheduleServices/DeleteService";
+import { reviewSchedule, reconcileOverdueSchedules } from "../services/ScheduleServices/ScheduleReconciliationService";
 import Schedule from "../models/Schedule";
 import path from "path";
 import fs from "fs";
@@ -27,7 +30,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   const { schedules, count, hasMore } = await ListService({
     searchParam,
     contactId,
-    userId,
+    userId: req.user.profile === "admin" ? userId : req.user.id,
     pageNumber,
     companyId
   });
@@ -53,7 +56,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   });
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit("schedule", {
+  io.to(`user-${schedule.userId}`).to(`company-${companyId}-admin`).emit("schedule", {
     action: "create",
     schedule
   });
@@ -74,7 +77,7 @@ export const update = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
-  if (req.user.profile !== "admin") {
+  if (req.user.profile !== "admin" && req.user.profile !== "supervisor") {
     throw new AppError("ERR_NO_PERMISSION", 403);
   }
 
@@ -85,7 +88,7 @@ export const update = async (
   const schedule = await UpdateService({ scheduleData, id: scheduleId, companyId });
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit("schedule", {
+  io.to(`user-${schedule.userId}`).to(`company-${companyId}-admin`).emit("schedule", {
     action: "update",
     schedule
   });
@@ -111,6 +114,42 @@ export const remove = async (
   return res.status(200).json({ message: "Schedule deleted" });
 };
 
+export const review = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  if (req.user.profile !== "admin" && req.user.profile !== "supervisor") {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
+  const { scheduleId } = req.params;
+  const { action } = req.body;
+  const { companyId, id: userId } = req.user;
+
+  const schedule = await reviewSchedule({
+    scheduleId,
+    companyId,
+    userId: Number(userId),
+    action
+  });
+
+  return res.status(200).json(schedule);
+};
+
+export const reconcile = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  if (req.user.profile !== "admin" && req.user.profile !== "supervisor") {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
+  const { companyId } = req.user;
+  const schedules = await reconcileOverdueSchedules({ companyId });
+
+  return res.status(200).json({ count: schedules.length, schedules });
+};
+
 export const mediaUpload = async (
   req: Request,
   res: Response
@@ -126,8 +165,8 @@ export const mediaUpload = async (
 
     await schedule.save();
     return res.send({ mensagem: "Arquivo Anexado" });
-    } catch (err: any) {
-      throw new AppError(err.message);
+  } catch (err: any) {
+    throw new AppError(err.message);
   }
 };
 
@@ -139,7 +178,7 @@ export const deleteMedia = async (
 
   try {
     const schedule = await Schedule.findByPk(id);
-    const filePath = path.resolve("public", schedule.mediaPath);
+    const filePath = confinedPath(uploadConfig.directory, schedule.mediaPath);
     const fileExists = fs.existsSync(filePath);
     if (fileExists) {
       fs.unlinkSync(filePath);
@@ -148,7 +187,7 @@ export const deleteMedia = async (
     schedule.mediaName = null;
     await schedule.save();
     return res.send({ mensagem: "Arquivo Excluído" });
-    } catch (err: any) {
-      throw new AppError(err.message);
+  } catch (err: any) {
+    throw new AppError(err.message);
   }
 };

@@ -57,7 +57,7 @@ const ListTicketsService = async ({
     {
       model: Contact,
       as: "contact",
-      attributes: ["id", "name", "number", "email", "profilePicUrl"]
+      attributes: ["id", "name", "number", "email", "profilePicUrl", "isLid"]
     },
     {
       model: Queue,
@@ -215,6 +215,11 @@ const ListTicketsService = async ({
     companyId
   };
 
+  const actor = await User.findByPk(userId, { include: [Queue] });
+  const access = actor.profile === "admin" ? { companyId: actor.companyId } : {
+    companyId: actor.companyId, queueId: { [Op.in]: actor.queues.map(q => q.id) }
+  };
+  whereCondition = { [Op.and]: [whereCondition, access] };
   const { count, rows: tickets } = await Ticket.findAndCountAll({
     where: whereCondition,
     include: includeCondition,

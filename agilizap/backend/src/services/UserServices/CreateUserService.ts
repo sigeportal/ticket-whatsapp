@@ -1,3 +1,6 @@
+import { roles, validatePassword, deny } from "../../security/policy";
+import Queue from "../../models/Queue";
+import Whatsapp from "../../models/Whatsapp";
 import * as Yup from "yup";
 
 import AppError from "../../errors/AppError";
@@ -15,6 +18,7 @@ interface Request {
   profile?: string;
   whatsappId?: number;
   allTicket?:string;
+  blocked?: boolean;
 }
 
 interface Response {
@@ -30,10 +34,14 @@ const CreateUserService = async ({
   name,
   queueIds = [],
   companyId,
-  profile = "admin",
-  whatsappId,
+  profile = "user",
+  whatsappId, blocked = false,
   allTicket
 }: Request): Promise<Response> => {
+  validatePassword(password);
+  if (!roles.includes(profile) || !companyId || !await Company.findByPk(companyId)) deny();
+  for (const id of queueIds) if (!await Queue.findOne({ where: { id, companyId } })) deny();
+  if (whatsappId && !await Whatsapp.findOne({ where: { id: whatsappId, companyId } })) deny();
   if (companyId !== undefined) {
     const company = await Company.findOne({
       where: {
@@ -89,7 +97,7 @@ const CreateUserService = async ({
       name,
       companyId,
       profile,
-      whatsappId: whatsappId || null,
+      whatsappId: whatsappId || null, blocked,
 	  allTicket
     },
     { include: ["queues", "company"] }

@@ -1,0 +1,20 @@
+name: ticket-security-panel
+services:
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_USER: panel_test
+      POSTGRES_PASSWORD: disposable_panel_only
+      POSTGRES_DB: security_panel
+    ports: ["127.0.0.1:55441:5432"]
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U panel_test -d security_panel"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--requirepass", "disposable_panel_only"]
+    ports: ["127.0.0.1:56391:6379"]
+    tmpfs: [/data]

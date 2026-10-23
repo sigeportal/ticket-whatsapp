@@ -10,11 +10,12 @@ export const createAccessToken = (user: User): string => {
       usarname: user.name,
       profile: user.profile,
       id: user.id,
-      companyId: user.companyId
+      companyId: user.companyId,
+      tokenVersion: user.tokenVersion
     },
     secret,
     {
-      expiresIn
+      expiresIn, algorithm: "HS256"
     }
   );
 };
@@ -26,7 +27,7 @@ export const createRefreshToken = (user: User): string => {
     { id: user.id, tokenVersion: user.tokenVersion, companyId: user.companyId },
     refreshSecret,
     {
-      expiresIn: refreshExpiresIn
+      expiresIn: refreshExpiresIn, algorithm: "HS256"
     }
   );
 };

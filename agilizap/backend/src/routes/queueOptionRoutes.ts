@@ -1,6 +1,6 @@
 import { Router } from "express";
 import isAuth from "../middleware/isAuth";
-import multer from "multer";
+import multer from "../security/secureUpload";
 import uploadConfig from "../config/upload";
 
 const upload = multer(uploadConfig);

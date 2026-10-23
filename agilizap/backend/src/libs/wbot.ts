@@ -4,7 +4,6 @@ import makeWASocket, {
   DisconnectReason,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
-  makeInMemoryStore,
   isJidBroadcast,
   jidNormalizedUser,
   CacheStore,
@@ -201,7 +200,6 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
       const { version, isLatest } = await fetchLatestBaileysVersion();
       logger.info(`Using WA v${version.join(".")}, isLatest: ${isLatest}. Starting session "${name}" (#${id}).`);
 
-      const store = makeInMemoryStore({ logger: loggerBaileys });
       const { state, saveState } = await authState(whatsappUpdate);
 
       const msgRetryCounterCache = new NodeCache();
@@ -224,7 +222,6 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
       });
 
       wsocket.id = whatsappUpdate.id;
-      wsocket.store = store;
 
       // Registra a sessão ativa em memória
       const existingIndex = sessions.findIndex(s => s.id === id);
@@ -248,7 +245,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                   status: "qrcode",
                   retries: 0
                 });
-                io.to(`company-${whatsappUpdate.companyId}-mainchannel`).emit(
+                io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
                   `company-${whatsappUpdate.companyId}-whatsappSession`,
                   {
                     action: "update",
@@ -286,7 +283,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
               session: "connected"
             });
 
-            io.to(`company-${whatsappUpdate.companyId}-mainchannel`).emit(
+            io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
               `company-${whatsappUpdate.companyId}-whatsappSession`,
               {
                 action: "update",
@@ -310,7 +307,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
               await DeleteBaileysService(id);
               await deleteSessionFiles(id);
 
-              io.to(`company-${whatsappUpdate.companyId}-mainchannel`).emit(
+              io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
                 `company-${whatsappUpdate.companyId}-whatsappSession`,
                 {
                   action: "update",
@@ -332,7 +329,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
               await DeleteBaileysService(id);
               await deleteSessionFiles(id);
 
-              io.to(`company-${whatsappUpdate.companyId}-mainchannel`).emit(
+              io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
                 `company-${whatsappUpdate.companyId}-whatsappSession`,
                 {
                   action: "update",
@@ -351,7 +348,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
               });
               await removeWbot(id, false);
 
-              io.to(`company-${whatsappUpdate.companyId}-mainchannel`).emit(
+              io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
                 `company-${whatsappUpdate.companyId}-whatsappSession`,
                 {
                   action: "update",
@@ -372,7 +369,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
               await removeWbot(id, true);
               await deleteSessionFiles(id);
 
-              io.to(`company-${whatsappUpdate.companyId}-mainchannel`).emit(
+              io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
                 `company-${whatsappUpdate.companyId}-whatsappSession`,
                 {
                   action: "update",
@@ -415,7 +412,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
               await removeWbot(id, false);
               retriesQrCodeMap.delete(id);
 
-              io.to(`company-${whatsappUpdate.companyId}-mainchannel`).emit(
+              io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
                 `company-${whatsappUpdate.companyId}-whatsappSession`,
                 {
                   action: "update",
@@ -432,7 +429,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                 retries: 0
               });
 
-              io.to(`company-${whatsappUpdate.companyId}-mainchannel`).emit(
+              io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
                 `company-${whatsappUpdate.companyId}-whatsappSession`,
                 {
                   action: "update",
@@ -489,7 +486,6 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
         }
       );
 
-      store.bind(wsocket.ev);
       resolve(wsocket);
     } catch (error) {
       Sentry.captureException(error);

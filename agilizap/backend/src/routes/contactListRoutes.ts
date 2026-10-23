@@ -3,7 +3,7 @@ import isAuth from "../middleware/isAuth";
 import uploadConfig from "../config/upload";
 
 import * as ContactListController from "../controllers/ContactListController";
-import multer from "multer";
+import multer from "../security/secureUpload";
 
 const routes = express.Router();
 

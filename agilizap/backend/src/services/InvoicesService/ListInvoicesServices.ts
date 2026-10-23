@@ -2,6 +2,7 @@ import { Sequelize, Op } from "sequelize";
 import Invoices from "../../models/Invoices";
 
 interface Request {
+  companyId: number;
   searchParam?: string;
   pageNumber?: string;
 }
@@ -14,12 +15,13 @@ interface Response {
 
 const ListInvoicesServices = async ({
   searchParam = "",
-  pageNumber = "1"
+  pageNumber = "1", companyId
 }: Request): Promise<Response> => {
   const whereCondition = {
+    companyId,
     [Op.or]: [
       {
-        name: Sequelize.where(
+        detail: Sequelize.where(
           Sequelize.fn("LOWER", Sequelize.col("detail")),
           "LIKE",
           `%${searchParam.toLowerCase().trim()}%`

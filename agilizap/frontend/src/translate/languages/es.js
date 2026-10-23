@@ -928,6 +928,14 @@ transferTicketModal: {
     },
   },
   backendErrors: {
+        ERR_TICKET_ALREADY_CLAIMED: "Este ticket ya ha sido asignado a otro atendente.",
+        ERR_CANNOT_ACCEPT_TICKET_OTHER_USER: "No se puede aceptar un ticket asignado a otro atendente.",
+        ERR_RESTRICTED_ATTENDANT_QUEUE: "No tienes permiso para esta cola.",
+        ERR_RESTRICTED_SUPERVISOR_QUEUE: "Cola fuera de su supervisión asignada.",
+        ERR_CONNECTION_DISCONNECTED: "Conexión de WhatsApp desconectada. Verifique las conexiones.",
+        ERR_AI_BUDGET_EXCEEDED: "Límite mensual del presupuesto de IA alcanzado para esta empresa.",
+        ERR_AUDIO_TOO_LONG: "El audio supera el límite máximo de 10 minutos.",
+        ERR_BACKUP_INTEGRITY_COMPROMISED: "Fallo de integridad: la copia de seguridad está dañada.",
     ERR_NO_OTHER_WHATSAPP: "Debe haber al menos un WhatsApp predeterminado.",
     ERR_NO_DEF_WAPP_FOUND:
       "No se encontró ningún WhatsApp predeterminado. Comprueba la página de conexiones.",

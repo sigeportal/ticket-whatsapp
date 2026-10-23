@@ -1,0 +1,66 @@
+﻿
+> backend@1.0.0 test:operation
+> node tests/operation/run.cjs
+
+PASS migration chain up executed inside isolated PostgreSQL/WASM
+PASS OPS-01: Backup - criacao estruturada, exportacao de tabelas, midias e manifesto SHA-256
+[32mINFO[39m [22-10-2026 17:24:58]:
+    event: "backup_started"
+    backupId: "fff5f0c2-a25a-440c-b149-564ec8503ad9"
+    backupFolder: "C:\Users\nanan\AppData\Local\Temp\ticket-operation-ewDtud\backup_vault\backup-fff5f0c2-a25a-440c-b149-564ec8503ad9"
+PASS OPS-01: Backup - rotina de rotacao preserva as N copias mais recentes e remove excedentes
+PASS OPS-01: Restauracao - deteccao estrita de adulteracao de hash e rejeicao com erro de integridade
+[32mINFO[39m [22-10-2026 17:24:58]:
+    event: "backup_completed"
+    backupId: "fff5f0c2-a25a-440c-b149-564ec8503ad9"
+    tablesCount: 11
+    mediaCount: 1
+[32mINFO[39m [22-10-2026 17:24:58]:
+    event: "backup_rotated"
+    removedBackup: "backup-test-2"
+[32mINFO[39m [22-10-2026 17:24:58]:
+    event: "backup_rotated"
+    removedBackup: "backup-test-1"
+[32mINFO[39m [22-10-2026 17:24:58]:
+    event: "restore_started"
+    backupId: "fff5f0c2-a25a-440c-b149-564ec8503ad9"
+    manifestTimestamp: "2026-10-22T21:24:58.713Z"
+[31mERROR[39m [22-10-2026 17:24:58]:
+    event: "restore_integrity_failed"
+    table: "Companies"
+    expected: "ea44472e634f74ce212f5de0a07c370bd878b1b83d66dc3a49b32d1059f247ce"
+    actual: "5aadc125a51596ee06939249e7e168db8621c22f6cf5a3dc170fae2a153ab676"
+[32mINFO[39m [22-10-2026 17:24:58]:
+    event: "restore_started"
+    backupId: "fff5f0c2-a25a-440c-b149-564ec8503ad9"
+    manifestTimestamp: "2026-10-22T21:24:58.713Z"
+PASS OPS-01: Restauracao - execucao bem-sucedida, metricas RPO/RTO e trava de seguranca Baileys
+PASS OPS-02: Liveness probe - GET /health/live retorna 200 e tempo de atividade
+PASS OPS-02: Readiness probe - GET /health/ready retorna 200 quando dependencias estao operacionais
+PASS OPS-02: Readiness probe - GET /health/ready retorna 503 degradado em falha de dependencia
+PASS OPS-02: Zero segredos - endpoint de saude nao expoe senhas ou strings de conexao
+PASS OPS-02: Observabilidade WhatsApp - GET /health/whatsapp isolado da saude central da aplicacao
+PASS OPS-02: Metricas operacionais - GET /health/metrics retorna memoria, filas e estatisticas
+[32mINFO[39m [22-10-2026 17:24:58]:
+    event: "restore_completed"
+    backupId: "fff5f0c2-a25a-440c-b149-564ec8503ad9"
+    recordsRestored: 7
+    mediaFilesRestored: 1
+    durationMs: 46
+    rpoCompliant: true
+    rtoCompliant: true
+    sessionCollisionPrevented: true
+PASS OPS-02: Sanitizacao de logs - sanitizeLogData mascara senhas, tokens e credenciais confidenciais
+[33mWARN[39m [22-10-2026 17:24:58]:
+    event: "readiness_db_failed"
+    error: "CONNECTION_LOST_TO_POSTGRES"
+PASS OPS-02: Alertas operacionais - deteccao de WhatsApp desconectado > 5min e desduplicacao
+PASS OPS-03: Graceful shutdown - stopQueueProcess encerra filas Bull de forma limpa
+PASS OPS-03: Entrypoint Docker - validacao de que migracao falha aborta e previne estado corrompido
+PASS OPS-03: Dockerfile de producao - usuario nao privilegiado node e permissoes minimas
+RESULT 15/15 passed; isolated PostgreSQL/WASM, zero external services
+[33mWARN[39m [22-10-2026 17:24:58]:
+    event: "operational_alert_triggered"
+    alertType: "WHATSAPP_DISCONNECTED"
+    severity: "HIGH"
+    message: "Conexão WhatsApp \"Conexao Secundaria\" (ID 2) desconectada há mais de 5 minutos."

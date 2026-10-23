@@ -1,3 +1,4 @@
+import { validateUploads } from "../../services/uploadLimits";
 import React, { useState, useEffect, useContext, useRef } from "react";
 import withWidth, { isWidthUp } from "@material-ui/core/withWidth";
 import "emoji-mart/css/emoji-mart.css";
@@ -639,11 +640,13 @@ const MessageInputCustom = (props) => {
     }
 
     const selectedMedias = Array.from(e.target.files);
+    try { validateUploads(selectedMedias); } catch (err) { toastError(err); return; }
     setMedias(selectedMedias);
   };
 
   const handleInputPaste = (e) => {
     if (e.clipboardData.files[0]) {
+      try { validateUploads([e.clipboardData.files[0]]); } catch (err) { toastError(err); return; }
       setMedias([e.clipboardData.files[0]]);
     }
   };
@@ -670,7 +673,7 @@ const MessageInputCustom = (props) => {
   const handleQuickAnswersClick = async (value) => {
     if (value.mediaPath) {
       try {
-        const { data } = await axios.get(value.mediaPath, {
+        const { data } = await api.get(value.mediaPath, {
           responseType: "blob",
         });
 
@@ -750,14 +753,14 @@ const MessageInputCustom = (props) => {
     };
     try {
       await api.post(`/messages/${ticketId}`, message);
+      setInputMessage("");
+      setShowEmoji(false);
+      setReplyingMessage(null);
     } catch (err) {
       toastError(err);
+    } finally {
+      setLoading(false);
     }
-
-    setInputMessage("");
-    setShowEmoji(false);
-    setLoading(false);
-    setReplyingMessage(null);
   };
 
   const handleStartRecording = async () => {

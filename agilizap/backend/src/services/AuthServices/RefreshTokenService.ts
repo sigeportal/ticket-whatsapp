@@ -1,3 +1,5 @@
+import { loadSession } from "../../security/session";
+import { SerializeUser } from "../../helpers/SerializeUser";
 import { verify } from "jsonwebtoken";
 import { Response as Res } from "express";
 
@@ -27,10 +29,8 @@ export const RefreshTokenService = async (
   token: string
 ): Promise<Response> => {
   try {
-    const decoded = verify(token, authConfig.refreshSecret);
-    const { id, tokenVersion, companyId } = decoded as RefreshTokenPayload;
-
-    const user = await ShowUserService(id);
+    const user = await loadSession(token, true);
+    const tokenVersion = user.tokenVersion;
 
     if (user.tokenVersion !== tokenVersion) {
       res.clearCookie("jrt");
@@ -40,7 +40,7 @@ export const RefreshTokenService = async (
     const newToken = createAccessToken(user);
     const refreshToken = createRefreshToken(user);
 
-    return { user, newToken, refreshToken };
+    return { user: await SerializeUser(user) as any, newToken, refreshToken };
   } catch (err) {
     res.clearCookie("jrt");
     throw new AppError("ERR_SESSION_EXPIRED", 401);

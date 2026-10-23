@@ -62,8 +62,8 @@ export const TransferTicketQueue = async (): Promise<void> => {
 
       const currentTicket = await ShowTicketService(ticket.id, ticket.companyId);
 
-      io.to(ticket.status)
-        .to("notification")
+      io.to(`company-${ticket.companyId}-${ticket.status}`).to(`queue-${ticket.queueId}-${ticket.status}`)
+        .to(`company-${ticket.companyId}-notification`).to(`queue-${ticket.queueId}-notification`)
         .to(ticket.id.toString())
         .emit(`company-${ticket.companyId}-ticket`, {
           action: "update",

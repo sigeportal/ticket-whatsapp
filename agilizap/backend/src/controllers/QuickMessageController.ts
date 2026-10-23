@@ -43,7 +43,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     searchParam,
     pageNumber,
     companyId,
-    userId
+    userId: req.user.profile === "admin" ? userId : req.user.id
   });
 
   return res.json({ records, count, hasMore });
@@ -71,7 +71,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   });
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-quickmessage`, {
+  io.to(record.geral ? `company-${companyId}-mainchannel` : `user-${record.userId}`).to(`company-${companyId}-admin`).emit(`company-${companyId}-quickmessage`, {
     action: "create",
     record
   });
@@ -114,7 +114,7 @@ export const update = async (
   });
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-quickmessage`, {
+  io.to(record.geral ? `company-${companyId}-mainchannel` : `user-${record.userId}`).to(`company-${companyId}-admin`).emit(`company-${companyId}-quickmessage`, {
     action: "update",
     record
   });
@@ -144,7 +144,7 @@ export const findList = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
-  const params = req.query as FindParams;
+  const params = { ...req.query, companyId: String(req.user.companyId), userId: req.user.id } as FindParams;
   const records: QuickMessage[] = await FindService(params);
 
   return res.status(200).json(records);

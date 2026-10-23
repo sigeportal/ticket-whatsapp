@@ -10,6 +10,7 @@ import {
   Divider,
   IconButton,
   makeStyles,
+  Tooltip,
   Badge,
 } from "@material-ui/core";
 
@@ -22,6 +23,7 @@ import {
   ExpandMore,
   GetApp,
   Reply,
+  ErrorOutline,
 } from "@material-ui/icons";
 
 import MarkdownWrapper from "../MarkdownWrapper";
@@ -661,6 +663,13 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
     */
 
     const renderMessageAck = (message) => {
+      if (message.status === "failed" || message.status === "uncertain") {
+        return (
+          <Tooltip title={message.uncertainReason || "Falha ou incerteza no envio"} arrow>
+            <ErrorOutline fontSize="small" style={{ color: "#ef4444", verticalAlign: "middle" }} />
+          </Tooltip>
+        );
+      }
       if (message.ack === 0) {
         return <AccessTime fontSize="small" className={classes.ackIcons} />;
       }

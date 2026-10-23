@@ -1,0 +1,29 @@
+> backend@1.0.0 test:security
+> node tests/security/run.cjs
+
+PASS migration up executed inside isolated PostgreSQL/WASM
+PASS REST: duas empresas e todos os papeis respeitam ticket, fila, UUID, leitura/alteracao/exclusao
+PASS REST: atendente assume disponivel, supervisor redistribui somente nas filas geridas
+PASS Usuario: autopromocao, outro alvo, super e empresa no corpo sao rejeitados; campos pessoais funcionam sem apagar filas
+PASS Notas: lista, leitura, criacao e alteracao nao atravessam empresa nem aceitam id do corpo
+PASS Recuperacao: conta existente/inexistente tem resposta generica; SMTP aguardado e sem segredo no log
+PASS Postgres/ORM: token expira, nao aceita aspas, consumo concorrente permite um sucesso e revoga sessoes
+PASS Upload: assinatura/MIME, travessia, sobrescrita, cinco arquivos e fronteira 20 MiB
+PASS Midia legada: anonimo/empresa alheia/fila alheia negados; cookie HttpOnly e painel autorizados funcionam
+PASS Sessoes: algoritmo restrito, exclusao, bloqueio, empresa inativa e versao revogada
+PASS Sockets: salas de tickets por empresa/fila, sem sala null compartilhada, revogacao encerra conexao
+PASS Administrador em producao entra com email e senha; politica de senha preservada
+PASS Casing de URL nao contorna autorizacao de recurso
+PASS CSRF, headers, limites de abuso e configuracao insegura recusados
+PASS Streaming recebido: fronteira real de bytes, timeout e interrupcao nao deixam fluxo aberto
+PASS Rotas reais de contas: criacao, signup fechado, login administrativo e cookies/refresh/logout
+PASS Relatorios SQL vinculam datas maliciosas e nao alteram usuarios
+PASS Exportacao em massa exige administrador e omite outra empresa; faturas sao isoladas
+PASS Bloqueio e desbloqueio administrativos invalidam sessoes antigas sem restaurar tokens
+PASS Configuracao de producao recusa HTTP, segredos iguais e credenciais ausentes
+PASS Matriz de recursos: conexoes, integracoes, arquivos, campanhas, listas e anuncios em duas empresas
+PASS Mensagens assincronas recusam colisao entre empresas e quotes legados cruzados; JSON preserva segredo interno
+PASS Bootstrap exige credencial explicita e permite login sem troca obrigatoria
+PASS Transferencia de fila remove sala de socket anterior antes da proxima mensagem
+RESULT 23/23 passed; isolated PostgreSQL/WASM, SMTP mocked, no production services
+PASS migration down executed inside isolated PostgreSQL/WASM

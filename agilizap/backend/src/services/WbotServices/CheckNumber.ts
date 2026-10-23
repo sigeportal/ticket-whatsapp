@@ -8,6 +8,9 @@ interface IOnWhatsapp {
 }
 
 const checker = async (number: string, wbot: any) => {
+  if (number.length >= 14 && !number.startsWith("55")) {
+    return { jid: `${number}@lid`, exists: true };
+  }
   const [validNumber] = await wbot.onWhatsApp(`${number}@s.whatsapp.net`);
 
   logger.info(validNumber);

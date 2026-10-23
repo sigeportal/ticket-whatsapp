@@ -1,3 +1,4 @@
+import { getSessionToken } from "../../services/sessionToken";
 import { createContext } from "react";
 import openSocket from "socket.io-client";
 import { isExpired, decodeToken } from "react-jwt";
@@ -99,7 +100,7 @@ const SocketManager = {
 		    this.currentUserId = null;
       }
 
-      let token = JSON.parse(localStorage.getItem("token"));
+      let token = getSessionToken();
       if (!token) {
         return new DummySocket();
       }
@@ -119,26 +120,25 @@ const SocketManager = {
         transports: ["websocket"],
         pingTimeout: 18000,
         pingInterval: 18000,
-        query: { token },
+        auth: { token },
       });
 
       this.currentSocket.io.on("reconnect_attempt", () => {
-        this.currentSocket.io.opts.query.r = 1;
-        token = JSON.parse(localStorage.getItem("token"));
+        token = getSessionToken();
         if ( isExpired(token) ) {
           console.warn("Refreshing");
           window.location.reload();
         } else {
           console.warn("Using new token");
-          this.currentSocket.io.opts.query.token = token;
+          this.currentSocket.auth = { token };
         }
       });
       
       this.currentSocket.on("disconnect", (reason) => {
         console.warn(`socket disconnected because: ${reason}`);
         if (reason.startsWith("io server disconnect")) {
-          console.warn("tryng to reconnect", this.currentSocket);
-          token = JSON.parse(localStorage.getItem("token"));
+          console.warn("Reconnecting socket");
+          token = getSessionToken();
           
           if ( isExpired(token) ) {
             console.warn("Expired token - refreshing");
@@ -146,8 +146,7 @@ const SocketManager = {
             return;
           }
           console.warn("Reconnecting using refreshed token");
-          this.currentSocket.io.opts.query.token = token;
-          this.currentSocket.io.opts.query.r = 1;
+          this.currentSocket.auth = { token };
           this.currentSocket.connect();
         }        
       });
@@ -155,10 +154,6 @@ const SocketManager = {
       this.currentSocket.on("connect", (...params) => {
         console.warn("socket connected", params);
       })
-      
-      this.currentSocket.onAny((event, ...args) => {
-        console.debug("Event: ", { socket: this.currentSocket, event, args });
-      });
       
       this.onReady(() => {
         this.socketReady = true;

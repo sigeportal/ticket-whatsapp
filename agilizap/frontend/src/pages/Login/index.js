@@ -193,20 +193,6 @@ const Login = () => {
     setUser({ ...user, [e.target.name]: e.target.value });
   };
 
-  useEffect(() => {
-    fetchviewregister();
-  }, []);
-
-  const fetchviewregister = async () => {
-    try {
-      const responsev = await api.get("/settings/viewregister");
-      const viewregisterX = responsev?.data?.value;
-      setviewregister(viewregisterX);
-    } catch (error) {
-      console.error("Error retrieving viewregister", error);
-    }
-  };
-
   const handleSubmit = e => {
     e.preventDefault();
     handleLogin(user);
@@ -257,6 +243,7 @@ const Login = () => {
             className={classes.input}
             size="small"
           />
+
 
           <Box display="flex" justifyContent="flex-end">
             <Link

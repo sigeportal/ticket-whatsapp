@@ -1,3 +1,4 @@
+import { validateUploads } from "../../services/uploadLimits";
 import React, { useState, useEffect, useContext, useRef } from "react";
 import "emoji-mart/css/emoji-mart.css";
 import { useParams } from "react-router-dom";
@@ -209,12 +210,14 @@ const MessageInput = ({ ticketStatus }) => {
 		}
 
 		const selectedMedias = Array.from(e.target.files);
+    try { validateUploads(selectedMedias); } catch (err) { toastError(err); return; }
 		setMedias(selectedMedias);
 	};
 
 	const handleInputPaste = e => {
 		if (e.clipboardData.files[0]) {
-			setMedias([e.clipboardData.files[0]]);
+			try { validateUploads([e.clipboardData.files[0]]); } catch (err) { toastError(err); return; }
+      setMedias([e.clipboardData.files[0]]);
 		}
 	};
 
@@ -256,14 +259,14 @@ const MessageInput = ({ ticketStatus }) => {
 		};
 		try {
 			await api.post(`/messages/${ticketId}`, message);
+			setInputMessage("");
+			setShowEmoji(false);
+			setReplyingMessage(null);
 		} catch (err) {
 			toastError(err);
+		} finally {
+			setLoading(false);
 		}
-
-		setInputMessage("");
-		setShowEmoji(false);
-		setLoading(false);
-		setReplyingMessage(null);
 	};
 
 	const handleStartRecording = async () => {

@@ -56,6 +56,10 @@ class ContactListItem extends Model<ContactListItem> {
 
   @BelongsTo(() => ContactList)
   contactList: ContactList;
+
+  @Default(false)
+  @Column
+  optOutCampaign: boolean;
 }
 
 export default ContactListItem;

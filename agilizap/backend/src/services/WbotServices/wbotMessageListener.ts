@@ -1,3 +1,7 @@
+import { validateOfficeBuffer } from "../../security/validateOffice";
+import { randomBytes } from "crypto";
+import { mediaTypes, validateMedia, confinedPath, ensureMediaStorage, MAX_FILE_BYTES } from "../../security/media";
+import { readLimitedStream } from "../../security/readLimitedStream";
 import * as Sentry from "@sentry/node";
 import { writeFile } from "fs";
 import { head, isNil } from "lodash";
@@ -493,11 +497,8 @@ const getContactMessage = async (msg: proto.IWebMessageInfo, wbot: Session) => {
 const downloadMedia = async (msg: proto.IWebMessageInfo) => {
   let buffer: Buffer | undefined;
   try {
-    buffer = (await downloadMediaMessage(
-      msg,
-      'buffer',
-      {}
-    )) as Buffer;
+    const stream = await downloadMediaMessage(msg, "stream", { options: { timeout: 15000 } });
+    buffer = await readLimitedStream(stream, MAX_FILE_BYTES, 30000);
   } catch (err) {
     logger.error(`Erro ao baixar mídia: ${err}`);
     return null;
@@ -526,30 +527,18 @@ const downloadMedia = async (msg: proto.IWebMessageInfo) => {
     msgContent?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage ||
     msgContent?.extendedTextMessage?.contextInfo?.quotedMessage?.videoMessage;
 
-  let filename = msgContent?.documentMessage?.fileName ||
-    msgContent?.documentWithCaptionMessage?.message?.documentMessage?.fileName ||
-    "";
-
-  if (mineType && mineType.mimetype) {
-    if (!filename) {
-      const ext = mineType.mimetype.split("/")[1]?.split(";")[0] || "bin";
-      filename = `${new Date().getTime()}.${ext}`;
-    } else {
-      filename = `${new Date().getTime()}_${filename}`;
-    }
-
-    return {
-      data: buffer,
-      mimetype: mineType.mimetype,
-      filename
-    };
+  if (!mineType?.mimetype) return null;
+  const mimetype = mineType.mimetype.split(";")[0].trim().toLowerCase();
+  const extension = Object.keys(mediaTypes).find(ext => mediaTypes[ext].includes(mimetype));
+  if (!extension) return null;
+  try {
+    validateMedia(extension, mimetype, buffer.subarray(0, 8192), buffer.length);
+    const root = path.resolve(__dirname, "..", "..", "..", "public");
+    await ensureMediaStorage(root);
+    if ([".xlsx", ".docx"].includes(extension)) await validateOfficeBuffer(buffer, extension, root);
   }
-
-  return {
-    data: buffer,
-    mimetype: "application/octet-stream",
-    filename: `${new Date().getTime()}.bin`
-  };
+  catch (_) { return null; }
+  return { data: buffer, mimetype, filename: `${randomBytes(24).toString("hex")}${extension}` };
 };
 
 
@@ -585,7 +574,7 @@ const verifyContact = async (
 };
 
 const verifyQuotedMessage = async (
-  msg: proto.IWebMessageInfo
+  msg: proto.IWebMessageInfo, ticket: Ticket
 ): Promise<Message | null> => {
   if (!msg) return null;
   const quoted = getQuotedMessageId(msg);
@@ -593,7 +582,7 @@ const verifyQuotedMessage = async (
   if (!quoted) return null;
 
   const quotedMsg = await Message.findOne({
-    where: { id: quoted },
+    where: { id: quoted, companyId: ticket.companyId, ticketId: ticket.id },
   });
 
   if (!quotedMsg) return null;
@@ -728,8 +717,8 @@ const handleOpenAi = async (
   try {
     const messages = await Message.findAll({
       where: { ticketId: ticket.id },
-      order: [["createdAt", "ASC"]],
-      limit: prompt.maxMessages || 15
+      order: [["createdAt", "DESC"]],
+      limit: Math.max(prompt.maxMessages || 15, 30)
     });
 
     let audioFilePath: string | undefined;
@@ -746,7 +735,7 @@ const handleOpenAi = async (
       contact,
       userMessage: bodyMessage || "",
       audioFilePath,
-      historyMessages: messages
+      historyMessages: messages.reverse()
     });
 
     let response = aiResult.text;
@@ -850,7 +839,7 @@ const verifyMediaMessage = async (
   contact: Contact
 ): Promise<Message> => {
   const io = getIO();
-  const quotedMsg = await verifyQuotedMessage(msg);
+  const quotedMsg = await verifyQuotedMessage(msg, ticket);
   const media = await downloadMedia(msg);
 
   if (!media) {
@@ -888,9 +877,9 @@ const verifyMediaMessage = async (
 
   try {
     await writeFileAsync(
-      join(__dirname, "..", "..", "..", "public", media.filename),
+      confinedPath(path.resolve(__dirname, "..", "..", "..", "public"), media.filename),
       media.data,
-      "base64"
+      { flag: "wx", mode: 0o640 }
     );
   } catch (err) {
     Sentry.captureException(err);
@@ -978,7 +967,7 @@ export const verifyMessage = async (
   contact: Contact
 ) => {
   const io = getIO();
-  const quotedMsg = await verifyQuotedMessage(msg);
+  const quotedMsg = await verifyQuotedMessage(msg, ticket);
   const body = getBodyMessage(msg);
   const isEdited = getTypeMessage(msg) == 'editedMessage';
 
@@ -2273,7 +2262,13 @@ const handleMsgAck = async (
     });
 
     if (!messageToUpdate) return;
-    await messageToUpdate.update({ ack: chat });
+    let newStatus = messageToUpdate.status;
+    if (chat === 1) newStatus = "sended";
+    else if (chat === 2) newStatus = "delivered";
+    else if (chat !== null && chat !== undefined && chat >= 3) newStatus = "read";
+    else if (chat !== null && chat !== undefined && chat < 0) newStatus = "failed";
+
+    await messageToUpdate.update({ ack: chat, status: newStatus });
     io.to(messageToUpdate.ticketId.toString()).emit(
       `company-${messageToUpdate.companyId}-appMessage`,
       {

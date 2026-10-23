@@ -35,7 +35,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   const ownerId = +req.user.id;
 
   const { records, count, hasMore } = await ListService({
-    ownerId,
+    ownerId, companyId: req.user.companyId,
     pageNumber
   });
 
@@ -134,19 +134,19 @@ export const saveMessage = async (
 
   const chat = await Chat.findByPk(chatId, {
     include: [
-      { model: User, as: "owner" },
+      { model: User, as: "owner", attributes: ["id", "name"] },
       { model: ChatUser, as: "users" }
     ]
   });
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-chat-${chatId}`, {
+  io.to(chat.users.map(u => `user-${u.userId}`)).emit(`company-${companyId}-chat-${chatId}`, {
     action: "new-message",
     newMessage,
     chat
   });
 
-  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-chat`, {
+  io.to(chat.users.map(u => `user-${u.userId}`)).emit(`company-${companyId}-chat`, {
     action: "new-message",
     newMessage,
     chat
@@ -160,7 +160,7 @@ export const checkAsRead = async (
   res: Response
 ): Promise<Response> => {
   const { companyId } = req.user;
-  const { userId } = req.body;
+  const userId = req.user.id;
   const { id } = req.params;
 
   const chatUser = await ChatUser.findOne({ where: { chatId: id, userId } });
@@ -168,18 +168,18 @@ export const checkAsRead = async (
 
   const chat = await Chat.findByPk(id, {
     include: [
-      { model: User, as: "owner" },
+      { model: User, as: "owner", attributes: ["id", "name"] },
       { model: ChatUser, as: "users" }
     ]
   });
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-chat-${id}`, {
+  io.to(chat.users.map(u => `user-${u.userId}`)).emit(`company-${companyId}-chat-${id}`, {
     action: "update",
     chat
   });
 
-  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-chat`, {
+  io.to(chat.users.map(u => `user-${u.userId}`)).emit(`company-${companyId}-chat`, {
     action: "update",
     chat
   });
@@ -197,7 +197,7 @@ export const messages = async (
 
   const { records, count, hasMore } = await FindMessages({
     chatId,
-    ownerId,
+    ownerId, companyId: req.user.companyId,
     pageNumber
   });
 

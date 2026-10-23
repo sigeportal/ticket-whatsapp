@@ -1,3 +1,4 @@
+import Chat from "../../models/Chat";
 import AppError from "../../errors/AppError";
 import ChatMessage from "../../models/ChatMessage";
 import ChatUser from "../../models/ChatUser";
@@ -8,6 +9,7 @@ import { sortBy } from "lodash";
 interface Request {
   chatId: string;
   ownerId: number;
+  companyId: number;
   pageNumber?: string;
 }
 
@@ -19,9 +21,10 @@ interface Response {
 
 const FindMessages = async ({
   chatId,
-  ownerId,
+  ownerId, companyId,
   pageNumber = "1"
 }: Request): Promise<Response> => {
+  if (!await Chat.findOne({ where: { id: chatId, companyId } })) throw new AppError("ERR_NO_PERMISSION", 403);
   const userInChat = await ChatUser.count({
     where: { chatId, userId: ownerId }
   });

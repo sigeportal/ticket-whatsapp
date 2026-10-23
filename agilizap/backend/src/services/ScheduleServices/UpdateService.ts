@@ -1,5 +1,5 @@
 import * as Yup from "yup";
-
+import moment from "moment";
 import AppError from "../../errors/AppError";
 import Schedule from "../../models/Schedule";
 import ShowService from "./ShowService";
@@ -13,6 +13,7 @@ interface ScheduleData {
   companyId?: number;
   ticketId?: number;
   userId?: number;
+  status?: string;
 }
 
 interface Request {
@@ -43,6 +44,7 @@ const UpdateUserService = async ({
     contactId,
     ticketId,
     userId,
+    status
   } = scheduleData;
 
   try {
@@ -51,14 +53,24 @@ const UpdateUserService = async ({
     throw new AppError(err.message);
   }
 
-  await schedule.update({
+  const updatePayload: any = {
     body,
     sendAt,
     sentAt,
     contactId,
     ticketId,
-    userId,
-  });
+    userId
+  };
+
+  if (status) {
+    updatePayload.status = status;
+  } else if (sendAt && moment(sendAt).isAfter(moment())) {
+    // Rescheduled into future: reset to PENDENTE
+    updatePayload.status = "PENDENTE";
+    updatePayload.interruptionReason = null;
+  }
+
+  await schedule.update(updatePayload);
 
   await schedule.reload();
   return schedule;

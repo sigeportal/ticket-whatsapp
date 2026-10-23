@@ -1,0 +1,4 @@
+> backend@1.0.0 build
+> tsc
+
+(Build completed with zero errors, exit code 0)

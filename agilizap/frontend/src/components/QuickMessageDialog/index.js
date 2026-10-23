@@ -126,7 +126,8 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
 
     const handleSaveQuickeMessage = async (values) => {
 
-        const quickemessageData = { ...values, isMedia: true, mediaPath: attachment ? String(attachment.name).replace(/ /g, "_") : values.mediaPath ? path.basename(values.mediaPath).replace(/ /g, "_") : null };
+        const { mediaPath: ignoredPath, ...fields } = values;
+        const quickemessageData = { ...fields, isMedia: true };
 
         try {
             if (quickemessageId) {

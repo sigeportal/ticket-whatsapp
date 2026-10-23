@@ -38,7 +38,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 
   const { invoices, count, hasMore } = await ListInvoicesServices({
     searchParam,
-    pageNumber
+    pageNumber, companyId: req.user.companyId
   });
 
   return res.json({ invoices, count, hasMore });
@@ -76,7 +76,8 @@ export const update = async (
     throw new AppError(err.message);
   }
 
-  const { id, status } = InvoiceData;
+  const { status } = InvoiceData;
+  const { id } = req.params;
 
   const plan = await UpdateInvoiceService({
     id,

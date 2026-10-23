@@ -13,11 +13,11 @@ export const StartWhatsAppSession = async (
   await whatsapp.update({ status: "OPENING" });
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-whatsappSession`, {
+  io.to(`company-${companyId}-admin`).emit(`company-${companyId}-whatsappSession`, {
     action: "update",
     session: whatsapp
   });
-  io.emit(`company-${companyId}-whatsappSession`, {
+  io.to(`company-${companyId}-admin`).emit(`company-${companyId}-whatsappSession`, {
     action: "update",
     session: whatsapp
   });
