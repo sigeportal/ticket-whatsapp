@@ -106,7 +106,13 @@ docker compose up -d --build
 
 ## 📦 Backup, Restauração e Manutenção
 
-Consulte o manual operacional completo em [`docs/ETAPA-5-OPERACAO.md`](docs/ETAPA-5-OPERACAO.md).
+A stack utiliza **Named Volumes otimizados** para garantir que nenhuma sessão do WhatsApp, mídia ou dado relacional seja perdido quando os containers pararem, falharem ou forem reiniciados.
+
+- **Guia Completo de Persistência e DR:** [`docs/PERSISTENCIA-E-BACKUP.md`](docs/PERSISTENCIA-E-BACKUP.md)
+- **Script de Backup:** `scripts/backup.sh` (Linux) ou `scripts/backup.ps1` (Windows)
+- **Script de Restauração:** `scripts/restore.sh` (Linux) ou `scripts/restore.ps1` (Windows)
+
+Consulte também o manual operacional em [`docs/ETAPA-5-OPERACAO.md`](docs/ETAPA-5-OPERACAO.md).
 
 ### Suíte de Testes Automatizada (Backend)
 ```bash
