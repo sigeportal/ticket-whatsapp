@@ -6,14 +6,14 @@ import { generateColor } from "../../helpers/colorGenerator";
 import { i18n } from "../../translate/i18n";
 
 const TicketInfo = ({ contact, ticket, onClick }) => {
-	const { user } = ticket
-	const [userName, setUserName] = useState('')
-	const [contactName, setContactName] = useState('')
+	const { user, queue, whatsapp } = ticket;
+	const [userName, setUserName] = useState('');
+	const [contactName, setContactName] = useState('');
 
 	useEffect(() => {
 		if (contact) {
 			setContactName(contact.name);
-			if(document.body.offsetWidth < 600) {
+			if (document.body.offsetWidth < 600) {
 				if (contact.name.length > 10) {
 					const truncadName = contact.name.substring(0, 10) + '...';
 					setContactName(truncadName);
@@ -21,15 +21,18 @@ const TicketInfo = ({ contact, ticket, onClick }) => {
 			}
 		}
 
-		if (user && contact) {
-			setUserName(`${i18n.t("messagesList.header.assignedTo")} ${user.name}`);
+		if (contact) {
+			const assigned = user ? `${i18n.t("messagesList.header.assignedTo")} ${user.name}` : "Sem atendente";
+			const queueName = queue?.name ? ` • ${queue.name}` : "";
+			const connectionName = whatsapp?.name ? ` • ${whatsapp.name}` : "";
+			setUserName(`${assigned}${queueName}${connectionName}`);
 
-			if(document.body.offsetWidth < 600) {
-				setUserName(`${user.name}`);
+			if (document.body.offsetWidth < 600) {
+				setUserName(user?.name || "Sem atendente");
 			}
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [])
+	}, [contact, user, queue, whatsapp])
 
 	return (
 		<CardHeader

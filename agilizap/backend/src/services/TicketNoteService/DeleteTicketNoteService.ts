@@ -1,7 +1,8 @@
+import { ticketAccess } from "../../security/authorizeRequest";
 import TicketNote from "../../models/TicketNote";
 import AppError from "../../errors/AppError";
 
-const DeleteTicketNoteService = async (id: string): Promise<void> => {
+const DeleteTicketNoteService = async (id: string, actor: any): Promise<void> => {
   const ticketnote = await TicketNote.findOne({
     where: { id }
   });
@@ -10,6 +11,7 @@ const DeleteTicketNoteService = async (id: string): Promise<void> => {
     throw new AppError("ERR_NO_TICKETNOTE_FOUND", 404);
   }
 
+  await ticketAccess(actor, ticketnote.ticketId);
   await ticketnote.destroy();
 };
 

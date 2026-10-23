@@ -1,3 +1,4 @@
+import { getSessionToken, setSessionToken } from "../../services/sessionToken";
 import { useState, useEffect, useContext } from "react";
 import { useHistory } from "react-router-dom";
 import { has, isArray } from "lodash";
@@ -17,9 +18,17 @@ const useAuth = () => {
 
   api.interceptors.request.use(
     (config) => {
-      const token = localStorage.getItem("token");
+      const token = getSessionToken();
+      const destination = new URL(config.url, config.baseURL || window.location.origin);
+      const backend = new URL(process.env.REACT_APP_BACKEND_URL || window.location.origin);
+      if (destination.origin !== backend.origin) {
+        delete config.headers["Authorization"];
+        delete config.headers["authorization"];
+        config.withCredentials = false;
+        return config;
+      }
       if (token) {
-        config.headers["Authorization"] = `Bearer ${JSON.parse(token)}`;
+        config.headers["Authorization"] = `Bearer ${token}`;
         setIsAuth(true);
       }
       return config;
@@ -35,18 +44,18 @@ const useAuth = () => {
     },
     async (error) => {
       const originalRequest = error.config;
-      if (error?.response?.status === 403 && !originalRequest._retry) {
+      if (error?.response?.status === 401 && !originalRequest._retry && !originalRequest.url.includes("/auth/")) {
         originalRequest._retry = true;
 
         const { data } = await api.post("/auth/refresh_token");
         if (data) {
-          localStorage.setItem("token", JSON.stringify(data.token));
+          setSessionToken(data.token);
           api.defaults.headers.Authorization = `Bearer ${data.token}`;
         }
         return api(originalRequest);
       }
       if (error?.response?.status === 401) {
-        localStorage.removeItem("token");
+        setSessionToken(null);
         localStorage.removeItem("companyId");
         api.defaults.headers.Authorization = undefined;
         setIsAuth(false);
@@ -58,18 +67,16 @@ const useAuth = () => {
   const socketManager = useContext(SocketContext);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
     (async () => {
-      if (token) {
         try {
           const { data } = await api.post("/auth/refresh_token");
+          setSessionToken(data.token);
           api.defaults.headers.Authorization = `Bearer ${data.token}`;
           setIsAuth(true);
           setUser(data.user);
         } catch (err) {
-          toastError(err);
+          if (err.response?.status !== 401) toastError(err);
         }
-      }
       setLoading(false);
     })();
   }, []);
@@ -122,7 +129,7 @@ const useAuth = () => {
       var dias = moment.duration(diff).asDays();
 
       if (before === true) {
-        localStorage.setItem("token", JSON.stringify(data.token));
+        setSessionToken(data.token);
         localStorage.setItem("companyId", companyId);
         localStorage.setItem("userId", id);
         localStorage.setItem("companyDueDate", vencimento);
@@ -155,7 +162,7 @@ Entre em contato com o Suporte para mais informações! `);
       await api.delete("/auth/logout");
       setIsAuth(false);
       setUser({});
-      localStorage.removeItem("token");
+      setSessionToken(null);
       localStorage.removeItem("companyId");
       localStorage.removeItem("userId");
       localStorage.removeItem("cshow");

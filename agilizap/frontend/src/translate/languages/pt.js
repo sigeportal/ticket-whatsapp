@@ -989,6 +989,14 @@ const messages = {
         },
       },
       backendErrors: {
+        ERR_TICKET_ALREADY_CLAIMED: "Este ticket já foi assumido por outro atendente.",
+        ERR_CANNOT_ACCEPT_TICKET_OTHER_USER: "Não é permitido assumir um ticket atribuído a outro atendente.",
+        ERR_RESTRICTED_ATTENDANT_QUEUE: "Você não tem permissão para atender esta fila.",
+        ERR_RESTRICTED_SUPERVISOR_QUEUE: "Esta fila está fora da sua supervisão.",
+        ERR_CONNECTION_DISCONNECTED: "A conexão com o WhatsApp está desconectada. Verifique as conexões.",
+        ERR_AI_BUDGET_EXCEEDED: "O limite de orçamento mensal de IA foi atingido.",
+        ERR_AUDIO_TOO_LONG: "Áudio excede o limite máximo permitido de 10 minutos.",
+        ERR_BACKUP_INTEGRITY_COMPROMISED: "Falha de integridade: o arquivo de backup está corrompido.",
         ERR_NO_OTHER_WHATSAPP: "Deve haver pelo menos um WhatsApp padrão.",
         ERR_NO_DEF_WAPP_FOUND:
           "Nenhum WhatsApp padrão encontrado. Verifique a página de conexões.",

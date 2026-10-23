@@ -1,6 +1,6 @@
 # Ticket WhatsApp (Agilizap) — Plataforma de Atendimento Multicanal
 
-Modernização e conteinerização completa da plataforma de atendimento multicanal via WhatsApp baseada no ecossistema Whaticket, dimensionada para operações ágeis de até 10 atendentes internos, com persistência resiliente e suporte nativo a automações e Inteligência Artificial.
+Modernização e conteinerização completa da plataforma de atendimento multicanal via WhatsApp baseada no ecossistema Whaticket, dimensionada para operações ágeis de até 10 atendentes internos, com persistência resiliente, isolamento multi-tenant estrito e suporte nativo a automações e Inteligência Artificial.
 
 ---
 
@@ -10,34 +10,40 @@ Modernização e conteinerização completa da plataforma de atendimento multica
 ┌────────────────────────────────────────────────────────┐
 │                   Docker Compose Stack                 │
 ├───────────────────┬────────────────────────────────────┤
-│ ticket-frontend   │ Nginx Alpine (SPA React 18 / Vite) │
-│                   │ Porta Externa: 3000 -> 80          │
+│ ticket-frontend   │ Nginx Alpine (SPA React 17 / Vite) │
+│                   │ Porta Host: 127.0.0.1:3000 -> 80   │
 ├───────────────────┼────────────────────────────────────┤
-│ ticket-backend    │ Node.js 20 LTS (Express, Baileys,  │
-│                   │ Sequelize ORM, Socket.IO)          │
-│                   │ Porta Externa: 8080                │
+│ ticket-backend    │ Node.js 22 LTS (Express, Baileys,  │
+│                   │ Sequelize ORM, Socket.IO, Bull)    │
+│                   │ Porta Host: 127.0.0.1:8080         │
+│                   │ Usuário: node (não-privilegiado)   │
 ├───────────────────┼────────────────────────────────────┤
 │ ticket-postgres   │ PostgreSQL 14 Alpine               │
-│                   │ Porta Externa: 5432                │
+│                   │ Rede Interna (sem portas expostas) │
 │                   │ Volume: postgres_data              │
 ├───────────────────┼────────────────────────────────────┤
 │ ticket-redis      │ Redis 7 Alpine                     │
-│                   │ Porta Externa: 6379                │
+│                   │ Rede Interna (sem portas expostas) │
 │                   │ Volume: redis_data                 │
 └───────────────────┴────────────────────────────────────┘
 ```
 
-### Principais Destaques da Infraestrutura (Fase 1):
+### Principais Destaques da Infraestrutura (Etapa 5 — Operação e Observabilidade):
 1. **Frontend Otimizado (Multi-Stage):**
-   - Imagem de produção baseada em `nginx:alpine` (~30 MB vs >1.5 GB no legado).
-   - Suporte nativo a roteamento SPA com `try_files` e compressão Gzip.
-2. **Backend Node 20 LTS:**
-   - Imagem oficial `node:20-bookworm` com suporte estável a Chromium headless, FFmpeg e Baileys.
-3. **Persistência de Mídias e Sessões:**
-   - Volume `backend_public` dedicado a uploads (`/app/public`), garantindo que áudios, imagens, documentos e avatares persistam entre reinicializações e deploys.
-   - Sessões do WhatsApp armazenadas com segurança no PostgreSQL.
-4. **Resiliência e Healthchecks:**
-   - O backend só inicializa após PostgreSQL e Redis estarem com healthcheck `healthy`.
+   - Imagem de produção baseada em `nginx:alpine` (~30 MB).
+   - SPA React 17 compilada com Vite, suporte nativo a roteamento com `try_files` e compressão Gzip.
+2. **Backend Node 22 LTS Seguro:**
+   - Imagem baseada em `node:22-bookworm` com suporte estável a Chromium headless, FFmpeg e Baileys 6.7.24 (ESM).
+   - Execução com usuário sem privilégios (`USER node`) para prevenir elevação de privilégios.
+   - Script de entrada (`docker-entrypoint.sh`) com parada estrita em caso de falha de migração e proteção contra execução indevida de seeds em reinicializações.
+3. **Persistência e Isolamento de Rede:**
+   - Volume `backend_public` dedicado a uploads confinados (`/app/public`).
+   - PostgreSQL e Redis restritos estritamente à rede interna de containers, sem portas publicadas na interface de rede pública do host.
+4. **Resiliência e Observabilidade:**
+   - Probes de saúde HTTP: `/health/live` (liveness) e `/health/ready` (readiness de DB e Redis com timeout e zero exposição de segredos).
+   - Observabilidade dedicada de WhatsApp: `/health/whatsapp` separada da disponibilidade geral da aplicação.
+   - Métricas operacionais em tempo real: `/health/metrics` (memória, filas Bull, mensagens falhas/incertas, alertas de supervisão).
+   - Desligamento ordenado (Graceful Shutdown): interceptação de `SIGINT` e `SIGTERM` fechando filas Bull, conexões com banco e sockets sem perder tarefas em trânsito.
 
 ---
 
@@ -45,6 +51,7 @@ Modernização e conteinerização completa da plataforma de atendimento multica
 
 ### Pré-requisitos
 - Docker Engine e Docker Compose (ou Docker Desktop no Windows/Mac, ou Docker ativo via WSL2).
+- Node.js 22.19+ (caso execute localmente fora de containers).
 
 ### 1. Clonar o repositório
 ```bash
@@ -59,7 +66,7 @@ cp .env.example .env
 ```
 *(No Windows PowerShell: `Copy-Item .env.example .env`)*
 
-Revise as credenciais e configurações no arquivo `.env`.
+Revise as credenciais e configurações no arquivo `.env`. Configure senhas fortes e exclusivas para `DB_PASS`, `REDIS_PASSWORD`, `JWT_SECRET` e `JWT_REFRESH_SECRET`.
 
 ### 3. Iniciar a stack completa
 
@@ -80,48 +87,43 @@ docker compose up -d --build
 
 ### 4. Acessar a aplicação
 - **Frontend (Painel de Atendimento):** [http://localhost:3000](http://localhost:3000)
-- **Backend (API & Webhooks):** [http://localhost:8080](http://localhost:8080)
+- **Backend (API & Healthchecks):** [http://localhost:8080](http://localhost:8080)
+- **Liveness Probe:** [http://localhost:8080/health/live](http://localhost:8080/health/live)
+- **Readiness Probe:** [http://localhost:8080/health/ready](http://localhost:8080/health/ready)
 
 ---
 
-## 🛠️ Comandos Úteis do Docker Compose
+## 🩺 Monitoramento e Endpoints de Saúde
 
+| Endpoint | Método | Finalidade | Status Esperado |
+|---|---|---|---|
+| `/health/live` | `GET` | Verificação de vida do processo Express | `200 OK` `{ status: "ok", uptimeSeconds: ... }` |
+| `/health/ready` | `GET` | Prontidão de dependências (PostgreSQL e Redis com timeouts) | `200 OK` ou `503 Service Unavailable` em falha |
+| `/health/whatsapp` | `GET` | Observabilidade de conexões WhatsApp por empresa | `200 OK` `{ summary: { total, connected, disconnected } }` |
+| `/health/metrics` | `GET` | Métricas de memória, filas Bull, mensagens falhas e alertas | `200 OK` |
+
+---
+
+## 📦 Backup, Restauração e Manutenção
+
+Consulte o manual operacional completo em [`docs/ETAPA-5-OPERACAO.md`](docs/ETAPA-5-OPERACAO.md).
+
+### Suíte de Testes Automatizada (Backend)
 ```bash
-# Ver status de todos os containers
-docker compose ps
+cd agilizap/backend
 
-# Acompanhar logs de todos os serviços em tempo real
-docker compose logs -f
+# Testes de Operação e Observabilidade (Etapa 5)
+npm run test:operation
 
-# Acompanhar logs apenas do backend
-docker compose logs -f backend
+# Testes de IA e Supervisão (Etapa 4)
+npm run test:ai-supervision
 
-# Parar todos os serviços
-docker compose down
+# Testes de Confiabilidade (Etapa 3)
+npm run test:reliability
 
-# Reiniciar todos os serviços
-docker compose restart
+# Testes de Governança e Dados (Etapa 2)
+npm run test:governance
 
-# Executar migrações manualmente (caso necessário)
-docker compose exec backend npx sequelize db:migrate
+# Testes de Segurança e Controle de Acesso (Etapa 1)
+npm run test:security
 ```
-
----
-
-## 🗺️ Roteiro de Modernização
-
-- [x] **Fase 1: Infraestrutura & Dockerização Total**
-  - Dockerfiles otimizados (Node 20 LTS + Nginx Alpine multi-stage).
-  - Orquestração completa com `docker-compose.yml` e volumes persistentes.
-  - `.env.example` unificado e scripts utilitários.
-- [ ] **Fase 2: Backend & Baileys**
-  - Atualização do `@whiskeysockets/baileys` para versão estável mais recente.
-  - Persistência e reconexão resiliente de sessões WhatsApp.
-- [ ] **Fase 3: Frontend (Vite + React 18 + Nova UI)**
-  - Migração de Create React App para Vite + React 18.
-  - Interface moderna, responsiva e acessível.
-- [ ] **Fase 4: IA & Automações**
-  - Conexão nativa com **Google Gemini 1.5 Flash** para triagem, FAQ e resumos.
-  - Transcrição de áudios recebidos com Whisper.
-- [ ] **Fase 5: Homologação e Testes Finais**
-  - Validação de ponta a ponta em ambiente real com até 10 atendentes.

@@ -3,6 +3,7 @@ import { isEmpty } from "lodash";
 import Announcement from "../../models/Announcement";
 
 interface Request {
+  companyId: number;
   searchParam?: string;
   pageNumber?: string;
 }
@@ -15,10 +16,10 @@ interface Response {
 
 const ListService = async ({
   searchParam = "",
-  pageNumber = "1"
+  pageNumber = "1", companyId
 }: Request): Promise<Response> => {
   let whereCondition: any = {
-    status: true
+    status: true, companyId
   };
 
   if (!isEmpty(searchParam)) {

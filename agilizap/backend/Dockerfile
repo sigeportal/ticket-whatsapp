@@ -1,4 +1,4 @@
-FROM node:20-bookworm
+FROM node:22-bookworm
 
 WORKDIR /app
 
@@ -39,8 +39,14 @@ RUN npm run build
 ENV NODE_ENV=production
 
 # Diretórios para armazenamento persistente de mídias e sessões do Baileys
-RUN mkdir -p public sessions
+RUN mkdir -p public sessions \
+  && cp docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh \
+  && chmod +x /usr/local/bin/docker-entrypoint.sh \
+  && chown -R node:node /app
+
+USER node
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "npx sequelize db:migrate && (npx sequelize db:seed:all || true) && node dist/server.js"]
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["node", "dist/server.js"]

@@ -38,6 +38,7 @@ const CreateTicketService = async ({
   if (!defaultWhatsapp)
     defaultWhatsapp = await GetDefaultWhatsApp(companyId);
 
+  if (!defaultWhatsapp || defaultWhatsapp.companyId !== companyId) throw new AppError("ERR_NO_PERMISSION", 403);
   await CheckContactOpenTickets(contactId, whatsappId);
 
   const { isGroup } = await ShowContactService(contactId, companyId);

@@ -1,3 +1,5 @@
+import { confinedPath } from "../security/media";
+import uploadConfig from "../config/upload";
 import * as Yup from "yup";
 import { Request, Response } from "express";
 import { getIO } from "../libs/socket";
@@ -41,7 +43,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 
   const { records, count, hasMore } = await ListService({
     searchParam,
-    pageNumber
+    pageNumber, companyId: req.user.companyId
   });
 
   return res.json({ records, count, hasMore });
@@ -67,7 +69,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   });
 
   const io = getIO();
-  io.emit(`company-announcement`, {
+  io.to(`company-${req.user.companyId}-mainchannel`).emit(`company-announcement`, {
     action: "create",
     record
   });
@@ -107,7 +109,7 @@ export const update = async (
   });
 
   const io = getIO();
-  io.emit(`company-announcement`, {
+  io.to(`company-${req.user.companyId}-mainchannel`).emit(`company-announcement`, {
     action: "update",
     record
   });
@@ -137,7 +139,7 @@ export const findList = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
-  const params = req.query as FindParams;
+  const params = { companyId: String(req.user.companyId) };
   const records: Announcement[] = await FindService(params);
 
   return res.status(200).json(records);
@@ -161,7 +163,7 @@ export const mediaUpload = async (
     await announcement.reload();
 
     const io = getIO();
-    io.emit(`company-announcement`, {
+    io.to(`company-${req.user.companyId}-mainchannel`).emit(`company-announcement`, {
       action: "update",
       record: announcement
     });
@@ -180,7 +182,7 @@ export const deleteMedia = async (
 
   try {
     const announcement = await Announcement.findByPk(id);
-    const filePath = path.resolve("public", announcement.mediaPath);
+    const filePath = confinedPath(uploadConfig.directory, announcement.mediaPath);
     const fileExists = fs.existsSync(filePath);
     if (fileExists) {
       fs.unlinkSync(filePath);
@@ -193,7 +195,7 @@ export const deleteMedia = async (
     await announcement.reload();
 
     const io = getIO();
-    io.emit(`company-announcement`, {
+    io.to(`company-${req.user.companyId}-mainchannel`).emit(`company-announcement`, {
       action: "update",
       record: announcement
     });

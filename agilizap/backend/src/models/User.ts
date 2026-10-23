@@ -13,7 +13,7 @@ import {
   HasMany,
   BelongsToMany,
   ForeignKey,
-  BelongsTo
+  BelongsTo, AfterUpdate, AfterDestroy
 } from "sequelize-typescript";
 import { hash, compare } from "bcryptjs";
 import Ticket from "./Ticket";
@@ -49,7 +49,21 @@ class User extends Model<User> {
   @Column
   tokenVersion: number;
 
-  @Default("admin")
+  @Column
+  resetTokenHash: string;
+  @Column(DataType.DATE)
+  resetTokenExpiresAt: Date;
+  @Default(false)
+  @Column
+  blocked: boolean;
+  @Default(false)
+  @Column
+  mustChangePassword: boolean;
+  @Default(0)
+  @Column(DataType.BIGINT)
+  mfaLastStep: number;
+
+  @Default("user")
   @Column
   profile: string;
 
@@ -92,11 +106,18 @@ class User extends Model<User> {
   @BelongsTo(() => Whatsapp)
   whatsapp: Whatsapp;
 
+  @AfterUpdate
+  @AfterDestroy
+  static async revokeSockets(instance: User): Promise<void> {
+    const { disconnectUser } = await import("../libs/socket");
+    disconnectUser(instance.id);
+  }
+
   @BeforeUpdate
   @BeforeCreate
   static hashPassword = async (instance: User): Promise<void> => {
     if (instance.password) {
-      instance.passwordHash = await hash(instance.password, 8);
+      instance.passwordHash = await hash(instance.password, 12);
     }
   };
 

@@ -1,3 +1,9 @@
+import { logger } from "../../utils/logger";
+import { validateUserChange } from "../../security/policy";
+import { disconnectUser } from "../../libs/socket";
+import Queue from "../../models/Queue";
+import Whatsapp from "../../models/Whatsapp";
+import { literal } from "sequelize";
 import * as Yup from "yup";
 
 import AppError from "../../errors/AppError";
@@ -14,6 +20,7 @@ interface UserData {
   queueIds?: number[];
   whatsappId?: number;
   allTicket?: string;
+  blocked?: boolean;
 }
 
 interface Request {
@@ -40,8 +47,12 @@ const UpdateUserService = async ({
 
   const requestUser = await User.findByPk(requestUserId);
 
-  if (requestUser.super === false && userData.companyId !== companyId) {
-    throw new AppError("O usuário não pertence à esta empresa");
+  validateUserChange(requestUser, user, userData);
+  for (const queueId of userData.queueIds || []) {
+    if (!await Queue.findOne({ where: { id: queueId, companyId } })) throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+  if (userData.whatsappId && !await Whatsapp.findOne({ where: { id: userData.whatsappId, companyId } })) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
   }
 
   const schema = Yup.object().shape({
@@ -52,7 +63,7 @@ const UpdateUserService = async ({
 	allTicket: Yup.string()
   });
 
-  const { email, password, profile, name, queueIds = [], whatsappId, allTicket } = userData;
+  const { email, password, profile, name, queueIds, whatsappId, allTicket, blocked } = userData;
 
   try {
     await schema.validate({ email, password, profile, name, allTicket });
@@ -61,15 +72,19 @@ const UpdateUserService = async ({
   }
 
   await user.update({
-    email,
-    password,
+    email, blocked,
+    password: password || undefined,
+    tokenVersion: literal('"tokenVersion" + 1') as any,
     profile,
     name,
-    whatsappId: whatsappId || null,
+    whatsappId: whatsappId === undefined ? user.whatsappId : whatsappId || null,
 	allTicket
   });
 
-  await user.$set("queues", queueIds);
+  if (queueIds !== undefined) await user.$set("queues", queueIds);
+  disconnectUser(user.id);
+  logger.info({ event: "user_access_updated", actorId: requestUserId, companyId, targetId: user.id,
+    fields: Object.keys(userData).filter(key => ["profile", "queueIds", "whatsappId", "allTicket", "blocked"].includes(key)) });
 
   await user.reload();
 

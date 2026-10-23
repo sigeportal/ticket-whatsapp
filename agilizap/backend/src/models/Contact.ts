@@ -1,3 +1,4 @@
+import { redactOperational } from "../security/serializeOperational";
 import {
   Table,
   Column,
@@ -21,6 +22,8 @@ import Whatsapp from "./Whatsapp";
 
 @Table
 class Contact extends Model<Contact> {
+  public toJSON(): any { return redactOperational(super.toJSON()); }
+
   @PrimaryKey
   @AutoIncrement
   @Column
@@ -87,6 +90,10 @@ class Contact extends Model<Contact> {
 
   @BelongsTo(() => Whatsapp)
   whatsapp: Whatsapp;
+
+  @Default(false)
+  @Column
+  optOutCampaign: boolean;
 }
 
 export default Contact;

@@ -30,7 +30,7 @@ const UpdateContactService = async ({
 
   const contact = await Contact.findOne({
     where: { id: contactId },
-    attributes: ["id", "name", "number", "email", "companyId", "profilePicUrl", "active"],
+    attributes: ["id", "name", "number", "email", "companyId", "profilePicUrl", "active", "isLid"],
     include: ["extraInfo"]
   });
 
@@ -68,7 +68,7 @@ const UpdateContactService = async ({
   });
 
   await contact.reload({
-    attributes: ["id", "name", "number", "email", "profilePicUrl","active"],
+    attributes: ["id", "name", "number", "email", "profilePicUrl","active", "isLid"],
     include: ["extraInfo"]
   });
 

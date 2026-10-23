@@ -1,3 +1,5 @@
+import Whatsapp from "../models/Whatsapp";
+import AppError from "../errors/AppError";
 import { WASocket } from "@whiskeysockets/baileys";
 import { getWbot } from "../libs/wbot";
 import GetDefaultWhatsApp from "./GetDefaultWhatsApp";
@@ -11,11 +13,12 @@ type Session = WASocket & {
 
 const GetTicketWbot = async (ticket: Ticket): Promise<Session> => {
   if (!ticket.whatsappId) {
-    const defaultWhatsapp = await GetDefaultWhatsApp(ticket.user.id);
+    const defaultWhatsapp = await GetDefaultWhatsApp(ticket.companyId);
 
     await ticket.$set("whatsapp", defaultWhatsapp);
   }
 
+  if (!await Whatsapp.findOne({ where: { id: ticket.whatsappId, companyId: ticket.companyId } })) throw new AppError("ERR_NO_PERMISSION", 403);
   const wbot = getWbot(ticket.whatsappId);
   return wbot;
 };

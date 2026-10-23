@@ -1,0 +1,13 @@
+PASS Senha incorreta e MFA administrativo ausente negados
+PASS MFA válido permite login e código consumido não pode ser reutilizado
+PASS Leitura real por ID/UUID respeita empresa e fila
+PASS Lista real de tickets não contém fila ou empresa alheia
+PASS Mídia legada fictícia exige sessão e vínculo autorizado
+PASS Atendente não promove conta nem acessa exportação em massa
+PASS Primeiro acesso exige nova senha antes de emitir sessão
+PASS Recuperação entrega somente à caixa simulada e responde genericamente
+PASS Bloqueio/desbloqueio revoga sessão sem restaurar token antigo
+PASS Transferência pelo controller revoga acesso à fila anterior
+PASS WhatsApp e pagamentos não podem ser ativados no ensaio
+PASS Logout real revoga token e impede reutilização
+RESULT 12/12 HTTP groups passed; PostgreSQL real, Node 22, integrations blocked

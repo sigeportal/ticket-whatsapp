@@ -1,0 +1,21 @@
+> backend@1.0.0 test:ai-supervision
+> node tests/ai-supervision/run.cjs
+
+PASS migration up executed inside isolated PostgreSQL/WASM
+PASS migration down/up reversibility verified
+PASS AI-01: Sanitizacao - [RESUMO_IA] e Acao: Transferir sao extraidos e removidos do texto do cliente
+PASS AI-01: Sanitizacao - Resposta truncada com [RESUMO_IA] sem fechamento nao vaza para o cliente
+PASS AI-01: Fallback seguro - Timeout no provedor transfere para humano com resumo interno
+PASS AI-01: Fallback seguro - Chave de API ausente transfere deterministica para humano
+PASS AI-01: Audio validation - Audio superior a 10 min (600s) e rejeitado para IA e vai para humano
+PASS AI-01: Orcamento - Teto mensal atingido bloqueia chamada a IA e encaminha para humano
+PASS OPS-04: Horario util - Sabado 11h55 -> Segunda 08h05 sem feriado = exatamente 10 minutos uteis
+PASS OPS-04: Horario util - Pausa fora do expediente e retomada na abertura
+PASS OPS-04: Horario util - Feriado suspende contagem
+PASS OPS-04: Alerta de espera - Disparo apos 10 minutos uteis e desduplicacao por episodio
+PASS OPS-04: Alerta de espera - Fila sem supervisor escala para administradores (destinatario substituto)
+ticketData { status: 'open', userId: 10 }
+PASS OPS-04: Semantica - Assumir ticket sem responder NAO encerra a espera
+PASS OPS-04: Semantica - Resposta humana encerra espera e resolve alerta pendente
+PASS OPS-04: API REST - Supervisor ve apenas alertas de suas filas e Atendente recebe 403
+RESULT 14/14 passed; isolated PostgreSQL/WASM, zero external services

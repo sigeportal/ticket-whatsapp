@@ -1,3 +1,4 @@
+import { exportContacts } from "../controllers/ContactExportController";
 import express from "express";
 import isAuth from "../middleware/isAuth";
 
@@ -5,7 +6,7 @@ import * as ContactController from "../controllers/ContactController";
 import * as ImportPhoneContactsController from "../controllers/ImportPhoneContactsController";
 import routes from "./contactListRoutes";
 import uploadConfig from "../config/upload";
-import multer from "multer";
+import multer from "../security/secureUpload";
 
 const contactRoutes = express.Router();
 
@@ -27,6 +28,8 @@ routes.post(
 contactRoutes.get("/contacts", isAuth, ContactController.index);
 
 contactRoutes.get("/contacts/list", isAuth, ContactController.list);
+
+contactRoutes.get("/contacts/export", isAuth, exportContacts);
 
 contactRoutes.get("/contacts/:contactId", isAuth, ContactController.show);
 

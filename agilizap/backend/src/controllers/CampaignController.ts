@@ -1,3 +1,5 @@
+import { confinedPath } from "../security/media";
+import uploadConfig from "../config/upload";
 import { Request, Response } from "express";
 import fs from "fs";
 import { head } from "lodash";
@@ -125,7 +127,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
           contactListId: contactListId,
         });
         const io = getIO();
-        io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-campaign`, {
+        io.to(`company-${companyId}-admin`).emit(`company-${companyId}-campaign`, {
           action: "create",
           record
         });
@@ -145,7 +147,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     });
 
     const io = getIO();
-    io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-campaign`, {
+    io.to(`company-${companyId}-admin`).emit(`company-${companyId}-campaign`, {
       action: "create",
       record
     });
@@ -187,7 +189,7 @@ export const update = async (
   });
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-campaign`, {
+  io.to(`company-${companyId}-admin`).emit(`company-${companyId}-campaign`, {
     action: "update",
     record
   });
@@ -227,7 +229,7 @@ export const remove = async (
   await DeleteService(id);
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-campaign`, {
+  io.to(`company-${companyId}-admin`).emit(`company-${companyId}-campaign`, {
     action: "delete",
     id
   });
@@ -239,7 +241,7 @@ export const findList = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
-  const params = req.query as FindParams;
+  const params = { ...req.query, companyId: String(req.user.companyId), userId: req.user.id } as FindParams;
   const records: Campaign[] = await FindService(params);
 
   return res.status(200).json(records);
@@ -272,7 +274,7 @@ export const deleteMedia = async (
 
   try {
     const campaign = await Campaign.findByPk(id);
-    const filePath = path.resolve("public", campaign.mediaPath);
+    const filePath = confinedPath(uploadConfig.directory, campaign.mediaPath);
     const fileExists = fs.existsSync(filePath);
     if (fileExists) {
       fs.unlinkSync(filePath);

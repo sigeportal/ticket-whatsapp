@@ -183,6 +183,22 @@ const Icons = {
 };
 
 const useStyles = makeStyles((theme) => ({
+  firstListSubheader: {
+    position: "relative !important",
+    height: 24,
+    lineHeight: "24px",
+    paddingLeft: 16,
+    paddingRight: 16,
+    marginTop: 2,
+    marginBottom: 4,
+    color: theme.mode === "light" ? "#64748b" : "#6ee7b7",
+    fontSize: "0.6875rem",
+    fontWeight: 800,
+    textTransform: "uppercase",
+    letterSpacing: "0.1em",
+    opacity: 0.8,
+    backgroundColor: "transparent",
+  },
   listSubheader: {
     position: "relative !important",
     height: 28,
@@ -387,55 +403,6 @@ const useStyles = makeStyles((theme) => ({
       theme.mode === "light"
         ? "rgba(229, 231, 235, 0.7)"
         : "rgba(255, 255, 255, 0.08)",
-  },
-  sidebarFooterCard: {
-    margin: "12px 10px 6px 10px",
-    padding: "8px 10px",
-    borderRadius: 12,
-    border:
-      theme.mode === "light"
-        ? "1px solid rgba(226, 232, 240, 0.9)"
-        : "1px solid rgba(16, 185, 129, 0.18)",
-    backgroundColor:
-      theme.mode === "light"
-        ? "rgba(248, 250, 252, 0.8)"
-        : "rgba(13, 34, 25, 0.6)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  footerCardContent: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-  },
-  footerLogo: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
-    backgroundColor: "rgba(16, 185, 129, 0.18)",
-    color: "#10b981",
-    fontSize: "0.75rem",
-    fontWeight: 800,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  footerText: {
-    display: "flex",
-    flexDirection: "column",
-    lineHeight: 1.15,
-  },
-  footerTitle: {
-    fontSize: "0.75rem",
-    fontWeight: 700,
-    color: theme.mode === "light" ? "#1e293b" : "#f1f5f9",
-  },
-  footerSubtitle: {
-    fontSize: "0.625rem",
-    fontWeight: 600,
-    color: theme.mode === "light" ? "#059669" : "#34d399",
-    opacity: 0.8,
   },
 }));
 
@@ -764,16 +731,14 @@ const MainListItems = (props) => {
           <>
             {!collapsed ? (
               <ListSubheader
-                className={classes.listSubheader}
+                className={classes.firstListSubheader}
                 disableSticky={true}
                 inset
                 color="inherit"
               >
                 Atendimento
               </ListSubheader>
-            ) : (
-              <Divider className={classes.collapsedDivider} />
-            )}
+            ) : null}
 
             <ListItemLink
               to="/tickets"
@@ -1081,18 +1046,6 @@ const MainListItems = (props) => {
           </>
         )}
       />
-
-      {!collapsed && (
-        <div className={classes.sidebarFooterCard}>
-          <div className={classes.footerCardContent}>
-            <div className={classes.footerLogo}>P</div>
-            <div className={classes.footerText}>
-              <div className={classes.footerTitle}>Portal Atendimento</div>
-              <div className={classes.footerSubtitle}>PortAI Smart CX</div>
-            </div>
-          </div>
-        </div>
-      )}
 
       <Divider className={classes.divider} />
 

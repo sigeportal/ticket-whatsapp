@@ -26,30 +26,39 @@ const useStyles = makeStyles((theme) => ({
         boxShadow: "none !important",
     },
     icons: {
-        color: theme.mode === "light" ? "#1e293b" : "#f0fdf4",
-        backgroundColor:
-            theme.mode === "light"
-                ? "rgba(0, 0, 0, 0.04)"
-                : "rgba(255, 255, 255, 0.06)",
-        border:
-            theme.mode === "light"
-                ? "1px solid rgba(226, 232, 240, 0.9)"
-                : "1px solid rgba(16, 185, 129, 0.18)",
-        padding: 8,
-        borderRadius: 10,
-        marginLeft: 3,
-        marginRight: 3,
-        transition: "all 0.2s ease-in-out",
-        "&:hover": {
-            backgroundColor:
-                theme.mode === "light"
-                    ? "rgba(16, 185, 129, 0.12)"
-                    : "rgba(37, 211, 102, 0.18)",
-            color: theme.mode === "light" ? "#065f46" : "#25d366",
-            transform: "translateY(-1px)",
-        },
-    },
-    customBadge: {
+		color: theme.mode === "light" ? "#475569" : "#cbd5e1",
+		backgroundColor:
+			theme.mode === "light"
+				? "rgba(248, 250, 252, 0.95)"
+				: "rgba(255, 255, 255, 0.04)",
+		border:
+			theme.mode === "light"
+				? "1px solid rgba(226, 232, 240, 0.95)"
+				: "1px solid rgba(16, 185, 129, 0.18)",
+		width: 40,
+		height: 40,
+		minWidth: 40,
+		borderRadius: 12,
+		padding: 0,
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "center",
+		boxShadow: "0 1px 2px rgba(0, 0, 0, 0.02)",
+		transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+		"&:hover": {
+			backgroundColor:
+				theme.mode === "light"
+					? "rgba(16, 185, 129, 0.08)"
+					: "rgba(37, 211, 102, 0.12)",
+			borderColor:
+				theme.mode === "light"
+					? "rgba(16, 185, 129, 0.35)"
+					: "rgba(37, 211, 102, 0.35)",
+			color: theme.mode === "light" ? "#10b981" : "#34d399",
+			transform: "translateY(-1px)",
+		},
+	},
+	customBadge: {
         backgroundColor: "#f44336",
         color: "#fff",
     },

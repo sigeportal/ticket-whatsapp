@@ -13,10 +13,10 @@ companyRoutes.post("/companies", isAuth, isSuper, CompanyController.store);
 companyRoutes.put("/companies/:id", isAuth, isSuper, CompanyController.update);
 companyRoutes.put("/companies/:id/schedules",isAuth,CompanyController.updateSchedules);
 companyRoutes.delete("/companies/:id", isAuth, isSuper, CompanyController.remove);
-companyRoutes.post("/companies/cadastro", CompanyController.store);
+companyRoutes.post("/companies/cadastro", isAuth, isSuper, CompanyController.store);
 
 // Rota para listar o plano da empresa
 companyRoutes.get("/companies/listPlan/:id", isAuth, CompanyController.listPlan);
-companyRoutes.get("/companiesPlan", isAuth, CompanyController.indexPlan);
+companyRoutes.get("/companiesPlan", isAuth, isSuper, CompanyController.indexPlan);
 
 export default companyRoutes;

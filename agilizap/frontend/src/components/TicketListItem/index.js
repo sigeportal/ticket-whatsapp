@@ -122,14 +122,14 @@ const TicketListItem = ({ ticket }) => {
         status: "open",
         userId: user?.id,
       });
+      history.push(`/tickets/${ticket.uuid}`);
     } catch (err) {
-      setLoading(false);
       toastError(err);
+    } finally {
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
-    if (isMounted.current) {
-      setLoading(false);
-    }
-    history.push(`/tickets/${ticket.uuid}`);
   };
   console.log("🚀 Console Log : ticket.lastMessage", ticket.lastMessage);
 

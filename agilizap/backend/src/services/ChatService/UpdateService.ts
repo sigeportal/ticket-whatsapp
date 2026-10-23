@@ -29,8 +29,8 @@ export default async function UpdateService(data: ChatData) {
 
   await record.reload({
     include: [
-      { model: ChatUser, as: "users", include: [{ model: User, as: "user" }] },
-      { model: User, as: "owner" }
+      { model: ChatUser, as: "users", include: [{ model: User, as: "user", attributes: ["id", "name"] }] },
+      { model: User, as: "owner", attributes: ["id", "name"] }
     ]
   });
 

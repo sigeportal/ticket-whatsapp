@@ -10,6 +10,7 @@ const DeleteService = async (id: string | number, companyId: number): Promise<vo
     throw new AppError("ERR_NO_SCHEDULE_FOUND", 404);
   }
 
+  await schedule.update({ status: "CANCELADA" });
   await schedule.destroy();
 };
 

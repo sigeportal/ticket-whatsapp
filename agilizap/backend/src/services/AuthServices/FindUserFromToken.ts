@@ -1,3 +1,4 @@
+import { loadSession } from "../../security/session";
 import { verify } from "jsonwebtoken";
 import ShowUserService from "../UserServices/ShowUserService";
 import authConfig from "../../config/auth";
@@ -10,9 +11,6 @@ interface RefreshTokenPayload {
 }
 
 export default async function FindUserFromToken(token: string): Promise<User> {
-  const decoded = verify(token, authConfig.refreshSecret);
-  const { id } = decoded as RefreshTokenPayload;
-
-  const user = await ShowUserService(id);
+  const user = await loadSession(token, true);
   return user;
 }

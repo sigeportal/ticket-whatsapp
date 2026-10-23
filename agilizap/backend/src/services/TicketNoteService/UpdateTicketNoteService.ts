@@ -1,3 +1,4 @@
+import { ticketAccess } from "../../security/authorizeRequest";
 import AppError from "../../errors/AppError";
 import TicketNote from "../../models/TicketNote";
 
@@ -7,7 +8,7 @@ interface TicketNoteData {
 }
 
 const UpdateTicketNoteService = async (
-  ticketNoteData: TicketNoteData
+  ticketNoteData: TicketNoteData, actor: any
 ): Promise<TicketNote> => {
   const { id, note } = ticketNoteData;
 
@@ -17,6 +18,7 @@ const UpdateTicketNoteService = async (
     throw new AppError("ERR_NO_TICKETNOTE_FOUND", 404);
   }
 
+  await ticketAccess(actor, ticketNote.ticketId);
   await ticketNote.update({
     note
   });

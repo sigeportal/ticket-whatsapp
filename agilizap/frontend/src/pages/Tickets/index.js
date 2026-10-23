@@ -16,7 +16,7 @@ const useStyles = makeStyles(theme => ({
 		flex: 1,
 		// backgroundColor: "#eee",
 		padding: theme.spacing(0),
-		height: `calc(100% - 48px)`,
+		height: `calc(100% - 64px)`,
 		overflowY: "hidden",
 	},
 

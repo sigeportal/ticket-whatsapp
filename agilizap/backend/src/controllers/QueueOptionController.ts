@@ -1,3 +1,5 @@
+import { confinedPath } from "../security/media";
+import uploadConfig from "../config/upload";
 import { Request, Response } from "express";
 
 import CreateService from "../services/QueueOptionService/CreateService";
@@ -94,7 +96,7 @@ export const deleteMedia = async (
 
   try {
     const queue = await QueueOption.findByPk(queueOptionId);
-    const filePath = path.resolve("public", queue.mediaPath);
+    const filePath = confinedPath(uploadConfig.directory, queue.mediaPath);
     const fileExists = fs.existsSync(filePath);
     if (fileExists) {
       fs.unlinkSync(filePath);

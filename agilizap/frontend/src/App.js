@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 
 import "react-toastify/dist/ReactToastify.css";
+import "./styles/toast.css";
 import { QueryClient, QueryClientProvider } from "react-query";
 import lightBackground from '../src/assets/wa-background-light.png';
 import darkBackground from '../src/assets/wa-background-dark.jpg';
@@ -283,6 +284,15 @@ const App = () => {
 
     useEffect(() => {
         window.localStorage.setItem("preferredTheme", mode);
+        document.documentElement.setAttribute("data-theme", mode);
+        document.body.setAttribute("data-theme", mode);
+        if (mode === "dark") {
+            document.documentElement.classList.add("dark");
+            document.body.classList.add("dark");
+        } else {
+            document.documentElement.classList.remove("dark");
+            document.body.classList.remove("dark");
+        }
     }, [mode]);
 
 

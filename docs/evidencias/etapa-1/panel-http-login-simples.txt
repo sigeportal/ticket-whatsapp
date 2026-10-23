@@ -1,0 +1,13 @@
+PASS Senha incorreta negada para atendente e administrador
+PASS Administrador entra somente com email e senha
+PASS Leitura real por ID/UUID respeita empresa e fila
+PASS Lista real de tickets não contém fila ou empresa alheia
+PASS Mídia legada fictícia exige sessão e vínculo autorizado
+PASS Atendente não promove conta nem acessa exportação em massa
+PASS Conta inicial permite acesso sem solicitar nova senha
+PASS Recuperação entrega somente à caixa simulada e responde genericamente
+PASS Bloqueio/desbloqueio revoga sessão sem restaurar token antigo
+PASS Transferência pelo controller revoga acesso à fila anterior
+PASS WhatsApp e pagamentos não podem ser ativados no ensaio
+PASS Logout real revoga token e impede reutilização
+RESULT 12/12 HTTP groups passed; PostgreSQL real, Node 22, integrations blocked

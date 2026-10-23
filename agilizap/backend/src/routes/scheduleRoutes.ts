@@ -2,7 +2,7 @@ import express from "express";
 import isAuth from "../middleware/isAuth";
 
 import * as ScheduleController from "../controllers/ScheduleController";
-import multer from "multer";
+import multer from "../security/secureUpload";
 import uploadConfig from "../config/upload";
 
 const upload = multer(uploadConfig);
@@ -12,6 +12,10 @@ const scheduleRoutes = express.Router();
 scheduleRoutes.get("/schedules", isAuth, ScheduleController.index);
 
 scheduleRoutes.post("/schedules", isAuth, ScheduleController.store);
+
+scheduleRoutes.post("/schedules/reconcile", isAuth, ScheduleController.reconcile);
+
+scheduleRoutes.post("/schedules/:scheduleId/review", isAuth, ScheduleController.review);
 
 scheduleRoutes.put("/schedules/:scheduleId", isAuth, ScheduleController.update);
 

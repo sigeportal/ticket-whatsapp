@@ -9,7 +9,7 @@ import {
   ForeignKey,
   BelongsTo,
   DataType,
-  HasMany
+  HasMany, AfterUpdate, BeforeDestroy
 } from "sequelize-typescript";
 import Contact from "./Contact";
 import Message from "./Message";
@@ -22,9 +22,18 @@ import TicketTraking from "./TicketTraking";
 import User from "./User";
 import UserRating from "./UserRating";
 import Whatsapp from "./Whatsapp";
+import QueueWaitAlert from "./QueueWaitAlert";
 
 @Table
 class Company extends Model<Company> {
+  @AfterUpdate
+  @BeforeDestroy
+  static async revokeCompanySockets(company: Company): Promise<void> {
+    const { disconnectUser } = await import("../libs/socket");
+    const users = await User.findAll({ where: { companyId: company.id }, attributes: ["id"] });
+    users.forEach(user => disconnectUser(user.id));
+  }
+
   @PrimaryKey
   @AutoIncrement
   @Column
@@ -59,6 +68,18 @@ class Company extends Model<Company> {
 
   @BelongsTo(() => Plan)
   plan: Plan;
+
+  @Column({ type: DataType.DECIMAL(10, 2), defaultValue: 50.00 })
+  aiMonthlyBudgetLimit: number;
+
+  @Column({ type: DataType.DECIMAL(10, 4), defaultValue: 0 })
+  aiMonthlySpent: number;
+
+  @Column({ defaultValue: "2026-10" })
+  aiBudgetPeriod: string;
+
+  @Column({ defaultValue: 0 })
+  aiRequestsCount: number;
 
   @CreatedAt
   createdAt: Date;
@@ -128,6 +149,9 @@ class Company extends Model<Company> {
     hooks: true
   })
   ticketTrankins: TicketTraking[];
+
+  @HasMany(() => QueueWaitAlert)
+  queueWaitAlerts: QueueWaitAlert[];
 }
 
 export default Company;

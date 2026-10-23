@@ -13,7 +13,13 @@
     "pretest": "NODE_ENV=test sequelize db:migrate && NODE_ENV=test sequelize db:seed:all",
     "test": "NODE_ENV=test jest",
     "posttest": "NODE_ENV=test sequelize db:migrate:undo:all",
-    "lint": "eslint src/**/*.ts"
+    "lint": "eslint src/**/*.ts",
+    "test:security": "node tests/security/run.cjs",
+    "test:governance": "node tests/governance/run.cjs",
+    "test:reliability": "node tests/reliability/run.cjs",
+    "test:ai-supervision": "node tests/ai-supervision/run.cjs",
+    "test:operation": "node tests/operation/run.cjs",
+    "test:homologation": "node tests/homologation/run.cjs"
   },
   "author": "",
   "license": "MIT",
@@ -24,7 +30,7 @@
     "@hapi/boom": "^9.1.4",
     "@sentry/node": "^6.18.1",
     "@types/fs-extra": "^11.0.4",
-    "@whiskeysockets/baileys": "6.7.9",
+    "@whiskeysockets/baileys": "6.7.24",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.2",
     "bull": "^4.8.2",
@@ -41,7 +47,7 @@
     "ioredis": "^5.4.1",
     "jsonwebtoken": "^8.5.1",
     "microsoft-cognitiveservices-speech-sdk": "1.31.0",
-    "multer": "^1.4.4",
+    "multer": "2.4.0",
     "mustache": "^4.2.0",
     "mysql2": "^2.2.5",
     "node-cache": "^5.1.2",
@@ -61,9 +67,11 @@
     "socket.io": "^4.7.4",
     "uuid": "^8.3.2",
     "xlsx": "^0.18.3",
+    "yauzl": "3.4.0",
     "yup": "^0.32.11"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.11",
     "@types/bcryptjs": "^2.4.2",
     "@types/bluebird": "^3.5.36",
     "@types/chance": "^1.1.3",
@@ -74,7 +82,7 @@
     "@types/ioredis": "^5.0.0",
     "@types/jest": "^27.4.1",
     "@types/jsonwebtoken": "^8.5.8",
-    "@types/multer": "^1.4.7",
+    "@types/multer": "^2.3.0",
     "@types/mustache": "^4.1.2",
     "@types/node": "^17.0.21",
     "@types/supertest": "^2.0.11",
@@ -94,9 +102,13 @@
     "jest": "^27.5.1",
     "nodemon": "^2.0.15",
     "prettier": "^2.5.1",
+    "socket.io-client": "4.8.1",
     "supertest": "^6.2.2",
     "ts-jest": "^27.1.3",
     "ts-node-dev": "^1.1.8",
     "typescript": "^4.6.3"
+  },
+  "engines": {
+    "node": ">=22.19.0 <23"
   }
 }

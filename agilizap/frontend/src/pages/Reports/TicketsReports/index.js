@@ -96,7 +96,7 @@ const TicketsReports = () => {
   const formateDate = (date) => {
     const parseDate = parseISO(date);
     const data = format(parseDate, " dd'/'MM'/'yyyy '-' HH:mm'h'", {
-      timeZone: 'America/Sao_Paulo',
+      timeZone: 'America/Campo_Grande',
     });
     return data;
   };

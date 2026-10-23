@@ -1,3 +1,4 @@
+import { adminFields, deny } from "../security/policy";
 import { Request, Response } from "express";
 import { getIO } from "../libs/socket";
 
@@ -36,6 +37,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
+  if (!req.user || req.user.profile !== "admin" || Object.keys(req.body).some(k => !adminFields.includes(k))) deny();
   const {
     email,
     password,
@@ -43,7 +45,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     profile,
     companyId: bodyCompanyId,
     queueIds,
-    whatsappId,
+    whatsappId, blocked,
 	allTicket
   } = req.body;
   let userCompanyId: number | null = null;
@@ -56,7 +58,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     requestUser = await User.findByPk(req.user.id);
   }
 
-  const newUserCompanyId = bodyCompanyId || userCompanyId; 
+  if (bodyCompanyId !== undefined && Number(bodyCompanyId) !== userCompanyId) deny();
+  const newUserCompanyId = userCompanyId;
 
   if (req.url === "/signup") {
     if (await CheckSettingsHelper("userCreation") === "disabled") {
@@ -75,7 +78,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     profile,
     companyId: newUserCompanyId,
     queueIds,
-    whatsappId,
+    whatsappId, blocked,
 	allTicket
   });
 
@@ -132,7 +135,7 @@ export const remove = async (
     throw new AppError("ERR_NO_PERMISSION", 403);
   }
 
-  await DeleteUserService(userId, companyId);
+  await DeleteUserService(userId, companyId, req.user.id);
 
   const io = getIO();
   io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-user`, {
@@ -148,7 +151,7 @@ export const list = async (req: Request, res: Response): Promise<Response> => {
   const { companyId: userCompanyId } = req.user;
 
   const users = await SimpleListService({
-    companyId: companyId ? +companyId : userCompanyId
+    companyId: userCompanyId
   });
 
   return res.status(200).json(users);

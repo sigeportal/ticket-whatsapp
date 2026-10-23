@@ -3,7 +3,7 @@ import isAuth from "../middleware/isAuth";
 import isSuper from "../middleware/isSuper";
 
 import * as AnnouncementController from "../controllers/AnnouncementController";
-import multer from "multer";
+import multer from "../security/secureUpload";
 import uploadConfig from "../config/upload";
 
 const upload = multer(uploadConfig);

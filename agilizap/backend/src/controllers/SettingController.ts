@@ -1,3 +1,5 @@
+import uploadConfig from "../config/upload";
+import { confinedPath } from "../security/media";
 import { Request, Response } from "express";
 import authConfig from "../config/auth";
 import * as Yup from "yup";
@@ -45,7 +47,7 @@ export const update = async (
   });
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-settings`, {
+  io.to(`company-${companyId}-admin`).emit(`company-${companyId}-settings`, {
     action: "update",
     setting
   });
@@ -60,7 +62,7 @@ export const show = async (
 ): Promise<Response> => {
 
   //const { companyId } = req.user;
-  const companyId = 1;
+  const { companyId } = req.user;
   const { settingKey } = req.params;
   
 
@@ -92,9 +94,15 @@ export const mediaUpload = async (
     throw new AppError("ERR_NO_PERMISSION", 403);
   }
 
-  const files = req.files as Express.Multer.File[];
-  const file = head(files);
-  console.log(file);
+  const file = (req.files as Express.Multer.File[])[0];
+  const names = ["signup", "login", "interno", "favicon", "favicon-256x256", "apple-touch-icon"];
+  const ref = String(req.query.ref || "");
+  if (!file || !names.includes(ref) || (ref === "favicon" ? !["image/x-icon", "image/vnd.microsoft.icon"].includes(file.mimetype) : file.mimetype !== "image/png")) {
+    throw new AppError("ERR_INVALID_BRANDING_ASSET", 400);
+  }
+  const target = confinedPath(uploadConfig.directory, `logotipos/${ref}${ref === "favicon" ? ".ico" : ".png"}`);
+  await fs.promises.mkdir(path.dirname(target), { recursive: true, mode: 0o750 });
+  await fs.promises.rename(file.path, target);
   return res.send({ mensagem: "Arquivo Anexado" });
 };
 

@@ -415,14 +415,14 @@ const TicketListItemCustom = ({ ticket }) => {
         userId: user?.id,
         queueId: ticket?.queue?.id,
       });
+      history.push(`/tickets/${ticket.uuid}`);
     } catch (err) {
-      setLoading(false);
       toastError(err);
+    } finally {
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
-    if (isMounted.current) {
-      setLoading(false);
-    }
-    history.push(`/tickets/${ticket.uuid}`);
   };
 
   const handleAcepptTicket = async (id) => {
@@ -444,14 +444,14 @@ const TicketListItemCustom = ({ ticket }) => {
       if (settingIndex && settingIndex[0]?.value === "enabled" && !ticket.isGroup) {
         handleSendMessage(ticket.id);
       }
+      history.push(`/tickets/${ticket.uuid}`);
     } catch (err) {
-      setLoading(false);
       toastError(err);
+    } finally {
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
-    if (isMounted.current) {
-      setLoading(false);
-    }
-    history.push(`/tickets/${ticket.uuid}`);
   };
 
   const handleSendMessage = async (id) => {

@@ -1,3 +1,4 @@
+import { validatePassword } from "../../security/policy";
 import * as Yup from "yup";
 import AppError from "../../errors/AppError";
 import Company from "../../models/Company";
@@ -30,6 +31,8 @@ const CreateCompanyService = async (
     dueDate,
     recurrence
   } = companyData;
+
+  validatePassword(password);
 
   const companySchema = Yup.object().shape({
     name: Yup.string()
@@ -70,7 +73,7 @@ const CreateCompanyService = async (
   const user = await User.create({
     name: company.name,
     email: company.email,
-    password: password || "mudar123",
+    password,
     profile: "admin",
     companyId: company.id
   });

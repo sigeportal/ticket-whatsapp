@@ -1,3 +1,5 @@
+import Ticket from "../../models/Ticket";
+import { Op as AccessOp } from "sequelize";
 import { Sequelize, Op } from "sequelize";
 import TicketNote from "../../models/TicketNote";
 
@@ -15,7 +17,7 @@ interface Response {
 const ListTicketNotesService = async ({
   searchParam = "",
   pageNumber = "1"
-}: Request): Promise<Response> => {
+}: Request, actor: any): Promise<Response> => {
   const whereCondition = {
     [Op.or]: [
       {
@@ -32,6 +34,7 @@ const ListTicketNotesService = async ({
 
   const { count, rows: ticketNotes } = await TicketNote.findAndCountAll({
     where: whereCondition,
+    include: [{ model: Ticket, as: "ticket", required: true, where: actor.profile === "admin" ? { companyId: actor.companyId } : { companyId: actor.companyId, queueId: { [AccessOp.in]: actor.queues.map((q: any) => q.id) } } }],
     limit,
     offset,
     order: [["createdAt", "DESC"]]

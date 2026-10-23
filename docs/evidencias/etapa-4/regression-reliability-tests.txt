@@ -1,0 +1,23 @@
+> backend@1.0.0 test:reliability
+> node tests/reliability/run.cjs
+
+PASS migration up executed inside isolated PostgreSQL/WASM
+PASS migration down/up reversibility verified
+PASS REL-01: Agendamentos vencidos durante parada sao reconciliados para EM_REVISAO sem disparo automatico
+PASS REL-01: Revisao humana - aprovacao e cancelamento auditados por admin e supervisor
+PASS REL-01: Cancelamento previo impede envio mesmo se o job estiver registrado
+PASS REL-01: Reagendamento para o futuro atualiza horario e reverte status para PENDENTE
+PASS REL-02: Idempotencia de mensagens - operationId evita criacao duplicada
+PASS REL-02: Maquina de estados de mensagem (pending -> sended -> delivered -> read)
+PASS REL-02: Falha incerta (timeout/rede) marca status uncertain sem reenvio cego
+PASS REL-02: Endpoint de retry manual controlado (POST /messages/:id/retry)
+ticketData { status: 'open', userId: 3 }
+ticketData { status: 'open', userId: 4 }
+PASS REL-03: Concorrencia ao assumir ticket - 1 vencedor e 1 conflito 409
+ticketData { status: 'closed' }
+ticketData { queueId: 3 }
+PASS REL-03: Validacao de transicoes de status e isolamento de fila/usuario
+PASS REL-03: Criacao simultanea de tickets para o mesmo contato recupera ticket ativo sem duplicar
+PASS REL-04: Observabilidade de desconexao WhatsApp - motivos e acoes requeridas
+PASS REL-04: Falha de rede persistente alerta operador e interrompe loops infinitos
+RESULT 13/13 passed; isolated PostgreSQL/WASM, zero external services

@@ -47,6 +47,9 @@ const UpdateService = async ({
   if (options) {
     await Promise.all(
       options.map(async info => {
+        if (info.id && !file.options.some(option => option.id === info.id)) throw new AppError("ERR_NO_PERMISSION", 403);
+        const old = file.options.find(option => option.id === info.id);
+        if (info.path && info.path !== old?.path) throw new AppError("ERR_NO_PERMISSION", 403);
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         await FilesOptions.upsert({ ...info, fileId: file.id });

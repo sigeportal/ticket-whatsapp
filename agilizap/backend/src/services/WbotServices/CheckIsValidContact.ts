@@ -6,6 +6,10 @@ const CheckIsValidContact = async (
   number: string,
   companyId: number
 ): Promise<void> => {
+  if (number.length >= 14 && !number.startsWith("55")) {
+    return;
+  }
+
   const defaultWhatsapp = await GetDefaultWhatsApp(companyId);
 
   const wbot = getWbot(defaultWhatsapp.id);

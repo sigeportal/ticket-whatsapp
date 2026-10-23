@@ -15,7 +15,7 @@ import {
 } from "@material-ui/core";
 import { i18n } from "../../translate/i18n";
 import { head } from "lodash";
-import { ToastContainer, toast } from 'react-toastify';
+import { toast } from 'react-toastify';
 import Grid from "@material-ui/core/Grid";
 import MenuItem from "@material-ui/core/MenuItem";
 import FormControl from "@material-ui/core/FormControl";
@@ -146,7 +146,7 @@ const Uploader = () => {
 
 const handleFileChange = (event) => {
   const selectedFile = event.target.files[0];
-  const allowedTypes = ["image/png", "image/x-icon", "image/svg+xml"];
+  const allowedTypes = ["image/png", "image/x-icon", "image/vnd.microsoft.icon"];
   
   if (selectedFile && allowedTypes.includes(selectedFile.type)) {
     setFile(selectedFile);

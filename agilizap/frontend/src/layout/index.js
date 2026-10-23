@@ -38,7 +38,7 @@ import toastError from "../errors/toastError";
 import AnnouncementsPopover from "../components/AnnouncementsPopover";
 import { SocketContext } from "../context/Socket/SocketContext";
 import ChatPopover from "../pages/Chat/ChatPopover";
-import PortAiLogo from "../components/PortAiLogo";
+import { IconSun, IconMoon, IconRefresh, IconMenu } from "../components/Icons/NavbarIcons";
 import { useDate } from "../hooks/useDate";
 import ColorModeContext from "../layout/themeContext";
 
@@ -48,9 +48,7 @@ const useStyles = makeStyles((theme) => ({
   root: {
     display: "flex",
     height: "100vh",
-    [theme.breakpoints.down("sm")]: {
-      height: "calc(100vh - 56px)",
-    },
+    overflow: "hidden",
     backgroundColor: theme.mode === "light" ? "#f8fafc" : "#07130e",
     "& .MuiButton-outlinedPrimary": {
       color: theme.mode === "light" ? "#064e3b" : "#f0fdf4",
@@ -62,258 +60,210 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   toolbar: {
-    paddingLeft: theme.spacing(2),
-    paddingRight: theme.spacing(2),
-    minHeight: 60,
-    [theme.breakpoints.down("xs")]: {
-      minHeight: 56,
-      paddingLeft: theme.spacing(1),
-      paddingRight: theme.spacing(1),
-    },
+    paddingLeft: 24,
+    paddingRight: 24,
+    minHeight: 64,
+    height: 64,
     display: "flex",
     alignItems: "center",
-  },
-  toolbarIcon: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "0 12px 0 16px",
-    minHeight: 60,
-    height: 60,
-    borderBottom:
-      theme.mode === "light"
-        ? "1px solid rgba(226, 232, 240, 0.9)"
-        : "1px solid rgba(16, 185, 129, 0.18)",
-    [theme.breakpoints.down("sm")]: {
-      height: 56,
-      minHeight: 56,
-    },
   },
   appBar: {
-    zIndex: theme.zIndex.drawer + 1,
-    backgroundColor:
-      theme.mode === "light"
-        ? "#ffffff"
-        : "#0b1e16",
+    zIndex: theme.zIndex.drawer + 2,
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    width: "100%",
+    height: 64,
+    minHeight: 64,
+    backgroundColor: theme.mode === "light" ? "#ffffff" : "#0b1e16",
     color: theme.mode === "light" ? "#0f172a" : "#f0fdf4",
     borderBottom:
       theme.mode === "light"
         ? "1px solid rgba(226, 232, 240, 0.9)"
-        : "1px solid rgba(16, 185, 129, 0.18)",
+        : "1px solid rgba(16, 185, 129, 0.15)",
     boxShadow: "none",
-    transition: theme.transitions.create(["width", "margin"], {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen,
-    }),
-  },
-  appBarShift: {
-    marginLeft: drawerWidth,
-    width: `calc(100% - ${drawerWidth}px)`,
-    transition: theme.transitions.create(["width", "margin"], {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
-    [theme.breakpoints.down("sm")]: {
-      display: "none",
-    },
   },
   menuButton: {
-    marginRight: theme.spacing(1.5),
-    borderRadius: 10,
-    padding: 8,
+    width: 40,
+    height: 40,
+    minWidth: 40,
+    borderRadius: 12,
+    marginRight: 16,
+    padding: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     color: theme.mode === "light" ? "#475569" : "#cbd5e1",
-    transition: "all 0.2s ease-in-out",
+    backgroundColor:
+      theme.mode === "light"
+        ? "rgba(248, 250, 252, 0.95)"
+        : "rgba(255, 255, 255, 0.04)",
+    border:
+      theme.mode === "light"
+        ? "1px solid rgba(226, 232, 240, 0.95)"
+        : "1px solid rgba(16, 185, 129, 0.18)",
+    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.02)",
+    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
     "&:hover": {
       backgroundColor:
         theme.mode === "light"
           ? "rgba(16, 185, 129, 0.08)"
-          : "rgba(255, 255, 255, 0.08)",
-      color: "#10b981",
+          : "rgba(37, 211, 102, 0.12)",
+      borderColor:
+        theme.mode === "light"
+          ? "rgba(16, 185, 129, 0.35)"
+          : "rgba(37, 211, 102, 0.35)",
+      color: theme.mode === "light" ? "#10b981" : "#34d399",
+      transform: "translateY(-1px)",
     },
-  },
-  menuButtonHidden: {
-    display: "none",
   },
   titleWrapper: {
     display: "flex",
     alignItems: "center",
     flexGrow: 1,
     overflow: "hidden",
+    gap: 12,
   },
   onlinePill: {
     display: "inline-flex",
     alignItems: "center",
-    padding: "3px 9px",
-    borderRadius: 14,
-    fontSize: "0.75rem",
-    fontWeight: 600,
+    padding: "4px 12px 4px 9px",
+    borderRadius: 9999,
+    fontSize: "0.8125rem",
+    fontWeight: 700,
+    letterSpacing: "0.01em",
     backgroundColor:
       theme.mode === "light"
         ? "rgba(16, 185, 129, 0.1)"
         : "rgba(16, 185, 129, 0.18)",
-    color: theme.mode === "light" ? "#059669" : "#34d399",
-    marginRight: theme.spacing(1.5),
+    border:
+      theme.mode === "light"
+        ? "1px solid rgba(16, 185, 129, 0.25)"
+        : "1px solid rgba(37, 211, 102, 0.3)",
+    color: theme.mode === "light" ? "#065f46" : "#34d399",
     whiteSpace: "nowrap",
-    letterSpacing: "0.01em",
+    userSelect: "none",
   },
   onlineDot: {
     width: 8,
     height: 8,
     borderRadius: "50%",
     backgroundColor: "#10b981",
-    marginRight: 6,
+    marginRight: 8,
     display: "inline-block",
+    boxShadow: "0 0 0 2px rgba(16, 185, 129, 0.25)",
   },
   title: {
-    fontSize: "0.9375rem",
-    color: theme.mode === "light" ? "#1e293b" : "#f1f5f9",
+    fontSize: "0.875rem",
+    color: theme.mode === "light" ? "#475569" : "#94a3b8",
     fontWeight: 500,
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
     display: "flex",
     alignItems: "center",
-    gap: 6,
   },
   userName: {
     fontWeight: 700,
-    color: theme.mode === "light" ? "#0f172a" : "#ffffff",
+    color: theme.mode === "light" ? "#0f172a" : "#f8fafc",
+    marginLeft: 4,
+  },
+  bulletSeparator: {
+    color: theme.mode === "light" ? "#cbd5e1" : "#475569",
+    margin: "0 8px",
+    fontSize: "0.875rem",
+    userSelect: "none",
   },
   companyBadge: {
-    fontSize: "0.75rem",
-    padding: "2px 8px",
-    borderRadius: 6,
+    fontSize: "0.8125rem",
+    padding: "3px 10px",
+    borderRadius: 8,
     fontWeight: 600,
+    letterSpacing: "0.01em",
     backgroundColor:
       theme.mode === "light"
         ? "rgba(16, 185, 129, 0.08)"
-        : "rgba(255, 255, 255, 0.08)",
+        : "rgba(255, 255, 255, 0.06)",
+    border:
+      theme.mode === "light"
+        ? "1px solid rgba(16, 185, 129, 0.22)"
+        : "1px solid rgba(37, 211, 102, 0.22)",
     color: theme.mode === "light" ? "#059669" : "#34d399",
-    marginLeft: 4,
+    whiteSpace: "nowrap",
   },
   dueDateBadge: {
     fontSize: "0.75rem",
-    padding: "2px 8px",
-    borderRadius: 6,
+    padding: "3px 8px",
+    borderRadius: 8,
     backgroundColor:
       theme.mode === "light"
         ? "rgba(100, 116, 139, 0.08)"
-        : "rgba(255, 255, 255, 0.06)",
+        : "rgba(255, 255, 255, 0.05)",
     color: theme.mode === "light" ? "#64748b" : "#94a3b8",
-    marginLeft: 4,
+    marginLeft: 8,
+    whiteSpace: "nowrap",
   },
   topbarActions: {
     display: "flex",
     alignItems: "center",
+    gap: 8,
   },
   actionIconButton: {
-    padding: 8,
-    borderRadius: 10,
-    marginLeft: 3,
-    marginRight: 3,
-    color: theme.mode === "light" ? "#1e293b" : "#f0fdf4",
-    backgroundColor:
-      theme.mode === "light"
-        ? "rgba(0, 0, 0, 0.04)"
-        : "rgba(255, 255, 255, 0.06)",
-    border:
-      theme.mode === "light"
-        ? "1px solid rgba(226, 232, 240, 0.9)"
-        : "1px solid rgba(16, 185, 129, 0.18)",
-    transition: "all 0.2s ease-in-out",
-    "&:hover": {
-      backgroundColor:
-        theme.mode === "light"
-          ? "rgba(16, 185, 129, 0.12)"
-          : "rgba(37, 211, 102, 0.18)",
-      color: theme.mode === "light" ? "#065f46" : "#25D366",
-      transform: "translateY(-1px)",
-    },
-  },
-  themeToggleBtn: {
-    padding: 8,
-    borderRadius: 10,
-    marginLeft: 3,
-    marginRight: 3,
-    color: theme.mode === "dark" ? "#fbbf24" : "#1e293b",
-    backgroundColor:
-      theme.mode === "light"
-        ? "rgba(0, 0, 0, 0.04)"
-        : "rgba(255, 255, 255, 0.06)",
-    border:
-      theme.mode === "light"
-        ? "1px solid rgba(226, 232, 240, 0.9)"
-        : "1px solid rgba(16, 185, 129, 0.18)",
-    transition: "all 0.2s ease-in-out",
-    "&:hover": {
-      backgroundColor:
-        theme.mode === "light"
-          ? "rgba(16, 185, 129, 0.12)"
-          : "rgba(251, 191, 36, 0.16)",
-      transform: "scale(1.05)",
-    },
-  },
-  profileBadge: {
+    width: 40,
+    height: 40,
+    minWidth: 40,
+    borderRadius: 12,
+    padding: 0,
     display: "flex",
     alignItems: "center",
-    gap: 8,
-    padding: "3px 8px 3px 4px",
-    borderRadius: 12,
-    marginLeft: 6,
-    cursor: "pointer",
-    userSelect: "none",
-    border:
-      theme.mode === "light"
-        ? "1px solid rgba(226, 232, 240, 0.9)"
-        : "1px solid rgba(16, 185, 129, 0.22)",
+    justifyContent: "center",
+    color: theme.mode === "light" ? "#475569" : "#cbd5e1",
     backgroundColor:
       theme.mode === "light"
-        ? "rgba(255, 255, 255, 0.85)"
-        : "rgba(11, 30, 22, 0.75)",
-    transition: "all 0.2s ease-in-out",
+        ? "rgba(248, 250, 252, 0.95)"
+        : "rgba(255, 255, 255, 0.04)",
+    border:
+      theme.mode === "light"
+        ? "1px solid rgba(226, 232, 240, 0.95)"
+        : "1px solid rgba(16, 185, 129, 0.18)",
+    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.02)",
+    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
     "&:hover": {
       backgroundColor:
         theme.mode === "light"
           ? "rgba(16, 185, 129, 0.08)"
-          : "rgba(16, 185, 129, 0.16)",
-      borderColor: "#10b981",
+          : "rgba(37, 211, 102, 0.12)",
+      borderColor:
+        theme.mode === "light"
+          ? "rgba(16, 185, 129, 0.35)"
+          : "rgba(37, 211, 102, 0.35)",
+      color: theme.mode === "light" ? "#10b981" : "#34d399",
+      transform: "translateY(-1px)",
     },
   },
-  profileAvatarSquircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    background: "linear-gradient(135deg, #10b981 0%, #0d9488 100%)",
+  userAvatarCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: "50%",
+    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
     color: "#ffffff",
-    fontSize: "0.75rem",
-    fontWeight: 800,
-    letterSpacing: "-0.02em",
+    fontSize: "0.8125rem",
+    fontWeight: 700,
+    letterSpacing: "-0.01em",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "none",
-    flexShrink: 0,
-  },
-  profileMeta: {
-    display: "flex",
-    flexDirection: "column",
-    textAlign: "left",
-    lineHeight: 1.15,
-  },
-  profileNameText: {
-    fontSize: "0.8125rem",
-    fontWeight: 700,
-    color: theme.mode === "light" ? "#0f172a" : "#f0fdf4",
-    maxWidth: 130,
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-  },
-  profileRoleText: {
-    fontSize: "0.625rem",
-    fontWeight: 600,
-    color: theme.mode === "light" ? "#059669" : "#34d399",
-    letterSpacing: "0.02em",
+    cursor: "pointer",
+    marginLeft: 4,
+    border: "2px solid transparent",
+    boxShadow: "0 2px 6px rgba(16, 185, 129, 0.25)",
+    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+    userSelect: "none",
+    "&:hover": {
+      transform: "scale(1.05)",
+      boxShadow: "0 0 0 3px rgba(16, 185, 129, 0.35)",
+    },
   },
   profileMenuPaper: {
     minWidth: 200,
@@ -370,42 +320,74 @@ const useStyles = makeStyles((theme) => ({
           : "rgba(239, 68, 68, 0.15)",
     },
   },
-  drawerPaper: {
-    position: "relative",
-    whiteSpace: "nowrap",
+  drawer: {
     width: drawerWidth,
+    flexShrink: 0,
+    whiteSpace: "nowrap",
+    transition: theme.transitions.create("width", {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+  },
+  drawerClose: {
+    width: 68,
+    flexShrink: 0,
+    whiteSpace: "nowrap",
+    overflowX: "hidden",
+    transition: theme.transitions.create("width", {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.leavingScreen,
+    }),
+  },
+  drawerPaper: {
+    position: "fixed",
+    top: 64,
+    left: 0,
+    width: drawerWidth,
+    height: "calc(100vh - 64px)",
     backgroundColor: theme.mode === "light" ? "#ffffff" : "#0b1e16",
     borderRight:
       theme.mode === "light"
         ? "1px solid rgba(226, 232, 240, 0.9)"
         : "1px solid rgba(16, 185, 129, 0.18)",
     boxShadow: "none",
+    overflowX: "hidden",
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.enteringScreen,
     }),
-    [theme.breakpoints.down("sm")]: {
-      width: "100%",
-    },
     scrollbarWidth: "none",
     "&::-webkit-scrollbar": {
       display: "none",
     },
     "-ms-overflow-style": "none",
+    [theme.breakpoints.down("xs")]: {
+      top: 0,
+      height: "100vh",
+      zIndex: theme.zIndex.drawer + 5,
+    },
   },
   drawerPaperClose: {
+    position: "fixed",
+    top: 64,
+    left: 0,
+    width: 68,
+    height: "calc(100vh - 64px)",
+    backgroundColor: theme.mode === "light" ? "#ffffff" : "#0b1e16",
+    borderRight:
+      theme.mode === "light"
+        ? "1px solid rgba(226, 232, 240, 0.9)"
+        : "1px solid rgba(16, 185, 129, 0.18)",
     overflowX: "hidden",
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.leavingScreen,
     }),
-    width: 68,
-    [theme.breakpoints.up("sm")]: {
-      width: 68,
+    scrollbarWidth: "none",
+    "&::-webkit-scrollbar": {
+      display: "none",
     },
-    [theme.breakpoints.down("sm")]: {
-      width: "100%",
-    },
+    "-ms-overflow-style": "none",
     "& .MuiListItemText-root": {
       display: "none !important",
     },
@@ -415,89 +397,23 @@ const useStyles = makeStyles((theme) => ({
     "& .MuiListItem-root": {
       justifyContent: "center",
     },
-  },
-  portalBrand: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    paddingLeft: 4,
-    textDecoration: "none",
-  },
-  portalLogoBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    boxShadow: "none",
-    flexShrink: 0,
-  },
-  portalLogoBadgeCollapsed: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    boxShadow: "none",
-    transition: "all 0.2s ease-in-out",
-    "&:hover": {
-      transform: "scale(1.05)",
-    },
-  },
-  portalTextWrapper: {
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-  },
-  portalTitle: {
-    fontFamily: "'Montserrat', sans-serif",
-    fontSize: "1.15rem",
-    fontWeight: 800,
-    letterSpacing: "0.06em",
-    color: theme.mode === "light" ? "#0f172a" : "#ffffff",
-    lineHeight: 1.1,
-  },
-  portalSubtitle: {
-    fontSize: "0.625rem",
-    fontWeight: 700,
-    letterSpacing: "0.14em",
-    color: "#10b981",
-    lineHeight: 1.3,
-    marginTop: 2,
-  },
-  toolbarIconCollapsed: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 0,
-    minHeight: "60px",
-    height: "60px",
-    cursor: "pointer",
-  },
-  drawerCloseButton: {
-    borderRadius: 8,
-    padding: 6,
-    color: theme.mode === "light" ? "#64748b" : "#94a3b8",
-    transition: "all 0.2s ease-in-out",
-    "&:hover": {
-      backgroundColor:
-        theme.mode === "light"
-          ? "rgba(16, 185, 129, 0.08)"
-          : "rgba(255, 255, 255, 0.08)",
-      color: "#10b981",
+    [theme.breakpoints.down("xs")]: {
+      top: 0,
+      height: "100vh",
+      zIndex: theme.zIndex.drawer + 5,
     },
   },
   appBarSpacer: {
-    minHeight: 60,
-    [theme.breakpoints.down("xs")]: {
-      minHeight: 56,
-    },
+    minHeight: 64,
+    height: 64,
+    flexShrink: 0,
   },
   content: {
     flex: 1,
-    overflow: "auto",
+    height: "100vh",
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
     backgroundColor: theme.mode === "light" ? "#f8fafc" : "#0f172a",
   },
   containerWithScroll: {
@@ -613,7 +529,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
     <div className={classes.root}>
       <Drawer
         variant={drawerVariant}
-        className={drawerOpen ? classes.drawerPaper : classes.drawerPaperClose}
+        className={drawerOpen ? classes.drawer : classes.drawerClose}
         classes={{
           paper: clsx(
             classes.drawerPaper,
@@ -622,36 +538,6 @@ const LoggedInLayout = ({ children, themeToggle }) => {
         }}
         open={drawerOpen}
       >
-        <div
-          className={drawerOpen ? classes.toolbarIcon : classes.toolbarIconCollapsed}
-          onClick={!drawerOpen ? () => setDrawerOpen(true) : undefined}
-          title={!drawerOpen ? "Expandir menu (Portal)" : undefined}
-        >
-          {drawerOpen ? (
-            <>
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <PortAiLogo variant="full" width={150} height={48} />
-              </div>
-              <IconButton
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDrawerOpen(false);
-                }}
-                className={classes.drawerCloseButton}
-                size="small"
-              >
-                <ChevronLeftIcon />
-              </IconButton>
-            </>
-          ) : (
-            <Tooltip title="PortAI (Clique para expandir)" placement="right" arrow>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%" }}>
-                <PortAiLogo variant="icon" size={36} />
-              </div>
-            </Tooltip>
-          )}
-        </div>
-        <Divider />
         <List className={classes.containerWithScroll}>
           <MainListItems drawerClose={drawerClose} collapsed={!drawerOpen} />
         </List>
@@ -664,21 +550,18 @@ const LoggedInLayout = ({ children, themeToggle }) => {
       />
 
       <AppBar
-        position="absolute"
-        className={clsx(classes.appBar, drawerOpen && classes.appBarShift)}
+        position="fixed"
+        className={classes.appBar}
         elevation={0}
       >
-        <Toolbar variant="dense" className={classes.toolbar}>
+        <Toolbar className={classes.toolbar}>
           <IconButton
             edge="start"
-            aria-label="abrir menu"
+            aria-label="alternar menu"
             onClick={() => setDrawerOpen(!drawerOpen)}
-            className={clsx(
-              classes.menuButton,
-              drawerOpen && classes.menuButtonHidden
-            )}
+            className={classes.menuButton}
           >
-            <MenuIcon />
+            <IconMenu size={20} />
           </IconButton>
 
           <div className={classes.titleWrapper}>
@@ -688,32 +571,25 @@ const LoggedInLayout = ({ children, themeToggle }) => {
             </div>
 
             <Typography
-              component="h2"
+              component="div"
               variant="subtitle1"
               noWrap
               className={classes.title}
             >
-              {greaterThenSm && user?.profile === "admin" && user?.company?.dueDate ? (
+              <span>Olá,</span>
+              <span className={classes.userName}>{user?.name || "Admin"}</span>
+              {user?.company?.name && (
                 <>
-                  Olá, <span className={classes.userName}>{user.name}</span>
-                  {user?.company?.name && (
-                    <span className={classes.companyBadge}>
-                      {user.company.name}
-                    </span>
-                  )}
-                  <span className={classes.dueDateBadge}>
-                    Ativo até {dateToClient(user?.company?.dueDate)}
+                  <span className={classes.bulletSeparator}>•</span>
+                  <span className={classes.companyBadge}>
+                    {user.company.name}
                   </span>
                 </>
-              ) : (
-                <>
-                  Olá, <span className={classes.userName}>{user.name}</span>
-                  {user?.company?.name && (
-                    <span className={classes.companyBadge}>
-                      {user.company.name}
-                    </span>
-                  )}
-                </>
+              )}
+              {greaterThenSm && user?.profile === "admin" && user?.company?.dueDate && (
+                <span className={classes.dueDateBadge}>
+                  Ativo até {dateToClient(user?.company?.dueDate)}
+                </span>
               )}
             </Typography>
           </div>
@@ -725,18 +601,18 @@ const LoggedInLayout = ({ children, themeToggle }) => {
             >
               <IconButton
                 onClick={toggleColorMode}
-                className={classes.themeToggleBtn}
+                className={classes.actionIconButton}
                 aria-label="Alternar tema"
               >
                 {theme.mode === "dark" ? (
-                  <Brightness7Icon style={{ fontSize: 20 }} />
+                  <IconSun size={19} />
                 ) : (
-                  <Brightness4Icon style={{ fontSize: 20 }} />
+                  <IconMoon size={19} />
                 )}
               </IconButton>
             </Tooltip>
 
-            <NotificationsVolume setVolume={setVolume} volume={volume} />
+            <AnnouncementsPopover />
 
             <Tooltip title={i18n.t("mainDrawer.appBar.refresh")} arrow>
               <IconButton
@@ -744,15 +620,15 @@ const LoggedInLayout = ({ children, themeToggle }) => {
                 aria-label={i18n.t("mainDrawer.appBar.refresh")}
                 className={classes.actionIconButton}
               >
-                <CachedIcon style={{ fontSize: 20 }} />
+                <IconRefresh size={19} />
               </IconButton>
             </Tooltip>
 
-            {user.id && <NotificationsPopOver volume={volume} />}
-
-            <AnnouncementsPopover />
-
             <ChatPopover />
+
+            {user?.id && <NotificationsPopOver volume={volume} />}
+
+            <NotificationsVolume setVolume={setVolume} volume={volume} />
 
             <div>
               <Tooltip title={user?.name || "Meu Perfil"} arrow>
@@ -766,21 +642,9 @@ const LoggedInLayout = ({ children, themeToggle }) => {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") handleMenu(e);
                   }}
-                  className={classes.profileBadge}
+                  className={classes.userAvatarCircle}
                 >
-                  <div className={classes.profileAvatarSquircle}>
-                    {user?.name ? user.name.slice(0, 2).toUpperCase() : "AD"}
-                  </div>
-                  {greaterThenSm && (
-                    <div className={classes.profileMeta}>
-                      <span className={classes.profileNameText}>
-                        {user?.name || "Admin"}
-                      </span>
-                      <span className={classes.profileRoleText}>
-                        Online • Smart CX
-                      </span>
-                    </div>
-                  )}
+                  {user?.name ? user.name.slice(0, 2).toUpperCase() : "AD"}
                 </div>
               </Tooltip>
               <Menu

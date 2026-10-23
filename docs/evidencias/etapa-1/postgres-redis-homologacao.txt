@@ -1,0 +1,186 @@
+ Network ticket-security-homolog_isolated Creating 
+ Network ticket-security-homolog_isolated Creating 
+ Network ticket-security-homolog_isolated Created 
+ Network ticket-security-homolog_isolated Created 
+ Container ticket-security-homolog-redis-1 Creating 
+ Container ticket-security-homolog-postgres-1 Creating 
+ Container ticket-security-homolog-postgres-1 Created 
+ Container ticket-security-homolog-redis-1 Created 
+ Container ticket-security-homolog-postgres-1 Starting 
+ Container ticket-security-homolog-redis-1 Starting 
+ Container ticket-security-homolog-postgres-1 Started 
+ Container ticket-security-homolog-redis-1 Started 
+ Container ticket-security-homolog-redis-1 Waiting 
+ Container ticket-security-homolog-postgres-1 Waiting 
+ Container ticket-security-homolog-redis-1 Healthy 
+ Container ticket-security-homolog-postgres-1 Healthy 
+ Container ticket-security-homolog-runner-run-d6473ecc8d06 Creating 
+ Container ticket-security-homolog-runner-run-d6473ecc8d06 Created 
+PASS real Redis authentication and isolated expiring key
+PASS migration 20200717133431-add-uuid-ossp.ts
+PASS migration 20200717133438-create-users.ts
+PASS migration 20200717144403-create-contacts.ts
+PASS migration 20200717145643-create-tickets.ts
+PASS migration 20200717151645-create-messages.ts
+PASS migration 20200717170223-create-whatsapps.ts
+PASS migration 20200723200315-create-contacts-custom-fields.ts
+PASS migration 20200723202116-add-email-field-to-contacts.ts
+PASS migration 20200730153237-remove-user-association-from-messages.ts
+PASS migration 20200730153545-add-fromMe-to-messages.ts
+PASS migration 20200813114236-change-ticket-lastMessage-column-type.ts
+PASS migration 20200901235509-add-profile-column-to-users.ts
+PASS migration 20200903215941-create-settings.ts
+PASS migration 20200904220257-add-name-to-whatsapp.ts
+PASS migration 20200906122228-add-name-default-field-to-whatsapp.ts
+PASS migration 20200906155658-add-whatsapp-field-to-tickets.ts
+PASS migration 20200919124112-update-default-column-name-on-whatsappp.ts
+PASS migration 20200927220708-add-isDeleted-column-to-messages.ts
+PASS migration 20200929145451-add-user-tokenVersion-column.ts
+PASS migration 20200930162323-add-isGroup-column-to-tickets.ts
+PASS migration 20200930194808-add-isGroup-column-to-contacts.ts
+PASS migration 20201004150008-add-contactId-column-to-messages.ts
+PASS migration 20201004155719-add-vcardContactId-column-to-messages.ts
+PASS migration 20201004955719-remove-vcardContactId-column-to-messages.ts
+PASS migration 20201026215410-add-retries-to-whatsapps.ts
+PASS migration 20201028124427-add-quoted-msg-to-messages.ts
+PASS migration 20210108001431-add-unreadMessages-to-tickets.ts
+PASS migration 20210108164404-create-queues.ts
+PASS migration 20210108164504-add-queueId-to-tickets.ts
+PASS migration 20210108174594-associate-whatsapp-queue.ts
+PASS migration 20210108204708-associate-users-queue.ts
+PASS migration 20210109192513-add-greetingMessage-to-whatsapp.ts
+PASS migration 20210109192514-create-companies-table.ts
+PASS migration 20210109192515-add-column-companyId-to-Settings-table.ts
+PASS migration 20210109192516-add-column-companyId-to-Users-table.ts
+PASS migration 20210109192517-add-column-companyId-to-Contacts-table.ts
+PASS migration 20210109192518-add-column-companyId-to-Messages-table.ts
+PASS migration 20210109192519-add-column-companyId-to-Queues-table.ts
+PASS migration 20210109192520-add-column-companyId-to-Whatsapps-table.ts
+PASS migration 20210109192521-add-column-companyId-to-Tickets-table.ts
+PASS migration 20210109192522-create-plans-table.ts
+PASS migration 20210109192523-add-column-planId-to-Companies.ts
+PASS migration 20210109192523-add-column-status-and-schedules-to-Companies.ts
+PASS migration 20210109192523-create-ticket-notes.ts
+PASS migration 20210109192524-create-quick-messages.ts
+PASS migration 20210109192525-add-column-complationMessage-to-whatsapp.ts
+PASS migration 20210109192526-add-column-outOfHoursMessage-to-whatsapp .ts
+PASS migration 20210109192527-add-column-super-to-Users-table.ts
+PASS migration 20210109192528-change-column-message-to-quick-messages-table.ts
+PASS migration 20210109192529-create-helps.ts
+PASS migration 20210109192530-add-unique-constraint-to-Contacts-table.ts
+PASS migration 20210109192531-create-TicketTracking-table.ts
+PASS migration 20210109192532-add-column-online-to-Users-table.ts
+PASS migration 20210109192533-create-UserRatings-table.ts
+PASS migration 20210109192534-add-rated-to-TicketTraking.ts
+PASS migration 20210109192535-add-column-ratingMessage-to-whatsapp.ts
+PASS migration 20210109192536-add-unique-constraint-to-Tickets-table.ts
+PASS migration 20210818102606-add-uuid-to-tickets.ts
+PASS migration 20210818102607-remove-unique-indexes-to-Queues-table.ts
+PASS migration 20210818102608-add-unique-indexes-to-Queues-table.ts
+PASS migration 20210818102609-add-token-to-Whatsapps.ts
+PASS migration 20211205164404-create-queue-options.ts
+PASS migration 20211212125704-add-chatbot-to-tickets.ts
+PASS migration 20211227010200-create-schedules.ts
+PASS migration 20220115114088-add-column-userId-to-QuickMessages-table.ts
+PASS migration 20220117130000-create-tags.ts
+PASS migration 20220117134400-associate-tickets-tags.ts
+PASS migration 20220122160900-add-status-to-schedules.ts
+PASS migration 20220220014719-add-farewellMessage-to-whatsapp.ts
+PASS migration 20220221014717-add-provider-whatsapp.ts
+PASS migration 20220221014718-add-remoteJid-messages.ts
+PASS migration 20220221014719-add-jsonMessage-messages.ts
+PASS migration 20220221014720-add-participant-messages.ts
+PASS migration 20220221014721-create-baileys.ts
+PASS migration 20220315110000-create-ContactLists-table.ts
+PASS migration 20220315110001-create-ContactListItems-table.ts
+PASS migration 20220315110002-create-Campaigns-table.ts
+PASS migration 20220315110004-create-CampaignSettings-table.ts
+PASS migration 20220315110005-remove-constraint-to-Settings.ts
+PASS migration 20220321130000-create-CampaignShipping.ts
+PASS migration 20220404000000-add-column-queueId-to-Messages-table.ts
+PASS migration 20220406000000-add-column-dueDate-to-Companies.ts
+PASS migration 20220406000001-add-column-recurrence-to-Companies.ts
+PASS migration 20220411000000-add-column-startTime-and-endTime-to-Queues.ts
+PASS migration 20220411000001-remove-column-startTime-and-endTime-to-Queues.ts
+PASS migration 20220411000002-add-column-schedules-and-outOfHoursMessage-to-Queues.ts
+PASS migration 20220411000003-create-table-Announcements.ts
+PASS migration 20220425000000-create-table-Chats.ts
+PASS migration 20220425000001-create-table-ChatUsers.ts
+PASS migration 20220425000002-create-table-ChatMessages.ts
+PASS migration 20220512000001-create-Indexes.ts
+PASS migration 20220512000002-create-subscriptions.ts
+PASS migration 20220512000003-create-invoices.ts
+PASS migration 20220723000001-add-mediaPath-to-quickmessages.ts
+PASS migration 20220723000002-add-mediaName-to-quickemessages.ts
+PASS migration 20221229000000-add-column-number-to-Whatsapps.ts
+PASS migration 20222016014720-create-baileys-chats.ts
+PASS migration 20222016014721-create-baileys-chats Messages.ts
+PASS migration 20230106164900-add-useCampaigns-Plans.ts
+PASS migration 20230106164900-add-useExternalApi-Plans.ts
+PASS migration 20230106164900-add-useInternalChat-Plans.ts
+PASS migration 20230106164900-add-useSchedules-Plans.ts
+PASS migration 20230127091500-add-column-active-to-Contacts.ts
+PASS migration 20230303223001-add-amountUsedBotQueues-to-tickets.ts
+PASS migration 20230417203900-add-allTickets-user.ts
+PASS migration 20230603212335-create-QueueIntegrations.ts
+PASS migration 20230603212337-add-urlN8N-QueueIntegrations.ts
+PASS migration 20230623095932-add-whatsapp-to-user.ts
+PASS migration 20230623133903-add-chatbotAt-ticket-tracking.ts
+PASS migration 20230628134807-add-orderQueue-Queue.ts
+PASS migration 20230711094417-add-column-companyId-to-QueueIntegrations-table.ts
+PASS migration 20230711111701-add-sendIdQueue-to-whatsapp.ts
+PASS migration 20230714113901-create-Files.ts
+PASS migration 20230714113902-create-fileOptions.ts
+PASS migration 20230723301001-add-kanban-to-Tags.ts
+PASS migration 20230801081907-add-collumns-Ticket.ts
+PASS migration 20230805555699-add-useInternal-Plans.ts
+PASS migration 20230813114236-change-ticket-lastMessage-column-type.ts
+PASS migration 20230824082607-add-mediaType-FilesOptions.ts
+PASS migration 20230828143411-add-Integrations-to-tickets.ts
+PASS migration 20230828144000-create-prompts.ts
+PASS migration 20230828144100-add-column-promptid-into-whatsapps.ts
+PASS migration 20230831093000-add-useKanban-Plans.ts
+PASS migration 20230918122800-add-media-to-Queues.ts
+PASS migration 20230918142800-add-media-to-QueueOptions.ts
+PASS migration 20230922212337-add-integrationId-Queues.ts
+PASS migration 20230924212337-add-fileListId-Campaigns.ts
+PASS migration 20231111185822-add_reset_password_column.ts
+PASS migration 20231117000001-add-mediaName-to-schedules.ts
+PASS migration 20231117000001-add-mediaPath-to-schedules.ts
+PASS migration 20231127113000-add-columns-Plans.ts
+PASS migration 20231128123537-add-typebot-QueueIntegrations.ts
+PASS migration 20231202143411-add-typebotSessionId-to-tickets.ts
+PASS migration 20231207080337-add-typebotDelayMessage-QueueIntegrations.ts
+PASS migration 20231207085011-add-typebotStatus-to-tickets.ts
+PASS migration 20231214092337-add-promptId-Queues.ts
+PASS migration 20231214143411-add-columns-to-whatsapps.ts
+PASS migration 20231214143411-add-promptId-to-tickets.ts
+PASS migration 20231218160937-add-columns-QueueIntegrations.ts
+PASS migration 20231219153800-add-isEdited-column-to-messages.ts
+PASS migration 20231220192536-add-unique-constraint-to-tickets-table.ts
+PASS migration 20231220223517-add-column-whatsappId-to-Contacts.ts
+PASS migration 20232016014719-add-transferTime-and-queueIdTransfer.ts
+PASS migration 20240723000002-add-geral-to-quickemessages.ts
+PASS migration 20240815183416-add-reactions-to-messages.ts
+PASS migration 20240911143705-add-isForwarded-to-messages.ts
+PASS migration 20241016100000-add-provider-and-model-to-prompts.ts
+PASS migration 20241016120000-add-isLid-to-contacts.ts
+PASS migration 20241016140000-change-temperature-to-float-in-prompts.ts
+PASS migration 20261021000000-security-access.ts
+PASS complete historical chain: 150 migrations, 73 foreign keys
+PASS upgrade retains fictitious legacy user and invalidates legacy token/session
+PASS historical company foreign key rejects nonexistent company
+PASS single-use reset conditional SQL across two physical PostgreSQL connections
+PASS security down/up preserves user and does not resurrect revoked credentials
+DO
+PASS pg_dump/pg_restore: fictitious user, revoked credentials and 73 foreign keys restored
+ Container ticket-security-homolog-postgres-1 Stopping 
+ Container ticket-security-homolog-redis-1 Stopping 
+ Container ticket-security-homolog-postgres-1 Stopped 
+ Container ticket-security-homolog-postgres-1 Removing 
+ Container ticket-security-homolog-postgres-1 Removed 
+ Container ticket-security-homolog-redis-1 Stopped 
+ Container ticket-security-homolog-redis-1 Removing 
+ Container ticket-security-homolog-redis-1 Removed 
+ Network ticket-security-homolog_isolated Removing 
+ Network ticket-security-homolog_isolated Removed 

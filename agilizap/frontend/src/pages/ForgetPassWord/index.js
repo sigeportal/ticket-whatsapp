@@ -107,9 +107,9 @@ const handleSendEmail = async (values) => {
   const email = values.email;
   try {
     const response = await api.post(
-      `${process.env.REACT_APP_BACKEND_URL}/forgetpassword/${email}`
+      "/forgetpassword", { email }
     );
-    console.log("API Response:", response.data);
+
 
     if (response.data.status === 404) {
       toast.error("Email não encontrado");
@@ -117,7 +117,7 @@ const handleSendEmail = async (values) => {
       toast.success(i18n.t("Email enviado com sucesso!"));
     }
   } catch (err) {
-    console.log("API Error:", err);
+
     toastError(err);
   }
 };
@@ -131,13 +131,13 @@ const handleSendEmail = async (values) => {
     if (newPassword === confirmPassword) {
       try {
         await api.post(
-          `${process.env.REACT_APP_BACKEND_URL}/resetpasswords/${email}/${token}/${newPassword}`
+          "/resetpasswords", { email, token, password: newPassword }
         );
         setError(""); // Limpe o erro se não houver erro
         toast.success(i18n.t("Senha redefinida com sucesso."));
         history.push("/login");
       } catch (err) {
-        console.log(err);
+        toastError(err);
       }
     }
   };
@@ -325,12 +325,11 @@ const handleSendEmail = async (values) => {
                 <Grid container justifyContent="flex-end">
                   <Grid item>
                     <Link
-                      href="#"
                       variant="body2"
                       component={RouterLink}
-                      to="/signup"
+                      to="/login"
                     >
-                      {i18n.t("Não tem uma conta? Cadastre-se!")}
+                      Voltar ao login
                     </Link>
                   </Grid>
                 </Grid>

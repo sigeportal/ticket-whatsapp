@@ -43,13 +43,13 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   const { ticketNotes, count, hasMore } = await ListTicketNotesService({
     searchParam,
     pageNumber
-  });
+  }, res.locals.actor);
 
   return res.json({ ticketNotes, count, hasMore });
 };
 
 export const list = async (req: Request, res: Response): Promise<Response> => {
-  const ticketNotes: TicketNote[] = await FindAllTicketNotesService();
+  const ticketNotes: TicketNote[] = await FindAllTicketNotesService(res.locals.actor);
 
   return res.status(200).json(ticketNotes);
 };
@@ -69,7 +69,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   }
 
   const ticketNote = await CreateTicketNoteService({
-    ...newTicketNote,
+    note: newTicketNote.note, contactId: newTicketNote.contactId, ticketId: newTicketNote.ticketId,
     userId
   });
 
@@ -79,7 +79,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { id } = req.params;
 
-  const ticketNote = await ShowTicketNoteService(id);
+  const ticketNote = await ShowTicketNoteService(id, res.locals.actor);
 
   return res.status(200).json(ticketNote);
 };
@@ -100,7 +100,7 @@ export const update = async (
     throw new AppError(err.message);
   }
 
-  const recordUpdated = await UpdateTicketNoteService(ticketNote);
+  const recordUpdated = await UpdateTicketNoteService({ note: ticketNote.note, id: req.params.id }, res.locals.actor);
 
   return res.status(200).json(recordUpdated);
 };
@@ -115,7 +115,7 @@ export const remove = async (
     throw new AppError("ERR_NO_PERMISSION", 403);
   }
 
-  await DeleteTicketNoteService(id);
+  await DeleteTicketNoteService(id, res.locals.actor);
 
   return res.status(200).json({ message: "Observação removida" });
 };
@@ -129,10 +129,10 @@ export const findFilteredList = async (
     const notes: TicketNote[] = await FindNotesByContactIdAndTicketId({
       contactId,
       ticketId
-    });
+    }, res.locals.actor);
 
     return res.status(200).json(notes);
   } catch (e) {
-    return res.status(500).json({ message: e });
+    throw e;
   }
 };

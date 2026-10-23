@@ -33,12 +33,15 @@ const AuthUserService = async ({
   email,
   password
 }: Request): Promise<Response> => {
+  if (typeof email !== "string" || typeof password !== "string" || email.length > 254 || Buffer.byteLength(password) > 72) {
+    throw new AppError("ERR_INVALID_CREDENTIALS", 401);
+  }
   const user = await User.findOne({
     where: { email },
     include: ["queues", { model: Company, include: [{ model: Setting }] }]
   });
 
-  if (!user) {
+  if (!user || user.blocked || user.company?.status === false) {
     throw new AppError("ERR_INVALID_CREDENTIALS", 401);
   }
 

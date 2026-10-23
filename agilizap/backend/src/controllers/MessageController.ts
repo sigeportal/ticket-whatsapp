@@ -356,7 +356,7 @@ export const edit = async (req: Request, res: Response): Promise<Response> => {
   const { ticket , message } = await EditWhatsAppMessage({messageId, body});
 
   const io = getIO();
- io.emit(`company-${companyId}-appMessage`, {
+ io.to(String(ticket.id)).emit(`company-${companyId}-appMessage`, {
     action:"update",
     message,
     ticket: ticket,
@@ -365,3 +365,44 @@ export const edit = async (req: Request, res: Response): Promise<Response> => {
 
   return res.send();
 }
+export const retry = async (req: Request, res: Response): Promise<Response> => {
+  const { messageId } = req.params;
+  const { companyId } = req.user;
+
+  const message = await Message.findOne({
+    where: { id: messageId, companyId },
+    include: [
+      {
+        model: Ticket,
+        as: "ticket",
+        include: ["contact"]
+      }
+    ]
+  });
+
+  if (!message) {
+    throw new AppError("ERR_NO_MESSAGE_FOUND", 404);
+  }
+
+  if (message.status !== "failed" && message.status !== "uncertain") {
+    throw new AppError("ERR_MESSAGE_NOT_RETRYABLE", 400);
+  }
+
+  await message.update({
+    status: "processing",
+    retries: (message.retries || 0) + 1
+  });
+
+  try {
+    await SendWhatsAppMessage({
+      body: message.body,
+      ticket: message.ticket,
+      messageId: message.id
+    });
+    await message.reload();
+  } catch (err: any) {
+    await message.reload();
+  }
+
+  return res.status(200).json(message);
+};

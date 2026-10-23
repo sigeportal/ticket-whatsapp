@@ -1,0 +1,13 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Homologação — etapa 1</title>
+<style>body{font:16px system-ui;max-width:1100px;margin:30px auto;padding:20px;background:#f4f6fa;color:#172337}table{border-collapse:collapse;width:100%;background:white}td,th{border:1px solid #ccd3dd;padding:10px;text-align:left}a{color:#1654ba}pre{white-space:pre-wrap;background:white;padding:15px}.notice{padding:18px;background:#fff0bf;border:1px solid #c79000}button{padding:10px;cursor:pointer}</style>
+<h1>Homologação da etapa 1</h1><p class="notice">Somente dados fictícios. WhatsApp, IA, pagamentos, processos externos e SMTP real estão bloqueados. Contas e caixa de e-mail desta página existem apenas para este ensaio local.</p>
+<p><a href="/login">Abrir painel</a> · <button onclick="refresh()">Atualizar caixa de e-mail</button></p>
+<p>Senha inicial fictícia: <strong id="password"></strong>. Administradores entram somente com e-mail e senha. Não é exigida troca de senha no primeiro acesso.</p>
+<table><thead><tr><th>Conta</th><th>Empresa</th><th>Papel / setores</th></tr></thead><tbody id="accounts"></tbody></table>
+<h2>Tickets e anexos fictícios</h2><div id="fixtures"></div>
+<h2>Caixa de e-mail simulada</h2><pre id="mail">Vazia</pre>
+<p>Dados são descartados ao remover os containers exclusivos. Não use credenciais ou informações reais.</p>
+<script>
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function refresh(){const d=await fetch('http://homologacao.localhost:18080/__homologacao/data').then(r=>r.json());document.getElementById('password').textContent=d.password;document.getElementById('accounts').innerHTML=d.accounts.map(a=>`<tr><td>${esc(a.email)}</td><td>${esc(a.company)}</td><td>${esc(a.profile)} — ${esc(a.queues.join(', '))}</td></tr>`).join('');document.getElementById('fixtures').innerHTML=d.fixtures.map(t=>`<p>${esc(t.company)} / ${esc(t.queue)} — ticket ${t.id}: <a href="/tickets/${esc(t.uuid)}">abrir</a> · <a href="${esc(t.media)}">anexo privado</a></p>`).join('');document.getElementById('mail').textContent=d.mailbox.length?d.mailbox.map(m=>`${m.at}\nPara: ${m.to}\n${m.text}`).join('\n\n'):'Vazia';}refresh();
+</script></html>

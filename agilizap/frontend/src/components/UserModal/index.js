@@ -157,7 +157,11 @@ const UserModal = ({ open, onClose, userId }) => {
 	};
 
 	const handleSaveUser = async values => {
-		const userData = { ...values, whatsappId, queueIds: selectedQueueIds, allTicket: values.allTicket };
+		const fields = loggedInUser.profile === "admin"
+      ? ["name", "email", "password", "profile", "companyId", "allTicket", "blocked"]
+      : ["name", "email", "password"];
+    const userData = Object.fromEntries(fields.filter(key => values[key] !== undefined).map(key => [key, values[key]]));
+    if (loggedInUser.profile === "admin") Object.assign(userData, { whatsappId, queueIds: selectedQueueIds });
 		try {
 			if (userId) {
 				await api.put(`/users/${userId}`, userData);
@@ -252,7 +256,10 @@ const UserModal = ({ open, onClose, userId }) => {
 										className={classes.formControl}
 										margin="dense"
 									>
-										<Can
+		                {loggedInUser.profile === "admin" && userId && <Field name="blocked">
+                  {({field,form}) => <FormControlLabel label="Bloquear acesso" control={<Switch checked={Boolean(field.value)} onChange={e=>form.setFieldValue("blocked",e.target.checked)} />} />}
+                </Field>}
+								<Can
 											role={loggedInUser.profile}
 											perform="user-modal:editProfile"
 											yes={() => (
@@ -269,7 +276,8 @@ const UserModal = ({ open, onClose, userId }) => {
 														id="profile-selection"
 														required
 													>
-														<MenuItem value="admin">Admin</MenuItem>
+														<MenuItem value="supervisor">Supervisor</MenuItem>
+                    <MenuItem value="admin">Admin</MenuItem>
 														<MenuItem value="user">User</MenuItem>
 													</Field>
 												</>

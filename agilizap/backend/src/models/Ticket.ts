@@ -1,3 +1,4 @@
+import { redactOperational } from "../security/serializeOperational";
 import {
   Table,
   Column,
@@ -10,7 +11,7 @@ import {
   HasMany,
   AutoIncrement,
   Default,
-  BeforeCreate,
+  BeforeCreate, AfterUpdate,
   BelongsToMany,
   AllowNull
 } from "sequelize-typescript";
@@ -27,9 +28,18 @@ import Tag from "./Tag";
 import TicketTag from "./TicketTag";
 import QueueIntegrations from "./QueueIntegrations";
 import Prompt from "./Prompt";
+import QueueWaitAlert from "./QueueWaitAlert";
 
 @Table
 class Ticket extends Model<Ticket> {
+  @AfterUpdate
+  static async revokeTicketRooms(ticket: Ticket): Promise<void> {
+    const { enforceTicketRoomAccess } = await import("../libs/socket");
+    await enforceTicketRoomAccess(ticket);
+  }
+
+  public toJSON(): any { return redactOperational(super.toJSON()); }
+
   @PrimaryKey
   @AutoIncrement
   @Column
@@ -149,6 +159,31 @@ class Ticket extends Model<Ticket> {
   @Default(0)
   @Column
   amountUsedBotQueues: number;
+
+  @Column
+  closedAt: Date;
+
+  @Default(false)
+  @Column
+  legalHold: boolean;
+
+  @Column
+  legalHoldReason: string;
+
+  @Column
+  legalHoldAt: Date;
+
+  @Column
+  lastClientMessageAt: Date;
+
+  @Column
+  lastHumanResponseAt: Date;
+
+  @Column
+  currentWaitEpisodeId: string;
+
+  @HasMany(() => QueueWaitAlert)
+  queueWaitAlerts: QueueWaitAlert[];
 }
 
 export default Ticket;

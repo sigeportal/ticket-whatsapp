@@ -8,7 +8,8 @@ import {
   AutoIncrement,
   DataType,
   BelongsTo,
-  ForeignKey
+  ForeignKey,
+  Default
 } from "sequelize-typescript";
 import Company from "./Company";
 import Contact from "./Contact";
@@ -49,6 +50,19 @@ class Schedule extends Model<Schedule> {
 
   @Column(DataType.STRING)
   status: string;
+
+  @Column(DataType.STRING)
+  interruptionReason: string;
+
+  @Column(DataType.INTEGER)
+  reviewedBy: number;
+
+  @Column(DataType.DATE)
+  reviewedAt: Date;
+
+  @Default(0)
+  @Column
+  retries: number;
 
   @CreatedAt
   createdAt: Date;
