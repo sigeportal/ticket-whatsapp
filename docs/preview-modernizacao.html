@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agilizap - Preview Visual das Interfaces Modernizadas</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+            },
+            agilizap: {
+              bgDark: '#07130e',      // Fundo principal WhatsApp dark Agilizap
+              cardDark: '#0b1e16',    // Paper escuro
+              boxDark: '#0d2219',     // Boxlist escuro
+              borderDark: 'rgba(16, 185, 129, 0.18)',
+              borderLight: 'rgba(226, 232, 240, 0.9)',
+              bgLight: '#f8fafc',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(16, 185, 129, 0.25);
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(16, 185, 129, 0.45);
+    }
+  </style>
+</head>
+<body class="bg-agilizap-bgLight dark:bg-agilizap-bgDark text-slate-800 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-200">
+
+  <!-- Topbar Header Agilizap -->
+  <header class="bg-white/90 dark:bg-agilizap-cardDark/95 backdrop-blur-md border-b border-slate-200 dark:border-agilizap-borderDark sticky top-0 z-40 px-6 py-3">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-[10px] bg-gradient-to-tr from-emerald-600 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-600/20">
+          <i data-lucide="message-square" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="font-bold text-base md:text-lg text-slate-900 dark:text-white leading-tight">Agilizap • Identidade Visual Atual</h1>
+            <span class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800">
+              Branch: feat/modernizacao-chat-e-listas-contatos
+            </span>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Padronizado com Plus Jakarta Sans, degradê Agilizap e tema WhatsApp Dark</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs & Dark Mode Switcher -->
+      <div class="flex items-center space-x-3">
+        <div class="bg-slate-100 dark:bg-agilizap-boxDark p-1 rounded-[10px] flex items-center border border-slate-200 dark:border-agilizap-borderDark">
+          <button id="tabChatBtn" onclick="switchTab('chat')" class="flex items-center space-x-2 px-4 py-2 rounded-[8px] text-xs font-bold transition-all bg-white dark:bg-agilizap-cardDark text-slate-900 dark:text-white shadow-sm">
+            <i data-lucide="messages-square" class="w-4 h-4 text-emerald-500"></i>
+            <span>Chat Interno</span>
+          </button>
+          <button id="tabContactsBtn" onclick="switchTab('contacts')" class="flex items-center space-x-2 px-4 py-2 rounded-[8px] text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+            <i data-lucide="contact-2" class="w-4 h-4"></i>
+            <span>Listas de Contatos</span>
+          </button>
+        </div>
+
+        <button onclick="toggleDarkMode()" title="Alternar Modo Escuro / Claro" class="w-10 h-10 rounded-[10px] border border-slate-200 dark:border-agilizap-borderDark bg-white dark:bg-agilizap-cardDark flex items-center justify-center text-slate-600 dark:text-slate-300 hover:border-emerald-500 transition-colors shadow-sm">
+          <i id="themeIcon" data-lucide="moon" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col">
+
+    <!-- VIEW 1: CHAT INTERNO -->
+    <section id="viewChat" class="flex-1 flex flex-col space-y-4">
+      
+      <!-- Top banner alert -->
+      <div class="flex flex-wrap items-center justify-between gap-3 bg-white/70 dark:bg-agilizap-cardDark/80 p-3.5 rounded-[14px] border border-slate-200 dark:border-agilizap-borderDark text-xs">
+        <div class="flex items-center space-x-2 text-slate-600 dark:text-slate-300 font-medium">
+          <i data-lucide="check-circle" class="w-4 h-4 text-emerald-500"></i>
+          <span>Chat Interno com identidade Agilizap: Avatares Squircle, degraded emerald, cabeçalho de conversa e busca.</span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span class="text-slate-400">Componentes:</span>
+          <span class="px-2 py-0.5 rounded-[6px] text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-medium">
+            ChatList.js
+          </span>
+          <span class="px-2 py-0.5 rounded-[6px] text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-medium">
+            ChatMessages.js
+          </span>
+          <span class="px-2 py-0.5 rounded-[6px] text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-medium">
+            Chat/index.js
+          </span>
+        </div>
+      </div>
+
+      <!-- Chat UI Card -->
+      <div class="flex-1 min-h-[620px] bg-white dark:bg-agilizap-cardDark rounded-[14px] border border-slate-200 dark:border-agilizap-borderDark shadow-sm overflow-hidden flex flex-col md:flex-row">
+        
+        <!-- Left Column: Chat List -->
+        <aside class="w-full md:w-80 lg:w-96 border-b md:border-b-0 md:border-r border-slate-200 dark:border-agilizap-borderDark flex flex-col bg-slate-50/60 dark:bg-agilizap-bgDark">
+          
+          <!-- Sidebar Header -->
+          <div class="p-3.5 border-b border-slate-200 dark:border-agilizap-borderDark flex items-center justify-between bg-white dark:bg-agilizap-cardDark">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="messages-square" class="w-4 h-4 text-emerald-500"></i>
+              <h2 class="font-bold text-slate-900 dark:text-white text-sm">Chat Interno</h2>
+            </div>
+            <button onclick="alert('Modal de criação de conversa')" class="flex items-center space-x-1 px-3 py-1.5 rounded-[10px] bg-gradient-to-tr from-emerald-600 to-teal-600 text-white font-bold text-xs shadow-sm hover:opacity-95 transition-all">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              <span>Novo</span>
+            </button>
+          </div>
+
+          <!-- Search input -->
+          <div class="p-2.5 border-b border-slate-200 dark:border-agilizap-borderDark">
+            <div class="relative">
+              <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-emerald-500"></i>
+              <input 
+                type="text" 
+                placeholder="Filtrar conversas..."
+                class="w-full pl-9 pr-3 py-2 text-xs rounded-[10px] bg-white dark:bg-agilizap-boxDark border border-slate-200 dark:border-agilizap-borderDark focus:outline-none focus:border-emerald-500 text-slate-800 dark:text-white placeholder:text-slate-400"
+              />
+            </div>
+          </div>
+
+          <!-- Chat List Items -->
+          <div class="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+            
+            <!-- Item 1 (Selected) -->
+            <div onclick="selectChat(1)" id="chatItem-1" class="cursor-pointer p-2.5 rounded-[12px] bg-emerald-500/10 dark:bg-emerald-500/15 border-l-4 border-emerald-500 flex items-start space-x-3 transition-all">
+              <div class="w-10 h-10 rounded-[10px] bg-[#059669] flex items-center justify-center text-white font-bold text-xs shadow-sm flex-shrink-0">
+                OP
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between mb-0.5">
+                  <h3 class="text-xs font-bold text-slate-900 dark:text-white truncate">Operação & Plantão</h3>
+                  <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">14:48</span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Mariana: Já finalizei os disparos!</p>
+              </div>
+              <span class="flex-shrink-0 px-1.5 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-bold">
+                2
+              </span>
+            </div>
+
+            <!-- Item 2 -->
+            <div onclick="selectChat(2)" id="chatItem-2" class="cursor-pointer p-2.5 rounded-[12px] hover:bg-emerald-500/5 dark:hover:bg-emerald-500/10 flex items-start space-x-3 transition-all">
+              <div class="w-10 h-10 rounded-[10px] bg-[#2563eb] flex items-center justify-center text-white font-bold text-xs shadow-sm flex-shrink-0">
+                TI
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between mb-0.5">
+                  <h3 class="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">Suporte TI & Infra</h3>
+                  <span class="text-[11px] text-slate-400">11:20</span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Lucas: WhatsApp Web sincronizado sem falhas.</p>
+              </div>
+            </div>
+
+            <!-- Item 3 -->
+            <div onclick="selectChat(3)" id="chatItem-3" class="cursor-pointer p-2.5 rounded-[12px] hover:bg-emerald-500/5 dark:hover:bg-emerald-500/10 flex items-start space-x-3 transition-all">
+              <div class="w-10 h-10 rounded-[10px] bg-[#7c3aed] flex items-center justify-center text-white font-bold text-xs shadow-sm flex-shrink-0">
+                MK
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between mb-0.5">
+                  <h3 class="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">Marketing & Campanhas</h3>
+                  <span class="text-[11px] text-slate-400">Ontem</span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Ana: Planilha de contatos atualizada.</p>
+              </div>
+            </div>
+
+          </div>
+        </aside>
+
+        <!-- Right Column: Conversation Stage -->
+        <section class="flex-1 flex flex-col bg-white dark:bg-agilizap-cardDark">
+          
+          <!-- Conversation Active Header -->
+          <div class="px-5 py-3 border-b border-slate-200 dark:border-agilizap-borderDark flex items-center justify-between bg-white dark:bg-agilizap-cardDark">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-[10px] bg-[#059669] flex items-center justify-center text-white font-bold text-xs shadow-sm">
+                OP
+              </div>
+              <div>
+                <h2 id="activeChatTitle" class="text-sm font-bold text-slate-900 dark:text-white leading-tight">Operação & Plantão</h2>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center space-x-1">
+                  <i data-lucide="users" class="w-3 h-3 text-emerald-500"></i>
+                  <span>4 membros • Mariana, Carlos, Lucas e Você</span>
+                </p>
+              </div>
+            </div>
+
+            <!-- Header actions -->
+            <div class="flex items-center space-x-1">
+              <button title="Editar conversa" class="p-1.5 rounded-[8px] text-slate-500 dark:text-slate-400 hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors">
+                <i data-lucide="edit-3" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Message History Flow -->
+          <div id="messagesContainer" class="flex-1 p-5 overflow-y-auto custom-scrollbar space-y-3 bg-slate-50/50 dark:bg-agilizap-bgDark">
+            
+            <!-- Message Received 1 -->
+            <div class="flex items-start space-x-2 max-w-[80%]">
+              <div class="bg-white dark:bg-agilizap-boxDark p-3 rounded-[14px] rounded-bl-[3px] border border-slate-200 dark:border-agilizap-borderDark shadow-sm text-xs space-y-1">
+                <span class="font-bold text-emerald-600 dark:text-emerald-400 block text-[11px]">Mariana Silva</span>
+                <p class="text-slate-800 dark:text-slate-100 leading-relaxed">
+                  Subi a nova lista de contatos segmentada no painel. Vocês podem validar os números antes do disparo?
+                </p>
+                <div class="text-[10px] text-slate-400 text-right">14:42</div>
+              </div>
+            </div>
+
+            <!-- Message Sent 1 -->
+            <div class="flex items-end justify-end space-x-2 max-w-[80%] ml-auto">
+              <div class="bg-gradient-to-tr from-emerald-600 to-teal-600 text-white p-3 rounded-[14px] rounded-br-[3px] shadow-sm text-xs text-left space-y-1">
+                <p class="leading-relaxed">
+                  Perfeito Mari! Vou verificar agora mesmo na aba de Listas de Contatos e te dou o feedback.
+                </p>
+                <div class="flex items-center justify-end space-x-1 text-[10px] text-white/80">
+                  <span>14:45</span>
+                  <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Message Received 2 -->
+            <div class="flex items-start space-x-2 max-w-[80%]">
+              <div class="bg-white dark:bg-agilizap-boxDark p-3 rounded-[14px] rounded-bl-[3px] border border-slate-200 dark:border-agilizap-borderDark shadow-sm text-xs space-y-1">
+                <span class="font-bold text-emerald-600 dark:text-emerald-400 block text-[11px]">Carlos Eduardo</span>
+                <p class="text-slate-800 dark:text-slate-100 leading-relaxed">
+                  Validação concluída com sucesso! Números ativos identificados.
+                </p>
+                <div class="text-[10px] text-slate-400 text-right">14:47</div>
+              </div>
+            </div>
+
+            <!-- Dynamic Messages injected here -->
+            <div id="dynamicMessages"></div>
+
+          </div>
+
+          <!-- Bottom Capsule Input Bar -->
+          <div class="p-3 border-t border-slate-200 dark:border-agilizap-borderDark bg-white dark:bg-agilizap-cardDark">
+            <form onsubmit="handleSendMessage(event)" class="flex items-center space-x-2">
+              <div class="flex-1 relative">
+                <input 
+                  id="messageInput"
+                  type="text" 
+                  placeholder="Digite uma mensagem interna... (Pressione Enter para enviar)"
+                  autocomplete="off"
+                  class="w-full px-4 py-2.5 text-xs rounded-full bg-slate-100 dark:bg-agilizap-bgDark border border-slate-200 dark:border-agilizap-borderDark focus:outline-none focus:border-emerald-500 text-slate-800 dark:text-white placeholder:text-slate-400"
+                />
+              </div>
+
+              <!-- Send Button -->
+              <button 
+                type="submit" 
+                class="w-10 h-10 rounded-[12px] bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/20 hover:opacity-90 transition-all flex-shrink-0"
+              >
+                <i data-lucide="send" class="w-4 h-4"></i>
+              </button>
+            </form>
+          </div>
+
+        </section>
+
+      </div>
+    </section>
+
+    <!-- VIEW 2: LISTAS DE CONTATOS -->
+    <section id="viewContacts" class="hidden flex-1 flex flex-col space-y-4">
+      
+      <!-- Main Contact Lists Card -->
+      <div class="bg-white dark:bg-agilizap-cardDark rounded-[14px] border border-slate-200 dark:border-agilizap-borderDark shadow-sm overflow-hidden flex flex-col">
+        
+        <!-- Table Control Bar -->
+        <div class="p-4 border-b border-slate-200 dark:border-agilizap-borderDark flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div class="flex items-center space-x-3 w-full sm:w-auto">
+            <div class="relative w-full sm:w-72">
+              <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-2.5 text-emerald-500"></i>
+              <input 
+                type="text" 
+                placeholder="Pesquisar por nome de lista..."
+                class="w-full pl-9 pr-3 py-2 text-xs rounded-[10px] bg-slate-50 dark:bg-agilizap-bgDark border border-slate-200 dark:border-agilizap-borderDark focus:outline-none focus:border-emerald-500 text-slate-800 dark:text-white"
+              />
+            </div>
+          </div>
+
+          <!-- Actions: Modelo & Nova Lista -->
+          <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+            <button class="flex items-center space-x-1.5 px-3 py-2 rounded-[10px] border border-slate-200 dark:border-agilizap-borderDark bg-slate-100 dark:bg-agilizap-boxDark text-slate-700 dark:text-slate-300 text-xs font-semibold hover:border-emerald-500 transition-colors">
+              <i data-lucide="download" class="w-4 h-4 text-emerald-500"></i>
+              <span>Baixar Modelo</span>
+            </button>
+            <button class="flex items-center space-x-1.5 px-4 py-2 rounded-[10px] bg-gradient-to-tr from-emerald-600 to-teal-600 text-white text-xs font-bold shadow-md shadow-emerald-600/20 hover:opacity-95 transition-all">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>Adicionar Lista</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Table Listing -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-slate-200 dark:border-agilizap-borderDark bg-slate-50/80 dark:bg-agilizap-boxDark/50 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <th class="py-3 px-6">Nome da Lista</th>
+                <th class="py-3 px-6 text-center">Total Contatos</th>
+                <th class="py-3 px-6 text-right pr-8">Ações</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-agilizap-borderDark">
+              
+              <!-- Row 1 -->
+              <tr class="hover:bg-slate-50/60 dark:hover:bg-emerald-500/5 transition-colors">
+                <td class="py-3.5 px-6">
+                  <div class="flex items-center space-x-3">
+                    <div class="w-9 h-9 rounded-[10px] bg-[#059669] text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                      CV
+                    </div>
+                    <span class="font-semibold text-slate-900 dark:text-white">Clientes VIP - Campanha Outubro</span>
+                  </div>
+                </td>
+                <td class="py-3.5 px-6 text-center">
+                  <span class="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-[12px] text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    <i data-lucide="users" class="w-3.5 h-3.5"></i>
+                    <span>1.420 contatos</span>
+                  </span>
+                </td>
+                <td class="py-3.5 px-6 text-right pr-6">
+                  <div class="inline-flex items-center space-x-1.5">
+                    <button title="Baixar Planilha" class="w-8 h-8 rounded-[8px] bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:text-emerald-500 hover:bg-emerald-500/10 flex items-center justify-center transition-colors">
+                      <i data-lucide="download" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="openContactsDetailModal('Clientes VIP - Campanha Outubro', 1420)" title="Ver Contatos" class="w-8 h-8 rounded-[8px] bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:text-emerald-500 hover:bg-emerald-500/10 flex items-center justify-center transition-colors">
+                      <i data-lucide="users" class="w-4 h-4"></i>
+                    </button>
+                    <button title="Editar Lista" class="w-8 h-8 rounded-[8px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-colors">
+                      <i data-lucide="pencil" class="w-4 h-4"></i>
+                    </button>
+                    <button title="Excluir Lista" class="w-8 h-8 rounded-[8px] bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-colors">
+                      <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Row 2 -->
+              <tr class="hover:bg-slate-50/60 dark:hover:bg-emerald-500/5 transition-colors">
+                <td class="py-3.5 px-6">
+                  <div class="flex items-center space-x-3">
+                    <div class="w-9 h-9 rounded-[10px] bg-[#2563eb] text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                      LI
+                    </div>
+                    <span class="font-semibold text-slate-900 dark:text-white">Leads Inbound - Website</span>
+                  </div>
+                </td>
+                <td class="py-3.5 px-6 text-center">
+                  <span class="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-[12px] text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    <i data-lucide="users" class="w-3.5 h-3.5"></i>
+                    <span>860 contatos</span>
+                  </span>
+                </td>
+                <td class="py-3.5 px-6 text-right pr-6">
+                  <div class="inline-flex items-center space-x-1.5">
+                    <button title="Baixar Planilha" class="w-8 h-8 rounded-[8px] bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:text-emerald-500 hover:bg-emerald-500/10 flex items-center justify-center transition-colors">
+                      <i data-lucide="download" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="openContactsDetailModal('Leads Inbound - Website', 860)" title="Ver Contatos" class="w-8 h-8 rounded-[8px] bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:text-emerald-500 hover:bg-emerald-500/10 flex items-center justify-center transition-colors">
+                      <i data-lucide="users" class="w-4 h-4"></i>
+                    </button>
+                    <button title="Editar Lista" class="w-8 h-8 rounded-[8px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-colors">
+                      <i data-lucide="pencil" class="w-4 h-4"></i>
+                    </button>
+                    <button title="Excluir Lista" class="w-8 h-8 rounded-[8px] bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-colors">
+                      <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Modal: Exibir Itens da Lista de Contatos -->
+  <div id="modalContacts" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-agilizap-cardDark border border-slate-200 dark:border-agilizap-borderDark rounded-[14px] max-w-3xl w-full p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-agilizap-borderDark pb-3">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-[10px] bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+            <i data-lucide="contact-2" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 id="modalListName" class="font-bold text-slate-900 dark:text-white text-sm">Contatos da Lista</h3>
+            <p id="modalListCount" class="text-xs text-slate-400">Gerenciamento individual dos contatos</p>
+          </div>
+        </div>
+        <button onclick="closeContactsDetailModal()" class="w-8 h-8 rounded-[8px] hover:bg-slate-100 dark:hover:bg-agilizap-boxDark flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Quick Contact Preview Table -->
+      <div class="overflow-x-auto rounded-[10px] border border-slate-200 dark:border-agilizap-borderDark max-h-72 custom-scrollbar">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 dark:bg-agilizap-boxDark sticky top-0 text-[11px] font-bold text-slate-500 uppercase">
+            <tr>
+              <th class="py-2.5 px-4">Nome</th>
+              <th class="py-2.5 px-4 text-center">Status</th>
+              <th class="py-2.5 px-4 text-center">WhatsApp</th>
+              <th class="py-2.5 px-4 text-center">E-mail</th>
+              <th class="py-2.5 px-4 text-right">Ações</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-agilizap-borderDark">
+            <tr>
+              <td class="py-3 px-4 font-semibold text-slate-800 dark:text-slate-200 flex items-center space-x-2">
+                <div class="w-7 h-7 rounded-[8px] bg-purple-600 text-white font-bold flex items-center justify-center text-[10px]">JC</div>
+                <span>Juliana Costa</span>
+              </td>
+              <td class="py-3 px-4 text-center">
+                <span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-[12px] text-[11px] font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                  <i data-lucide="check-circle" class="w-3 h-3"></i>
+                  <span>WhatsApp Válido</span>
+                </span>
+              </td>
+              <td class="py-3 px-4 text-center text-slate-500">+55 (11) 98765-4321</td>
+              <td class="py-3 px-4 text-center text-slate-400">juliana@empresa.com</td>
+              <td class="py-3 px-4 text-right">
+                <button class="p-1 rounded-[6px] text-rose-500 hover:bg-rose-500/10"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+              </td>
+            </tr>
+            <tr>
+              <td class="py-3 px-4 font-semibold text-slate-800 dark:text-slate-200 flex items-center space-x-2">
+                <div class="w-7 h-7 rounded-[8px] bg-amber-600 text-white font-bold flex items-center justify-center text-[10px]">MF</div>
+                <span>Marcos Faria</span>
+              </td>
+              <td class="py-3 px-4 text-center">
+                <span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-[12px] text-[11px] font-medium bg-slate-500/10 text-slate-400 border border-slate-500/20">
+                  <i data-lucide="ban" class="w-3 h-3"></i>
+                  <span>Sem WhatsApp</span>
+                </span>
+              </td>
+              <td class="py-3 px-4 text-center text-slate-400">+55 (31) 3211-0000</td>
+              <td class="py-3 px-4 text-center text-slate-400">marcos@fixo.com</td>
+              <td class="py-3 px-4 text-right">
+                <button class="p-1 rounded-[6px] text-rose-500 hover:bg-rose-500/10"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex items-center justify-end pt-2">
+        <button onclick="closeContactsDetailModal()" class="px-4 py-2 rounded-[10px] bg-slate-200 dark:bg-agilizap-boxDark text-slate-800 dark:text-slate-200 text-xs font-semibold hover:opacity-90 transition-colors">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    function toggleDarkMode() {
+      const html = document.documentElement;
+      const isDark = html.classList.toggle('dark');
+      const icon = document.getElementById('themeIcon');
+      if (isDark) {
+        icon.setAttribute('data-lucide', 'sun');
+      } else {
+        icon.setAttribute('data-lucide', 'moon');
+      }
+      lucide.createIcons();
+    }
+
+    function switchTab(tab) {
+      const viewChat = document.getElementById('viewChat');
+      const viewContacts = document.getElementById('viewContacts');
+      const tabChatBtn = document.getElementById('tabChatBtn');
+      const tabContactsBtn = document.getElementById('tabContactsBtn');
+
+      if (tab === 'chat') {
+        viewChat.classList.remove('hidden');
+        viewContacts.classList.add('hidden');
+        tabChatBtn.className = 'flex items-center space-x-2 px-4 py-2 rounded-[8px] text-xs font-bold transition-all bg-white dark:bg-agilizap-cardDark text-slate-900 dark:text-white shadow-sm';
+        tabContactsBtn.className = 'flex items-center space-x-2 px-4 py-2 rounded-[8px] text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white';
+      } else {
+        viewChat.classList.add('hidden');
+        viewContacts.classList.remove('hidden');
+        tabContactsBtn.className = 'flex items-center space-x-2 px-4 py-2 rounded-[8px] text-xs font-bold transition-all bg-white dark:bg-agilizap-cardDark text-slate-900 dark:text-white shadow-sm';
+        tabChatBtn.className = 'flex items-center space-x-2 px-4 py-2 rounded-[8px] text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white';
+      }
+      lucide.createIcons();
+    }
+
+    function selectChat(id) {
+      for (let i = 1; i <= 3; i++) {
+        const item = document.getElementById(`chatItem-${i}`);
+        if (!item) continue;
+        if (i === id) {
+          item.className = 'cursor-pointer p-2.5 rounded-[12px] bg-emerald-500/10 dark:bg-emerald-500/15 border-l-4 border-emerald-500 flex items-start space-x-3 transition-all';
+        } else {
+          item.className = 'cursor-pointer p-2.5 rounded-[12px] hover:bg-emerald-500/5 dark:hover:bg-emerald-500/10 flex items-start space-x-3 transition-all';
+        }
+      }
+      const titles = {
+        1: 'Operação & Plantão',
+        2: 'Suporte TI & Infra',
+        3: 'Marketing & Campanhas'
+      };
+      document.getElementById('activeChatTitle').innerText = titles[id] || 'Conversa';
+    }
+
+    function handleSendMessage(e) {
+      e.preventDefault();
+      const input = document.getElementById('messageInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const dynamicContainer = document.getElementById('dynamicMessages');
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      const newMsg = document.createElement('div');
+      newMsg.className = 'flex items-end justify-end space-x-2 max-w-[80%] ml-auto';
+      newMsg.innerHTML = `
+        <div class="bg-gradient-to-tr from-emerald-600 to-teal-600 text-white p-3 rounded-[14px] rounded-br-[3px] shadow-sm text-xs text-left space-y-1">
+          <p class="leading-relaxed">${escapeHtml(text)}</p>
+          <div class="flex items-center justify-end space-x-1 text-[10px] text-white/80">
+            <span>${timeStr}</span>
+            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+          </div>
+        </div>
+      `;
+      dynamicContainer.appendChild(newMsg);
+      input.value = '';
+
+      const scrollBox = document.getElementById('messagesContainer');
+      scrollBox.scrollTop = scrollBox.scrollHeight;
+      lucide.createIcons();
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.innerText = text;
+      return div.innerHTML;
+    }
+
+    function openContactsDetailModal(name, count) {
+      document.getElementById('modalListName').innerText = name;
+      document.getElementById('modalListCount').innerText = `${count} contatos registrados`;
+      document.getElementById('modalContacts').classList.remove('hidden');
+    }
+
+    function closeContactsDetailModal() {
+      document.getElementById('modalContacts').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>

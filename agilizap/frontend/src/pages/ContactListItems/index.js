@@ -20,12 +20,18 @@ import Button from "@material-ui/core/Button";
 import SearchIcon from "@material-ui/icons/Search";
 import TextField from "@material-ui/core/TextField";
 import InputAdornment from "@material-ui/core/InputAdornment";
+import Tooltip from "@material-ui/core/Tooltip";
+import Avatar from "@material-ui/core/Avatar";
+import Typography from "@material-ui/core/Typography";
 
 import IconButton from "@material-ui/core/IconButton";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
 import BlockIcon from "@material-ui/icons/Block";
+import CloudUploadIcon from "@material-ui/icons/CloudUpload";
+import FormatListBulletedIcon from "@material-ui/icons/FormatListBulleted";
+import AddIcon from "@material-ui/icons/Add";
 
 import api from "../../services/api";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
@@ -44,6 +50,8 @@ import { Grid } from "@material-ui/core";
 
 import planilhaExemplo from "../../assets/planilha.xlsx";
 import { SocketContext } from "../../context/Socket/SocketContext";
+import { getInitials } from "../../helpers/getInitials";
+import { generateColor } from "../../helpers/colorGenerator";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_CONTACTS") {
@@ -92,9 +100,153 @@ const reducer = (state, action) => {
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(1),
+    padding: theme.spacing(1.5),
     overflowY: "scroll",
+    borderRadius: 14,
+    border: `1px solid ${
+      theme.palette.type === "dark"
+        ? "rgba(16, 185, 129, 0.18)"
+        : "rgba(226, 232, 240, 0.9)"
+    }`,
+    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
+    boxShadow:
+      theme.palette.type === "dark"
+        ? "0 4px 20px -2px rgba(0, 0, 0, 0.4)"
+        : "0 1px 3px rgba(0, 0, 0, 0.05)",
     ...theme.scrollbarStyles,
+  },
+  searchInput: {
+    backgroundColor: theme.palette.type === "dark" ? "#07130e" : "#f8fafc",
+    borderRadius: 10,
+    "& .MuiOutlinedInput-root": {
+      borderRadius: 10,
+      border: `1px solid ${
+        theme.palette.type === "dark"
+          ? "rgba(16, 185, 129, 0.2)"
+          : "rgba(226, 232, 240, 0.9)"
+      }`,
+      "&.Mui-focused": {
+        borderColor: "#10b981",
+        boxShadow: "0 0 0 3px rgba(16, 185, 129, 0.15)",
+      },
+    },
+  },
+  addButton: {
+    borderRadius: 10,
+    fontWeight: 700,
+    fontSize: "0.82rem",
+    padding: "8px 14px",
+    background: "linear-gradient(135deg, #10b981 0%, #0d9488 100%)",
+    color: "#ffffff",
+    boxShadow: "0 2px 8px rgba(16, 185, 129, 0.25)",
+    transition: "all 0.2s ease",
+    "&:hover": {
+      background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+      boxShadow: "0 4px 12px rgba(16, 185, 129, 0.4)",
+    },
+  },
+  secondaryButton: {
+    borderRadius: 10,
+    fontWeight: 600,
+    fontSize: "0.82rem",
+    padding: "8px 14px",
+    color: theme.palette.type === "dark" ? "#cbd5e1" : "#475569",
+    backgroundColor:
+      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.08)" : "#f1f5f9",
+    border: `1px solid ${
+      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.2)" : "#e2e8f0"
+    }`,
+    transition: "all 0.2s ease",
+    "&:hover": {
+      backgroundColor:
+        theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.15)" : "#e2e8f0",
+      color: theme.palette.type === "dark" ? "#34d399" : "#0f172a",
+    },
+  },
+  contactNameCell: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+  },
+  avatarSquircle: {
+    borderRadius: 10,
+    fontWeight: 700,
+    fontSize: "0.85rem",
+    width: 36,
+    height: 36,
+    boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+  },
+  contactNameText: {
+    fontWeight: 600,
+    fontSize: "0.86rem",
+    color: theme.palette.type === "dark" ? "#f0fdf4" : "#0f172a",
+  },
+  statusPillActive: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 5,
+    padding: "3px 9px",
+    borderRadius: 12,
+    fontSize: "0.75rem",
+    fontWeight: 600,
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(16, 185, 129, 0.15)"
+        : "rgba(16, 185, 129, 0.1)",
+    color: theme.palette.type === "dark" ? "#34d399" : "#059669",
+    border: `1px solid ${
+      theme.palette.type === "dark"
+        ? "rgba(16, 185, 129, 0.3)"
+        : "rgba(16, 185, 129, 0.2)"
+    }`,
+  },
+  statusPillInactive: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 5,
+    padding: "3px 9px",
+    borderRadius: 12,
+    fontSize: "0.75rem",
+    fontWeight: 600,
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(148, 163, 184, 0.1)"
+        : "#f1f5f9",
+    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+    border: `1px solid ${
+      theme.palette.type === "dark"
+        ? "rgba(148, 163, 184, 0.2)"
+        : "#e2e8f0"
+    }`,
+  },
+  actionButtonEdit: {
+    color: theme.palette.type === "dark" ? "#34d399" : "#059669",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(16, 185, 129, 0.12)"
+        : "rgba(16, 185, 129, 0.08)",
+    borderRadius: 8,
+    padding: 6,
+    marginRight: 6,
+    transition: "all 0.2s ease",
+    "&:hover": {
+      backgroundColor: "#10b981",
+      color: "#ffffff",
+    },
+  },
+  actionButtonDelete: {
+    color: theme.palette.type === "dark" ? "#f87171" : "#dc2626",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(239, 68, 68, 0.12)"
+        : "rgba(239, 68, 68, 0.08)",
+    borderRadius: 8,
+    padding: 6,
+    transition: "all 0.2s ease",
+    "&:hover": {
+      backgroundColor: "#ef4444",
+      color: "#ffffff",
+    },
   },
 }));
 
@@ -157,20 +309,6 @@ const ContactListItems = () => {
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
-
-    socket.on(`company-${companyId}-ContactListItem`, (data) => {
-      if (data.action === "update" || data.action === "create") {
-        dispatch({ type: "UPDATE_CONTACTS", payload: data.record });
-      }
-
-      if (data.action === "delete") {
-        dispatch({ type: "DELETE_CONTACT", payload: +data.id });
-      }
-
-      if (data.action === "reload") {
-        dispatch({ type: "LOAD_CONTACTS", payload: data.records });
-      }
-    });
 
     socket.on(
       `company-${companyId}-ContactListItem-${contactListId}`,
@@ -248,13 +386,13 @@ const ContactListItems = () => {
   };
 
   return (
-    <MainContainer className={classes.mainContainer}>
+    <MainContainer>
       <ContactListItemModal
         open={contactListItemModalOpen}
         onClose={handleCloseContactListItemModal}
         aria-labelledby="form-dialog-title"
         contactId={selectedContactId}
-      ></ContactListItemModal>
+      />
       <ConfirmationModal
         title={
           deletingContact
@@ -282,24 +420,28 @@ const ContactListItems = () => {
           </>
         )}
       </ConfirmationModal>
+
       <MainHeader>
-        <Grid style={{ width: "99.6%" }} container>
-          <Grid xs={12} sm={5} item>
-            <Title>{contactList.name}</Title>
+        <Grid style={{ width: "99.6%" }} alignItems="center" container>
+          <Grid xs={12} sm={4} item>
+            <Title>{contactList.name || "Contatos da Lista"}</Title>
           </Grid>
-          <Grid xs={12} sm={7} item>
-            <Grid spacing={2} container>
-              <Grid xs={12} sm={6} item>
+          <Grid xs={12} sm={8} item>
+            <Grid spacing={1} alignItems="center" justifyContent="flex-end" container>
+              <Grid xs={12} sm={5} item>
                 <TextField
                   fullWidth
                   placeholder={i18n.t("contactListItems.searchPlaceholder")}
                   type="search"
+                  size="small"
+                  variant="outlined"
                   value={searchParam}
                   onChange={handleSearch}
+                  className={classes.searchInput}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <SearchIcon style={{ color: "gray" }} />
+                        <SearchIcon style={{ color: "#10b981", fontSize: 18 }} />
                       </InputAdornment>
                     ),
                   }}
@@ -308,72 +450,79 @@ const ContactListItems = () => {
               <Grid xs={4} sm={2} item>
                 <Button
                   fullWidth
-                  variant="contained"
-                  color="primary"
+                  variant="outlined"
+                  className={classes.secondaryButton}
+                  startIcon={<FormatListBulletedIcon />}
                   onClick={goToContactLists}
                 >
-                  {i18n.t("contactListItems.buttons.lists")}
+                  Listas
                 </Button>
               </Grid>
               <Grid xs={4} sm={2} item>
                 <Button
                   fullWidth
-                  variant="contained"
-                  color="primary"
+                  variant="outlined"
+                  className={classes.secondaryButton}
+                  startIcon={<CloudUploadIcon />}
                   onClick={() => {
-                    fileUploadRef.current.value = null;
-                    fileUploadRef.current.click();
+                    if (fileUploadRef.current) {
+                      fileUploadRef.current.value = null;
+                      fileUploadRef.current.click();
+                    }
                   }}
                 >
-                  {i18n.t("contactListItems.buttons.import")}
+                  Importar
                 </Button>
               </Grid>
-              <Grid xs={4} sm={2} item>
+              <Grid xs={4} sm={3} item>
                 <Button
                   fullWidth
                   variant="contained"
-                  color="primary"
+                  className={classes.addButton}
+                  startIcon={<AddIcon />}
                   onClick={handleOpenContactListItemModal}
                 >
-                  {i18n.t("contactListItems.buttons.add")}
+                  Adicionar
                 </Button>
               </Grid>
             </Grid>
           </Grid>
         </Grid>
       </MainHeader>
+
       <Paper
         className={classes.mainPaper}
         variant="outlined"
         onScroll={handleScroll}
       >
-        <>
-          <input
-            style={{ display: "none" }}
-            id="upload"
-            name="file"
-            type="file"
-            accept=".xls,.xlsx"
-            onChange={() => {
-              setConfirmOpen(true);
-            }}
-            ref={fileUploadRef}
-          />
-        </>
+        <input
+          style={{ display: "none" }}
+          id="upload"
+          name="file"
+          type="file"
+          accept=".xls,.xlsx"
+          onChange={() => {
+            setConfirmOpen(true);
+          }}
+          ref={fileUploadRef}
+        />
+
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell align="center" style={{ width: "0%" }}>
-                #
+              <TableCell align="left" style={{ fontWeight: 700 }}>
+                {i18n.t("contactListItems.table.name")}
               </TableCell>
-              <TableCell>{i18n.t("contactListItems.table.name")}</TableCell>
-              <TableCell align="center">
+              <TableCell align="center" style={{ fontWeight: 700 }}>
+                Status
+              </TableCell>
+              <TableCell align="center" style={{ fontWeight: 700 }}>
                 {i18n.t("contactListItems.table.number")}
               </TableCell>
-              <TableCell align="center">
+              <TableCell align="center" style={{ fontWeight: 700 }}>
                 {i18n.t("contactListItems.table.email")}
               </TableCell>
-              <TableCell align="center">
+              <TableCell align="right" style={{ fontWeight: 700, paddingRight: 24 }}>
                 {i18n.t("contactListItems.table.actions")}
               </TableCell>
             </TableRow>
@@ -381,51 +530,75 @@ const ContactListItems = () => {
           <TableBody>
             <>
               {contacts.map((contact) => (
-                <TableRow key={contact.id}>
-                  <TableCell align="center" style={{ width: "0%" }}>
-                    <IconButton>
-                      {contact.isWhatsappValid ? (
-                        <CheckCircleIcon
-                          titleAccess="Whatsapp Válido"
-                          htmlColor="green"
-                        />
-                      ) : (
-                        <BlockIcon
-                          titleAccess="Whatsapp Inválido"
-                          htmlColor="grey"
-                        />
-                      )}
-                    </IconButton>
+                <TableRow key={contact.id} hover>
+                  <TableCell align="left">
+                    <div className={classes.contactNameCell}>
+                      <Avatar
+                        className={classes.avatarSquircle}
+                        style={{
+                          backgroundColor: generateColor(
+                            contact.name || contact.number || "Contact"
+                          ),
+                        }}
+                      >
+                        {getInitials(contact.name || "CT")}
+                      </Avatar>
+                      <Typography className={classes.contactNameText}>
+                        {contact.name}
+                      </Typography>
+                    </div>
                   </TableCell>
-                  <TableCell>{contact.name}</TableCell>
+
+                  <TableCell align="center">
+                    {contact.isWhatsappValid ? (
+                      <span className={classes.statusPillActive}>
+                        <CheckCircleIcon style={{ fontSize: 13 }} />
+                        WhatsApp Válido
+                      </span>
+                    ) : (
+                      <span className={classes.statusPillInactive}>
+                        <BlockIcon style={{ fontSize: 13 }} />
+                        Sem WhatsApp
+                      </span>
+                    )}
+                  </TableCell>
+
                   <TableCell align="center">{contact.number}</TableCell>
                   <TableCell align="center">{contact.email}</TableCell>
-                  <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      onClick={() => hadleEditContact(contact.id)}
-                    >
-                      <EditIcon />
-                    </IconButton>
+
+                  <TableCell align="right">
+                    <Tooltip title="Editar Contato" arrow>
+                      <IconButton
+                        size="small"
+                        className={classes.actionButtonEdit}
+                        onClick={() => hadleEditContact(contact.id)}
+                      >
+                        <EditIcon style={{ fontSize: 16 }} />
+                      </IconButton>
+                    </Tooltip>
+
                     <Can
                       role={user.profile}
                       perform="contacts-page:deleteContact"
                       yes={() => (
-                        <IconButton
-                          size="small"
-                          onClick={() => {
-                            setConfirmOpen(true);
-                            setDeletingContact(contact);
-                          }}
-                        >
-                          <DeleteOutlineIcon />
-                        </IconButton>
+                        <Tooltip title="Excluir Contato" arrow>
+                          <IconButton
+                            size="small"
+                            className={classes.actionButtonDelete}
+                            onClick={() => {
+                              setConfirmOpen(true);
+                              setDeletingContact(contact);
+                            }}
+                          >
+                            <DeleteOutlineIcon style={{ fontSize: 16 }} />
+                          </IconButton>
+                        </Tooltip>
                       )}
                     />
                   </TableCell>
                 </TableRow>
               ))}
-              {loading && <TableRowSkeleton columns={4} />}
+              {loading && <TableRowSkeleton columns={5} />}
             </>
           </TableBody>
         </Table>
