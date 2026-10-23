@@ -22,7 +22,7 @@ services:
     container_name: ticket-redis
     environment:
       TZ: ${TZ:-America/Campo_Grande}
-    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?Configure a unique strong REDIS_PASSWORD}"]
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Configure a unique strong REDIS_PASSWORD}"]
     volumes:
       - redis_data:/data
     healthcheck:
@@ -83,6 +83,7 @@ services:
     volumes:
       - backend_public:/app/public
       - backend_sessions:/app/sessions
+      - ./agilizap/backend/certs:/app/certs:ro
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
     restart: unless-stopped
@@ -100,6 +101,29 @@ services:
       - backend
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-3000}:80"
+    restart: unless-stopped
+
+
+  backup:
+    image: alpine:3.20
+    container_name: ticket-backup
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      TZ: ${TZ:-America/Campo_Grande}
+      DB_HOST: postgres
+      DB_USER: ${DB_USER:-agilizap}
+      DB_PASS: ${DB_PASS:?Configure a unique strong DB_PASS}
+      DB_NAME: ${DB_NAME:-agilizap}
+      RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+      BACKUP_CRON: ${BACKUP_CRON:-0 3 * * *}
+    volumes:
+      - backend_sessions:/sessions:ro
+      - backend_public:/public:ro
+      - ./backups:/backups
+      - ./scripts/docker-backup-cron.sh:/entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
     restart: unless-stopped
 
 volumes:
