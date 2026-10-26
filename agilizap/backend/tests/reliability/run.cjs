@@ -414,6 +414,74 @@ let pg, server, io;
     assert.equal(sReschedule.interruptionReason, null);
   });
 
+  test('REL-01: Criacao de agendamento dispara aviso imediato configuravel para o cliente', async () => {
+    const CreateService = load('services/ScheduleServices/CreateService.ts').default;
+
+    // Caso 1: Aviso padrao para contato com nome
+    lastSentPayload = null;
+    await CreateService({
+      body: 'Lembrete de consulta geral',
+      sendAt: '2026-10-25 15:00:00',
+      contactId: contact1.id,
+      companyId: 1,
+      userId: admin1.id,
+      sendConfirmation: true
+    });
+    assert.ok(lastSentPayload, 'Deveria ter disparado mensagem de aviso imediato');
+    assert.equal(lastSentPayload.messageData.number, contact1.number);
+    assert.match(lastSentPayload.messageData.body, new RegExp(contact1.name));
+    assert.match(lastSentPayload.messageData.body, /25\/10\/2026/);
+    assert.match(lastSentPayload.messageData.body, /15:00/);
+
+    // Caso 2: Contato com numero/LID no nome nao deve ser chamado pelo numero
+    const contactLid = await Contact.create({
+      id: 99,
+      name: '5567999881122',
+      number: '5567999881122',
+      companyId: 1
+    });
+    lastSentPayload = null;
+    await CreateService({
+      body: 'Lembrete importante',
+      sendAt: '2026-10-26 10:30:00',
+      contactId: contactLid.id,
+      companyId: 1,
+      userId: admin1.id,
+      sendConfirmation: true
+    });
+    assert.ok(lastSentPayload);
+    assert.ok(!lastSentPayload.messageData.body.includes('5567999881122'), 'Nao deve conter numero como saudacao de nome');
+    assert.match(lastSentPayload.messageData.body, /Olá!/);
+
+    // Caso 3: Mensagem personalizada
+    lastSentPayload = null;
+    await CreateService({
+      body: 'Sessao de alinhamento',
+      sendAt: '2026-10-27 11:00:00',
+      contactId: contact1.id,
+      companyId: 1,
+      userId: admin1.id,
+      sendConfirmation: true,
+      confirmationMessage: 'Ola {nome}, seu horario e {data} as {hora}. Mensagem: {mensagem}'
+    });
+    assert.ok(lastSentPayload);
+    assert.match(lastSentPayload.messageData.body, new RegExp(contact1.name));
+    assert.match(lastSentPayload.messageData.body, /27\/10\/2026 as 11:00/);
+    assert.match(lastSentPayload.messageData.body, /Sessao de alinhamento/);
+
+    // Caso 4: sendConfirmation=false nao dispara aviso
+    lastSentPayload = null;
+    await CreateService({
+      body: 'Agendamento sem notificacao previa',
+      sendAt: '2026-10-28 09:00:00',
+      contactId: contact1.id,
+      companyId: 1,
+      userId: admin1.id,
+      sendConfirmation: false
+    });
+    assert.equal(lastSentPayload, null, 'Nao deve disparar mensagem quando sendConfirmation for falso');
+  });
+
   // ==========================================
   // REL-02: ENTREGA E DESDUPLICAÇÃO DE MENSAGENS
   // ==========================================

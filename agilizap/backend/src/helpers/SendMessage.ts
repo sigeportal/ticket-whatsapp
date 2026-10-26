@@ -17,7 +17,15 @@ export const SendMessage = async (
 ): Promise<any> => {
   try {
     const wbot = await GetWhatsappWbot(whatsapp);
-    const chatId = `${messageData.number}@s.whatsapp.net`;
+    const rawNumber = String(messageData.number).replace(/\D/g, "");
+    let chatId: string;
+    if (String(messageData.number).includes("@")) {
+      chatId = String(messageData.number);
+    } else if (rawNumber.length >= 14 && !rawNumber.startsWith("55")) {
+      chatId = `${rawNumber}@lid`;
+    } else {
+      chatId = `${rawNumber}@s.whatsapp.net`;
+    }
 
     let message;
 

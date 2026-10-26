@@ -3,6 +3,7 @@ import moment from "moment";
 import AppError from "../../errors/AppError";
 import Schedule from "../../models/Schedule";
 import ShowService from "./ShowService";
+import { sendScheduleNotification } from "./SendScheduleNotificationService";
 
 interface ScheduleData {
   id?: number;
@@ -14,6 +15,8 @@ interface ScheduleData {
   ticketId?: number;
   userId?: number;
   status?: string;
+  sendConfirmation?: boolean;
+  confirmationMessage?: string;
 }
 
 interface Request {
@@ -44,7 +47,9 @@ const UpdateUserService = async ({
     contactId,
     ticketId,
     userId,
-    status
+    status,
+    sendConfirmation,
+    confirmationMessage
   } = scheduleData;
 
   try {
@@ -73,6 +78,18 @@ const UpdateUserService = async ({
   await schedule.update(updatePayload);
 
   await schedule.reload();
+
+  if (sendConfirmation) {
+    await sendScheduleNotification({
+      contactId: schedule.contactId,
+      companyId: schedule.companyId,
+      userId: schedule.userId,
+      sendAt: schedule.sendAt,
+      body: schedule.body,
+      confirmationMessage
+    });
+  }
+
   return schedule;
 };
 

@@ -27,6 +27,12 @@ yarn-error.log*
 *.pid.lock
 .pnpm-debug.log*
 
+# Backups and database dumps
+backups/
+*.sql
+*.sql.gz
+*.tar.gz
+
 # Public uploads except defaults
 agilizap/backend/public/*
 !agilizap/backend/public/logotipos/
