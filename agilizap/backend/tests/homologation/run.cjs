@@ -586,6 +586,24 @@ let pg;
     assert.equal(await ChatUser.count({ where: { chatId: chat.id } }), 2);
   });
 
+  test('Encerramento administrativo sem fila preserva responsavel e registra o administrador na auditoria', async () => {
+    const company = await Company.create({ name: 'Encerramento sem fila' });
+    const admin = await User.create({ name: 'Administrador', email: 'close-admin@example.invalid', passwordHash: 'hash', profile: 'admin', companyId: company.id });
+    const owner = await User.create({ name: 'Responsável original', email: 'close-owner@example.invalid', passwordHash: 'hash', profile: 'user', companyId: company.id });
+    for (const userId of [null, owner.id]) {
+      const contact = await Contact.create({ name: 'Contato de teste', number: `556599${userId || 0}`, companyId: company.id });
+      const ticket = await Ticket.create({ status: 'pending', queueId: null, userId, contactId: contact.id, companyId: company.id });
+      const result = await UpdateTicketService({ ticketData: { status: 'closed', useIntegration: false, promptId: null, integrationId: null }, ticketId: ticket.id, companyId: company.id, userId: admin.id });
+      assert.equal(result.ticket.status, 'closed');
+      assert.equal(result.ticket.queueId, null);
+      assert.equal(result.ticket.userId, userId);
+      assert.ok(result.ticket.closedAt);
+      const audit = await AuditLog.findOne({ where: { companyId: company.id, resource: 'ticket', action: 'close', targetId: String(ticket.id) } });
+      assert.ok(audit);
+      assert.equal(audit.userId, admin.id);
+    }
+  });
+
   // Execute all tests
   let passed = 0;
   let failed = 0;

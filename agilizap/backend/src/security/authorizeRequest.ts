@@ -156,7 +156,11 @@ export const authorizeRequest = async (req: Request, actor: any): Promise<void> 
   if (resource === "tickets" && write && assignedUserId) {
     const target = await User.findByPk(assignedUserId, { include: [Queue] });
     const queueId = body.queueId === undefined ? ticket?.queueId : Number(body.queueId);
-    if (!target || target.companyId !== actor.companyId || !target.queues.some(q => q.id === queueId)) deny();
+    // Closing an existing ticket does not reassign it or require its owner to join a queue.
+    const closingWithoutReassignment = actor.profile === "admin" && ticket && body.status === "closed" &&
+      body.userId === undefined && body.queueId === undefined;
+    if (!target || target.companyId !== actor.companyId ||
+        (!closingWithoutReassignment && !target.queues.some(q => q.id === queueId))) deny();
   }
   if (resource === "tickets" && write && actor.profile === "user") {
     if (body.userId !== undefined && Number(body.userId) !== Number(actor.id)) deny();

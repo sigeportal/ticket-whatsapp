@@ -161,6 +161,37 @@ let pg, server, io;
     assert.equal((await request.put(`/tickets/${t1.id}`).set(auth(supervisor)).send({ queueId: qOther.id })).status, 403);
     assert.equal((await request.post('/tickets').set(auth(agent)).send({ contactId: contact2.id, queueId: q1.id, userId: agent.id })).status, 403);
   });
+  test('REST: administrador encerra sem fila preservando responsavel e sem exigir vinculo a fila', async () => {
+    const adminWithoutQueues = await User.create({ name: 'Admin sem filas', email: 'admin-no-queue@example.invalid', password: 'InitialPass123', profile: 'admin', companyId: c1.id, tokenVersion: 0, blocked: false });
+    const actor = await User.findByPk(adminWithoutQueues.id, { include: [Queue, Company] });
+    for (const fields of [
+      { queueId: null, userId: null },
+      { queueId: null, userId: agent.id },
+      { queueId: qOther.id, userId: agent.id }
+    ]) {
+      const ticket = await Ticket.create({ status: 'pending', companyId: c1.id, contactId: contact.id, ...fields });
+      const response = await request.put(`/tickets/${ticket.id}`).set(auth(actor)).send({ status: 'closed', useIntegration: false, promptId: null, integrationId: null });
+      assert.equal(response.status, 200, JSON.stringify(response.body));
+    }
+  });
+  test('REST: encerramento sem fila continua negado a atendente, supervisor e administrador de outra empresa', async () => {
+    const ticket = await Ticket.create({ status: 'pending', companyId: c1.id, queueId: null, userId: null, contactId: contact.id });
+    for (const actor of [agent, supervisor, actors[`admin${c2.id}`]]) {
+      assert.equal((await request.put(`/tickets/${ticket.id}`).set(auth(actor)).send({ status: 'closed' })).status, 403);
+    }
+  });
+  test('REST: encerramento administrativo nao contorna validacao de atribuicao ou transferencia', async () => {
+    const ticket = await Ticket.create({ status: 'pending', companyId: c1.id, queueId: null, userId: agent.id, contactId: contact.id });
+    for (const body of [
+      { status: 'closed', userId: admin.id },
+      { status: 'closed', queueId: qOther.id },
+      { status: 'closed', userId: actors[`user${c2.id}`].id },
+      { status: 'closed', queueId: q2.id },
+      { status: 'open' }
+    ]) {
+      assert.equal((await request.put(`/tickets/${ticket.id}`).set(auth(admin)).send(body)).status, 403);
+    }
+  });
   test('Usuario: autopromocao, outro alvo, super e empresa no corpo sao rejeitados; campos pessoais funcionam sem apagar filas', async () => {
     for (const body of [{ profile:'admin' }, { super:true }, { companyId:c2.id }, { tokenVersion:999 }, { queueIds:[qOther.id] }]) {
       assert.equal((await request.put(`/users/${agent.id}`).set(auth(agent)).send(body)).status, 403);

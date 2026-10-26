@@ -338,8 +338,6 @@ const TicketListItemCustom = ({ ticket }) => {
     try {
       await api.put(`/tickets/${id}`, {
         status: "closed",
-        userId: user?.id,
-        queueId: ticket?.queue?.id,
         useIntegration: false,
         promptId: null,
         integrationId: null,
@@ -347,6 +345,7 @@ const TicketListItemCustom = ({ ticket }) => {
     } catch (err) {
       setLoading(false);
       toastError(err);
+      return;
     }
     if (isMounted.current) {
       setLoading(false);
