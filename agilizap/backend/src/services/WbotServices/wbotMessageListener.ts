@@ -66,7 +66,7 @@ import FindOrCreateTicketService from "../TicketServices/FindOrCreateTicketServi
 import UpdateTicketService from "../TicketServices/UpdateTicketService";
 import typebotListener from "../TypebotServices/typebotListener";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "crypto";
 import ShowPromptService from "../PromptServices/ShowPromptService";
 import { generateAIResponse } from "../AIServices/AIService";
 import { provider } from "./providers";
@@ -780,7 +780,7 @@ const handleOpenAi = async (
         try {
           await CreateMessageService({
             messageData: {
-              id: uuidv4(),
+              id: randomUUID(),
               ticketId: ticket.id,
               body: aiResult.summary.trim(),
               fromMe: true,

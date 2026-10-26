@@ -38,8 +38,8 @@ module.exports = {
 
   down: async (queryInterface: QueryInterface) => {
     return Promise.all([
-      queryInterface.bulkDelete("Companies", {}),
-      queryInterface.bulkDelete("Plans", {})
+      queryInterface.bulkDelete("Companies", { name: "Empresa 1" }),
+      queryInterface.bulkDelete("Plans", { name: "Plano 1" })
     ]);
   }
 };

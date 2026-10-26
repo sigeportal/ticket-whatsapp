@@ -30,6 +30,7 @@ yarn-error.log*
 # Backups and database dumps
 backups/
 *.sql
+!agilizap/backend/src/database/baseline/*.sql
 *.sql.gz
 *.tar.gz
 
