@@ -10,8 +10,6 @@ import "express-async-errors";
 import "reflect-metadata";
 import "./bootstrap";
 
-import bodyParser from 'body-parser';
-import uploadConfig from "./config/upload";
 import "./database";
 import AppError from "./errors/AppError";
 import { messageQueue, sendScheduledMessages } from "./queues";
@@ -36,8 +34,8 @@ app.set("queues", {
   sendScheduledMessages
 });
 
-const bodyparser = require('body-parser');
-app.use(bodyParser.json({ limit: '10mb' }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 const allowedOrigins = [
   process.env.FRONTEND_URL,
@@ -58,7 +56,6 @@ app.use(
 );
 app.use(cookieParser());
 app.use(trustedOrigin);
-app.use(express.json());
 app.use(Sentry.Handlers.requestHandler());
 app.use("/assets", publicAssets);
 app.use("/public/logotipos", publicAssets);

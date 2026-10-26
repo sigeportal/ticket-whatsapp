@@ -74,7 +74,6 @@ import SendWhatsAppMessage from "./SendWhatsAppMessage";
 import { getMessageOptions } from "./SendWhatsAppMedia";
 import { getRecipientJid } from "../../helpers/GetRecipientJid";
 
-const request = require("request");
 
 const fs = require('fs')
 
@@ -1806,28 +1805,18 @@ export const handleMessageIntegration = async (
 
   if (queueIntegration.type === "n8n" || queueIntegration.type === "webhook") {
     if (queueIntegration?.urlN8N) {
-      const options = {
-        method: "POST",
-        url: queueIntegration?.urlN8N,
-        headers: {
-          "Content-Type": "application/json"
-        },
-        json: msg
-      };
       try {
-        request(options, function (error, response) {
-          if (error) {
-            throw new Error(error);
-          }
-          else {
-            console.log(response.body);
-          }
+        await fetch(queueIntegration.urlN8N, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(msg)
         });
-      } catch (error) {
-        throw new Error(error);
+      } catch (error: any) {
+        logger.error(`[wbotMessageListener] Erro ao integrar com N8N: ${error?.message || error}`);
       }
     }
-
   } else if (queueIntegration.type === "typebot") {
     console.log("entrou no typebot")
     // await typebots(ticket, msg, wbot, queueIntegration);

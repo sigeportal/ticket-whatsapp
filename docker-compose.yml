@@ -84,6 +84,12 @@ services:
       - backend_public:/app/public
       - backend_sessions:/app/sessions
       - ./agilizap/backend/certs:/app/certs:ro
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:8080/health/live', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
     restart: unless-stopped
@@ -98,7 +104,8 @@ services:
         REACT_APP_NAME_SYSTEM: ${REACT_APP_NAME_SYSTEM:-Agilizap}
     container_name: ticket-frontend
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-3000}:80"
     restart: unless-stopped
