@@ -1,7 +1,11 @@
 import { QueryInterface, DataTypes } from "sequelize";
 
 module.exports = {
-  up: (queryInterface: QueryInterface) => {
+  up: async (queryInterface: QueryInterface) => {
+    const tables = await queryInterface.showAllTables();
+    if (tables.includes("BaileysMessages")) {
+      return;
+    }
     return queryInterface.createTable("BaileysMessages", {
       id: {
         type: DataTypes.INTEGER,

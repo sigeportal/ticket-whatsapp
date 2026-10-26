@@ -1,5 +1,5 @@
 import { Op } from "sequelize";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "crypto";
 import Ticket from "../../models/Ticket";
 import Queue from "../../models/Queue";
 import User from "../../models/User";
@@ -73,7 +73,7 @@ export const checkAndTriggerQueueWaitAlerts = async (
       // Garantir identificador único para o episódio de espera ativo
       let episodeId = ticket.currentWaitEpisodeId;
       if (!episodeId) {
-        episodeId = uuidv4();
+        episodeId = randomUUID();
         await ticket.update({ currentWaitEpisodeId: episodeId });
       }
 

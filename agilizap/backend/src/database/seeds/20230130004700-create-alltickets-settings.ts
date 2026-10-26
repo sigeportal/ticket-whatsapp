@@ -17,6 +17,6 @@ module.exports = {
   },
 
   down: (queryInterface: QueryInterface) => {
-    return queryInterface.bulkDelete("Settings", {});
+    return queryInterface.bulkDelete("Settings", { key: "allTicket" });
   }
 };

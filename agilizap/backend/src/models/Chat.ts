@@ -13,7 +13,7 @@ import {
   Default
 } from "sequelize-typescript";
 
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "crypto";
 
 import ChatMessage from "./ChatMessage";
 import ChatUser from "./ChatUser";
@@ -27,7 +27,7 @@ class Chat extends Model<Chat> {
   @Column
   id: number;
 
-  @Default(uuidv4())
+  @Default(randomUUID)
   @Column
   uuid: string;
 
@@ -65,7 +65,7 @@ class Chat extends Model<Chat> {
 
   @BeforeCreate
   static setUUID(chat: Chat) {
-    chat.uuid = uuidv4();
+    chat.uuid = randomUUID();
   }
 }
 

@@ -15,7 +15,7 @@ import {
   BelongsToMany,
   AllowNull
 } from "sequelize-typescript";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "crypto";
 
 import Contact from "./Contact";
 import Message from "./Message";
@@ -118,13 +118,13 @@ class Ticket extends Model<Ticket> {
   @BelongsTo(() => Company)
   company: Company;
 
-  @Default(uuidv4())
+  @Default(randomUUID)
   @Column
   uuid: string;
 
   @BeforeCreate
   static setUUID(ticket: Ticket) {
-    ticket.uuid = uuidv4();
+    ticket.uuid = randomUUID();
   }
   
   @Default(false)

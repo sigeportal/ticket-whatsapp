@@ -118,6 +118,6 @@ module.exports = {
     },
 
     down: async (queryInterface: QueryInterface) => {
-        return queryInterface.bulkDelete("Settings", {});
+        return queryInterface.bulkDelete("Settings", { companyId: 1 });
     }
 };
