@@ -19,14 +19,13 @@ import { i18n } from "../../translate/i18n";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
-import { FormControl, Grid, IconButton } from "@material-ui/core";
+import { FormControl, Grid, IconButton, FormControlLabel, Switch } from "@material-ui/core";
 import Autocomplete from "@material-ui/lab/Autocomplete";
-import moment from "moment"
+import moment from "moment";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import { isArray, capitalize } from "lodash";
+import { isArray, capitalize, head } from "lodash";
 import DeleteOutline from "@material-ui/icons/DeleteOutline";
 import AttachFile from "@material-ui/icons/AttachFile";
-import { head } from "lodash";
 import ConfirmationModal from "../ConfirmationModal";
 import MessageVariablesPicker from "../MessageVariablesPicker";
 
@@ -60,12 +59,19 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
+const DEFAULT_CONFIRMATION_MESSAGE = "Olá, {nome}! Seu agendamento foi confirmado para o dia {data} às {hora}.";
+
 const ScheduleSchema = Yup.object().shape({
 	body: Yup.string()
 		.min(5, "Mensagem muito curta")
 		.required("Obrigatório"),
 	contactId: Yup.number().required("Obrigatório"),
-	sendAt: Yup.string().required("Obrigatório")
+	sendAt: Yup.string().required("Obrigatório"),
+	sendConfirmation: Yup.boolean(),
+	confirmationMessage: Yup.string().when("sendConfirmation", {
+		is: true,
+		then: Yup.string().required("Informe a mensagem de aviso ou desative o disparo imediato")
+	})
 });
 
 const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, reload }) => {
@@ -77,13 +83,15 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 		body: "",
 		contactId: "",
 		sendAt: moment().add(1, 'hour').format('YYYY-MM-DDTHH:mm'),
-		sentAt: ""
+		sentAt: "",
+		sendConfirmation: true,
+		confirmationMessage: DEFAULT_CONFIRMATION_MESSAGE
 	};
 
 	const initialContact = {
 		id: "",
 		name: ""
-	}
+	};
 
 	const [schedule, setSchedule] = useState(initialState);
 	const [currentContact, setCurrentContact] = useState(initialContact);
@@ -122,7 +130,13 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 
 					const { data } = await api.get(`/schedules/${scheduleId}`);
 					setSchedule(prevState => {
-						return { ...prevState, ...data, sendAt: moment(data.sendAt).format('YYYY-MM-DDTHH:mm') };
+						return {
+							...prevState,
+							...data,
+							sendAt: moment(data.sendAt).format('YYYY-MM-DDTHH:mm'),
+							sendConfirmation: false,
+							confirmationMessage: DEFAULT_CONFIRMATION_MESSAGE
+						};
 					});
 					setCurrentContact(data.contact);
 				})()
@@ -183,6 +197,7 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 		setSchedule(initialState);
 		handleClose();
 	};
+
 	const handleClickMsgVar = async (msgVar, setValueFunc) => {
 		const el = messageInputRef.current;
 		const firstHalfText = el.value.substring(0, el.selectionStart);
@@ -203,14 +218,12 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 
 		if (schedule.mediaPath) {
 			await api.delete(`/schedules/${schedule.id}/media-upload`);
-			setSchedule((prev) => ({
+			setSchedule(prev => ({
 				...prev,
 				mediaPath: null,
 			}));
 			toast.success(i18n.t("scheduleModal.toasts.deleted"));
-			if (typeof reload == "function") {
-				console.log(reload);
-				console.log("1");
+			if (typeof reload == 'function') {
 				reload();
 			}
 		}
@@ -318,6 +331,35 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 										fullWidth
 									/>
 								</div>
+								<br />
+								<div>
+									<FormControlLabel
+										control={
+											<Switch
+												checked={Boolean(values.sendConfirmation)}
+												onChange={e => setFieldValue("sendConfirmation", e.target.checked)}
+												color="primary"
+											/>
+										}
+										label="Disparar aviso/confirmação imediato para o cliente"
+									/>
+								</div>
+								{values.sendConfirmation && (
+									<div className={classes.multFieldLine} style={{ marginTop: 8 }}>
+										<Field
+											as={TextField}
+											rows={3}
+											multiline={true}
+											label="Mensagem de aviso imediato"
+											name="confirmationMessage"
+											error={touched.confirmationMessage && Boolean(errors.confirmationMessage)}
+											helperText="Variáveis disponíveis: {nome}, {data}, {hora}, {mensagem}"
+											variant="outlined"
+											margin="dense"
+											fullWidth
+										/>
+									</div>
+								)}
 								{(schedule.mediaPath || attachment) && (
 									<Grid xs={12} item>
 										<Button startIcon={<AttachFile />}>

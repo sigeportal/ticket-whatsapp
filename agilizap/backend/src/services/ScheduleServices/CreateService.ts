@@ -2,6 +2,7 @@ import * as Yup from "yup";
 
 import AppError from "../../errors/AppError";
 import Schedule from "../../models/Schedule";
+import { sendScheduleNotification } from "./SendScheduleNotificationService";
 
 interface Request {
   body: string;
@@ -9,6 +10,8 @@ interface Request {
   contactId: number | string;
   companyId: number | string;
   userId?: number | string;
+  sendConfirmation?: boolean;
+  confirmationMessage?: string;
 }
 
 const CreateService = async ({
@@ -16,7 +19,9 @@ const CreateService = async ({
   sendAt,
   contactId,
   companyId,
-  userId
+  userId,
+  sendConfirmation,
+  confirmationMessage
 }: Request): Promise<Schedule> => {
   const schema = Yup.object().shape({
     body: Yup.string().required().min(5),
@@ -41,6 +46,17 @@ const CreateService = async ({
   );
 
   await schedule.reload();
+
+  if (sendConfirmation) {
+    await sendScheduleNotification({
+      contactId,
+      companyId,
+      userId,
+      sendAt,
+      body,
+      confirmationMessage
+    });
+  }
 
   return schedule;
 };
