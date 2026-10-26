@@ -135,7 +135,7 @@ export const saveMessage = async (
   const chat = await Chat.findByPk(chatId, {
     include: [
       { model: User, as: "owner", attributes: ["id", "name"] },
-      { model: ChatUser, as: "users" }
+      { model: ChatUser, as: "users", include: [{ model: User, as: "user", attributes: ["id", "name", "online"] }] }
     ]
   });
 
@@ -169,7 +169,7 @@ export const checkAsRead = async (
   const chat = await Chat.findByPk(id, {
     include: [
       { model: User, as: "owner", attributes: ["id", "name"] },
-      { model: ChatUser, as: "users" }
+      { model: ChatUser, as: "users", include: [{ model: User, as: "user", attributes: ["id", "name", "online"] }] }
     ]
   });
 

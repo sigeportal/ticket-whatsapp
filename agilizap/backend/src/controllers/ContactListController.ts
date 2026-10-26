@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { getIO } from "../libs/socket";
 
 import ListService from "../services/ContactListService/ListService";
+import StatsService from "../services/ContactListService/StatsService";
 import CreateService from "../services/ContactListService/CreateService";
 import ShowService from "../services/ContactListService/ShowService";
 import UpdateService from "../services/ContactListService/UpdateService";
@@ -19,6 +20,10 @@ type IndexQuery = {
   searchParam: string;
   pageNumber: string;
   companyId: string | number;
+};
+
+export const stats = async (req: Request, res: Response): Promise<Response> => {
+  return res.json(await StatsService(req.user.companyId, req.params.id ? Number(req.params.id) : undefined));
 };
 
 type StoreData = {

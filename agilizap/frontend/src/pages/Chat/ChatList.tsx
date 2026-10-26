@@ -1,6 +1,8 @@
 import React, { useContext, useState, useMemo } from "react";
 import {
   Avatar,
+  Button,
+  CircularProgress,
   Chip,
   IconButton,
   InputAdornment,
@@ -19,14 +21,13 @@ import { useHistory, useParams } from "react-router-dom";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { useDate } from "../../hooks/useDate";
 
-import DeleteIcon from "@material-ui/icons/DeleteOutline";
-import EditIcon from "@material-ui/icons/Edit";
-import SearchIcon from "@material-ui/icons/Search";
+import { FiTrash2 as DeleteIcon } from "react-icons/fi";
+import { FiEdit2 as EditIcon } from "react-icons/fi";
+import { FiSearch as SearchIcon } from "react-icons/fi";
 
 import ConfirmationModal from "../../components/ConfirmationModal";
-import api from "../../services/api";
 import { getInitials } from "../../helpers/getInitials";
-import { generateColor } from "../../helpers/colorGenerator";
+import type { InternalChat, User } from "../../types";
 
 const useStyles = makeStyles((theme) => ({
   mainContainer: {
@@ -34,9 +35,9 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: "column",
     position: "relative",
     flex: 1,
-    height: "100%",
+    minHeight: 0,
     overflow: "hidden",
-    backgroundColor: theme.palette.type === "dark" ? "#07130e" : "#f8fafc",
+    backgroundColor: theme.palette.type === "dark" ? "#0f172a" : "#f8fafc",
   },
   searchBox: {
     padding: theme.spacing(1, 1.5),
@@ -47,7 +48,7 @@ const useStyles = makeStyles((theme) => ({
     }`,
   },
   searchInput: {
-    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
+    backgroundColor: theme.palette.type === "dark" ? "#162032" : "#ffffff",
     borderRadius: 10,
     "& .MuiOutlinedInput-root": {
       borderRadius: 10,
@@ -74,13 +75,16 @@ const useStyles = makeStyles((theme) => ({
     overflowY: "auto",
     padding: theme.spacing(0.5),
     ...theme.scrollbarStyles,
+    minHeight: 0,
+    minWidth: 0,
   },
   listItem: {
     cursor: "pointer",
     borderRadius: 12,
     margin: "3px 0",
     padding: "8px 12px",
-    transition: "all 0.2s ease",
+    "&.MuiListItem-secondaryAction": { paddingRight: 12, paddingBottom: 54 },
+    transition: "background-color 0.2s ease, color 0.2s ease",
     "&:hover": {
       backgroundColor:
         theme.palette.type === "dark"
@@ -109,11 +113,12 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     justifyContent: "space-between",
     width: "100%",
+    gap: 8,
   },
   chatTitle: {
     fontWeight: 600,
-    fontSize: "0.85rem",
-    color: theme.palette.type === "dark" ? "#f0fdf4" : "#0f172a",
+    fontSize: "0.875rem",
+    color: theme.palette.type === "dark" ? "#f1f5f9" : "#0f172a",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
@@ -127,15 +132,15 @@ const useStyles = makeStyles((theme) => ({
     marginTop: 2,
   },
   chatTime: {
-    fontSize: "0.7rem",
-    color: theme.palette.type === "dark" ? "#6ee7b7" : "#059669",
+    fontSize: "0.75rem",
+    color: theme.palette.type === "dark" ? "#6ee7b7" : "#047857",
     fontWeight: 500,
   },
   unreadBadge: {
-    backgroundColor: "#10b981",
+    backgroundColor: "#047857",
     color: "#ffffff",
     fontWeight: 700,
-    fontSize: "0.7rem",
+    fontSize: "0.75rem",
     height: 18,
     minWidth: 18,
     padding: "0 4px",
@@ -143,6 +148,8 @@ const useStyles = makeStyles((theme) => ({
     marginLeft: 6,
   },
   actionButtonEdit: {
+    minWidth: 44,
+    minHeight: 44,
     color: theme.palette.type === "dark" ? "#34d399" : "#059669",
     backgroundColor:
       theme.palette.type === "dark"
@@ -151,13 +158,15 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: 6,
     padding: 5,
     marginRight: 4,
-    transition: "all 0.2s ease",
+    transition: "background-color 0.2s ease, color 0.2s ease",
     "&:hover": {
       backgroundColor: "#10b981",
       color: "#ffffff",
     },
   },
   actionButtonDelete: {
+    minWidth: 44,
+    minHeight: 44,
     color: theme.palette.type === "dark" ? "#f87171" : "#dc2626",
     backgroundColor:
       theme.palette.type === "dark"
@@ -165,7 +174,7 @@ const useStyles = makeStyles((theme) => ({
         : "rgba(239, 68, 68, 0.08)",
     borderRadius: 6,
     padding: 5,
-    transition: "all 0.2s ease",
+    transition: "background-color 0.2s ease, color 0.2s ease",
     "&:hover": {
       backgroundColor: "#ef4444",
       color: "#ffffff",
@@ -180,36 +189,31 @@ export default function ChatList({
   handleEditChat,
   pageInfo,
   loading,
-}) {
+  handleLoadMore,
+  error,
+  handleRetry,
+}: { chats: InternalChat[]; handleSelectChat: (chat: InternalChat) => void; handleDeleteChat: (chat: InternalChat) => void; handleEditChat: (chat: InternalChat) => void; pageInfo: { hasMore: boolean }; loading: boolean; handleLoadMore: () => void; error: boolean; handleRetry: () => void }) {
   const classes = useStyles();
   const history = useHistory();
-  const { user } = useContext(AuthContext);
+  const { user } = useContext(AuthContext) as { user: User };
   const { datetimeToClient } = useDate();
 
   const [confirmationModal, setConfirmModalOpen] = useState(false);
-  const [selectedChat, setSelectedChat] = useState({});
+  const [selectedChat, setSelectedChat] = useState<InternalChat | null>(null);
   const [searchParam, setSearchParam] = useState("");
 
-  const { id } = useParams();
+  const { id } = useParams<{ id?: string }>();
 
-  const goToMessages = async (chat) => {
-    if (unreadMessages(chat) > 0) {
-      try {
-        await api.post(`/chats/${chat.id}/read`, { userId: user.id });
-      } catch (err) {}
-    }
-
-    if (id !== chat.uuid) {
-      history.push(`/chats/${chat.uuid}`);
-      handleSelectChat(chat);
-    }
+  const goToMessages = (chat: InternalChat) => {
+    if (id !== chat.uuid) history.push(`/chats/${chat.uuid}`);
+    handleSelectChat(chat);
   };
 
   const handleDelete = () => {
-    handleDeleteChat(selectedChat);
+    if (selectedChat) handleDeleteChat(selectedChat);
   };
 
-  const unreadMessages = (chat) => {
+  const unreadMessages = (chat: InternalChat) => {
     if (!chat || !Array.isArray(chat.users)) return 0;
     const currentUser = chat.users.find((u) => u.userId === user.id);
     return currentUser ? currentUser.unreads : 0;
@@ -218,8 +222,8 @@ export default function ChatList({
   const filteredChats = useMemo(() => {
     if (!Array.isArray(chats)) return [];
     if (!searchParam.trim()) return chats;
-    const term = searchParam.toLowerCase();
-    return chats.filter((c) => c.title && c.title.toLowerCase().includes(term));
+    const term = searchParam.trim().toLocaleLowerCase();
+    return chats.filter(c => `${c.title} ${(c.users || []).map(p => p.user?.name || "").join(" ")}`.toLocaleLowerCase().includes(term));
   }, [chats, searchParam]);
 
   return (
@@ -240,7 +244,8 @@ export default function ChatList({
             fullWidth
             size="small"
             variant="outlined"
-            placeholder="Filtrar conversas..."
+            placeholder="Buscar conversa ou participante…"
+            inputProps={{ "aria-label": "Buscar conversas" }}
             value={searchParam}
             onChange={(e) => setSearchParam(e.target.value)}
             className={classes.searchInput}
@@ -267,13 +272,15 @@ export default function ChatList({
                   className={`${classes.listItem} ${
                     isSelected ? classes.listItemSelected : ""
                   }`}
+                  selected={isSelected}
+                  aria-current={isSelected ? "true" : undefined}
                   button
                 >
                   <ListItemAvatar>
                     <Avatar
                       className={classes.avatarSquircle}
                       style={{
-                        backgroundColor: generateColor(chat.title || "Chat"),
+                        backgroundColor: "#0d9488", color: "#fff",
                       }}
                     >
                       {getInitials(chat.title || "CH")}
@@ -281,11 +288,13 @@ export default function ChatList({
                   </ListItemAvatar>
 
                   <ListItemText
+                    disableTypography
                     primary={
                       <div className={classes.primaryTextWrapper}>
                         <span className={classes.chatTitle}>{chat.title}</span>
                         {unreads > 0 ? (
                           <Chip
+                            aria-label={`${unreads} mensagens não lidas`}
                             size="small"
                             label={unreads}
                             className={classes.unreadBadge}
@@ -309,19 +318,19 @@ export default function ChatList({
                   />
 
                   {chat.ownerId === user.id && (
-                    <ListItemSecondaryAction>
+                    <ListItemSecondaryAction style={{ top: "auto", bottom: 6, transform: "none" }}>
                       <Tooltip title="Editar Conversa" arrow>
                         <IconButton
                           onClick={(e) => {
                             e.stopPropagation();
-                            goToMessages(chat).then(() => {
-                              handleEditChat(chat);
-                            });
+                            goToMessages(chat);
+                            handleEditChat(chat);
                           }}
+                          aria-label={`Editar conversa ${chat.title}`}
                           className={classes.actionButtonEdit}
                           size="small"
                         >
-                          <EditIcon style={{ fontSize: 16 }} />
+                          <EditIcon style={{ fontSize: 18 }} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Excluir Conversa" arrow>
@@ -331,10 +340,11 @@ export default function ChatList({
                             setSelectedChat(chat);
                             setConfirmModalOpen(true);
                           }}
+                          aria-label={`Excluir conversa ${chat.title}`}
                           className={classes.actionButtonDelete}
                           size="small"
                         >
-                          <DeleteIcon style={{ fontSize: 16 }} />
+                          <DeleteIcon style={{ fontSize: 18 }} />
                         </IconButton>
                       </Tooltip>
                     </ListItemSecondaryAction>
@@ -343,6 +353,10 @@ export default function ChatList({
               );
             })}
           </List>
+          {loading && <CircularProgress size={24} aria-label="Carregando conversas" style={{ margin: 16, alignSelf: "center" }} />}
+          {error && <div role="alert">Não foi possível carregar as conversas. <Button onClick={handleRetry}>Tentar novamente</Button></div>}
+          {!loading && !error && filteredChats.length === 0 && <Typography style={{ padding: 16 }} color="textSecondary">{searchParam ? "Nenhuma conversa encontrada. Tente outro nome ou carregue mais conversas." : "Sua equipe ainda não tem conversas. Clique em Novo para começar."}</Typography>}
+          {pageInfo.hasMore && !error && <Button disabled={loading} onClick={handleLoadMore}>Carregar mais conversas</Button>}
         </div>
       </div>
     </>

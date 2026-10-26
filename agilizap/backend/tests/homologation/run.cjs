@@ -524,6 +524,68 @@ let pg;
     }
   });
 
+  test('Fase 5: KPIs contam todos os contatos e mantêm isolamento por empresa e lista', async () => {
+    const ContactList = load('models/ContactList.ts').default;
+    const ContactListItem = load('models/ContactListItem.ts').default;
+    const stats = load('services/ContactListService/StatsService.ts').default;
+    const a = await Company.create({ name: 'KPIs A' });
+    const b = await Company.create({ name: 'KPIs B' });
+    assert.deepEqual(await stats(a.id), { totalLists: 0, totalContacts: 0, validContacts: 0 });
+    const first = await ContactList.create({ name: 'Lista A', companyId: a.id });
+    const second = await ContactList.create({ name: 'Outra lista A', companyId: a.id });
+    const other = await ContactList.create({ name: 'Lista B', companyId: b.id });
+    await ContactListItem.bulkCreate(Array.from({ length: 25 }, (_, i) => ({
+      name: `Contato ${i}`, number: `55659999${i}`, email: '', companyId: a.id,
+      contactListId: first.id, isWhatsappValid: i < 20 ? true : i < 24 ? false : null
+    })));
+    await ContactListItem.create({ name: 'Outro', number: '55651111', email: '', companyId: a.id, contactListId: second.id, isWhatsappValid: true });
+    await ContactListItem.create({ name: 'Externo', number: '55652222', email: '', companyId: b.id, contactListId: other.id, isWhatsappValid: true });
+    assert.deepEqual(await stats(a.id), { totalLists: 2, totalContacts: 26, validContacts: 21 });
+    assert.deepEqual(await stats(a.id, first.id), { totalLists: 1, totalContacts: 25, validContacts: 20 });
+    assert.deepEqual(await stats(a.id, other.id), { totalLists: 0, totalContacts: 0, validContacts: 0 });
+  });
+
+  test('Fase 5: rotas de KPIs exigem administrador e negam lista de outra empresa', async () => {
+    const { authorizeRequest } = load('security/authorizeRequest.ts');
+    const ContactList = load('models/ContactList.ts').default;
+    const a = await Company.create({ name: 'Autorização KPIs A' });
+    const b = await Company.create({ name: 'Autorização KPIs B' });
+    const list = await ContactList.create({ name: 'Lista restrita', companyId: b.id });
+    const request = { baseUrl: '', method: 'GET', route: { path: '/contact-lists/:id/stats' }, path: `/contact-lists/${list.id}/stats`, params: { id: String(list.id) }, query: {}, body: {} };
+    await assert.rejects(() => authorizeRequest(request, { id: 1, profile: 'admin', companyId: a.id }), error => error.statusCode === 403);
+    await assert.rejects(() => authorizeRequest({ ...request, route: { path: '/contact-lists/stats' }, params: {} }, { id: 1, profile: 'user', companyId: a.id }), error => error.statusCode === 403);
+    await authorizeRequest(request, { id: 1, profile: 'admin', companyId: b.id });
+  });
+
+  test('Fase 5: paginação de listas preserva totais agrupados e próxima página', async () => {
+    const ContactList = load('models/ContactList.ts').default;
+    const list = load('services/ContactListService/ListService.ts').default;
+    const company = await Company.create({ name: 'Paginação de listas' });
+    await ContactList.bulkCreate(Array.from({ length: 21 }, (_, i) => ({ name: `Lista ${String(i).padStart(2, '0')}`, companyId: company.id })));
+    const first = await list({ companyId: company.id });
+    assert.equal(first.records.length, 20); assert.equal(first.count, 21); assert.equal(first.hasMore, true);
+    const second = await list({ companyId: company.id, pageNumber: '2' });
+    assert.equal(second.records.length, 1); assert.equal(second.hasMore, false);
+  });
+
+  test('Fase 5: chat inclui presença real e paginação conta conversas distintas', async () => {
+    const Chat = load('models/Chat.ts').default;
+    const ChatUser = load('models/ChatUser.ts').default;
+    const list = load('services/ChatService/ListService.ts').default;
+    const show = load('services/ChatService/ShowFromUuidService.ts').default;
+    const company = await Company.create({ name: 'Equipe interna' });
+    const owner = await User.create({ name: 'Mariana', email: 'mariana@fase5.invalid', passwordHash: 'hash', profile: 'user', companyId: company.id, online: true });
+    const colleague = await User.create({ name: 'Carlos', email: 'carlos@fase5.invalid', passwordHash: 'hash', profile: 'user', companyId: company.id, online: false });
+    const chat = await Chat.create({ title: 'Operação', ownerId: owner.id, companyId: company.id });
+    await ChatUser.bulkCreate([{ chatId: chat.id, userId: owner.id }, { chatId: chat.id, userId: colleague.id }]);
+    const result = await list({ companyId: company.id, ownerId: owner.id });
+    assert.equal(result.count, 1); assert.equal(result.hasMore, false);
+    assert.equal(result.records[0].users.find(p => p.userId === owner.id).user.online, true);
+    const detail = await show(chat.uuid);
+    assert.equal(detail.users.find(p => p.userId === colleague.id).user.online, false);
+    assert.equal(await ChatUser.count({ where: { chatId: chat.id } }), 2);
+  });
+
   // Execute all tests
   let passed = 0;
   let failed = 0;
