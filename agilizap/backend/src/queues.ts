@@ -934,7 +934,7 @@ async function handleInvoiceCreate() {
 
 handleCloseTicketsAutomatic()
 
-handleInvoiceCreate()
+// handleInvoiceCreate() - Desativado na Fase 1: rotina legada de faturamento SaaS com polling de 5s
 
 
 async function handleVerifyQueueWait(job: any) {
