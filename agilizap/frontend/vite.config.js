@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig, loadEnv, transformWithEsbuild } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import fs from 'fs';
@@ -12,16 +12,17 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
-      react({
-        include: /\.(jsx|js)$/,
-      }),
       {
         name: 'treat-js-files-as-jsx',
         async transform(code, id) {
           if (!id.match(/src\/.*\.js$/)) return null;
-          return null;
+          return transformWithEsbuild(code, id, {
+            loader: 'jsx',
+            jsx: 'automatic',
+          });
         },
       },
+      react(),
     ],
     assetsInclude: ['**/*.xlsx', '**/*.mp3', '**/*.ogg', '**/*.wav'],
     define: {
@@ -39,11 +40,6 @@ export default defineConfig(({ mode }) => {
         'mic-recorder-to-mp3': path.resolve(__dirname, './src/helpers/MicRecorder.js'),
         'lamejs': '@breezystack/lamejs',
       },
-    },
-    esbuild: {
-      loader: 'jsx',
-      include: /src\/.*\.jsx?$/,
-      exclude: [],
     },
     optimizeDeps: {
       esbuildOptions: {
