@@ -2,30 +2,12 @@ FROM node:22-bookworm
 
 WORKDIR /app
 
-# Instala dependências de sistema necessárias para o Chromium headless e processamento de áudio/vídeo
+# Instala dependências de sistema essenciais (certificados TLS e processamento de áudio/vídeo via FFmpeg)
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     ca-certificates \
-    chromium \
     ffmpeg \
-    fonts-liberation \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libcups2 \
-    libdrm2 \
-    libgbm1 \
-    libgtk-3-0 \
-    libnss3 \
-    libx11-xcb1 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    xdg-utils \
   && rm -rf /var/lib/apt/lists/*
-
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
-    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 COPY package*.json ./
 
