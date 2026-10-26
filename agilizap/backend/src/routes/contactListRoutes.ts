@@ -11,6 +11,10 @@ const upload = multer(uploadConfig);
 
 routes.get("/contact-lists/list", isAuth, ContactListController.findList);
 
+routes.get("/contact-lists/stats", isAuth, ContactListController.stats);
+
+routes.get("/contact-lists/:id/stats", isAuth, ContactListController.stats);
+
 routes.get("/contact-lists", isAuth, ContactListController.index);
 
 routes.get("/contact-lists/:id", isAuth, ContactListController.show);

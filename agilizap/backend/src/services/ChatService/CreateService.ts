@@ -27,7 +27,7 @@ const CreateService = async (data: Data): Promise<Chat> => {
 
   await record.reload({
     include: [
-      { model: ChatUser, as: "users", include: [{ model: User, as: "user", attributes: ["id", "name"] }] },
+      { model: ChatUser, as: "users", include: [{ model: User, as: "user", attributes: ["id", "name", "online"] }] },
       { model: User, as: "owner", attributes: ["id", "name"] }
     ]
   });
