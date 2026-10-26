@@ -16,25 +16,49 @@ const useAuth = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState({});
 
+  const setAuthHeader = (token) => {
+    if (token) {
+      if (api.defaults.headers?.common) {
+        api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      }
+      api.defaults.headers.Authorization = `Bearer ${token}`;
+    } else {
+      if (api.defaults.headers?.common) {
+        delete api.defaults.headers.common["Authorization"];
+        delete api.defaults.headers.common["authorization"];
+      }
+      delete api.defaults.headers.Authorization;
+      api.defaults.headers.Authorization = undefined;
+    }
+  };
+
   api.interceptors.request.use(
     (config) => {
       const token = getSessionToken();
       const destination = new URL(config.url, config.baseURL || window.location.origin);
       const backend = new URL(process.env.REACT_APP_BACKEND_URL || window.location.origin);
       if (destination.origin !== backend.origin) {
+        if (config.headers?.delete) {
+          config.headers.delete("Authorization");
+          config.headers.delete("authorization");
+        }
         delete config.headers["Authorization"];
         delete config.headers["authorization"];
         config.withCredentials = false;
         return config;
       }
       if (token) {
-        config.headers["Authorization"] = `Bearer ${token}`;
+        if (config.headers?.set) {
+          config.headers.set("Authorization", `Bearer ${token}`);
+        } else {
+          config.headers["Authorization"] = `Bearer ${token}`;
+        }
         setIsAuth(true);
       }
       return config;
     },
     (error) => {
-      Promise.reject(error);
+      return Promise.reject(error);
     }
   );
 
@@ -50,14 +74,14 @@ const useAuth = () => {
         const { data } = await api.post("/auth/refresh_token");
         if (data) {
           setSessionToken(data.token);
-          api.defaults.headers.Authorization = `Bearer ${data.token}`;
+          setAuthHeader(data.token);
         }
         return api(originalRequest);
       }
       if (error?.response?.status === 401) {
         setSessionToken(null);
         localStorage.removeItem("companyId");
-        api.defaults.headers.Authorization = undefined;
+        setAuthHeader(null);
         setIsAuth(false);
       }
       return Promise.reject(error);
@@ -71,7 +95,7 @@ const useAuth = () => {
         try {
           const { data } = await api.post("/auth/refresh_token");
           setSessionToken(data.token);
-          api.defaults.headers.Authorization = `Bearer ${data.token}`;
+          setAuthHeader(data.token);
           setIsAuth(true);
           setUser(data.user);
         } catch (err) {
@@ -133,7 +157,7 @@ const useAuth = () => {
         localStorage.setItem("companyId", companyId);
         localStorage.setItem("userId", id);
         localStorage.setItem("companyDueDate", vencimento);
-        api.defaults.headers.Authorization = `Bearer ${data.token}`;
+        setAuthHeader(data.token);
         setUser(data.user);
         setIsAuth(true);
         toast.success(i18n.t("auth.toasts.success"));
@@ -166,7 +190,7 @@ Entre em contato com o Suporte para mais informações! `);
       localStorage.removeItem("companyId");
       localStorage.removeItem("userId");
       localStorage.removeItem("cshow");
-      api.defaults.headers.Authorization = undefined;
+      setAuthHeader(null);
       setLoading(false);
       history.push("/login");
     } catch (err) {
