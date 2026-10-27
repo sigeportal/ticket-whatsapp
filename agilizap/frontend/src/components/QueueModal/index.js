@@ -239,26 +239,25 @@ const QueueModal = ({ open, onClose, queueId }) => {
   };
 
   const handleSaveQueue = async (values) => {
+    const queueData = {
+      name: values.name,
+      color: values.color,
+      greetingMessage: values.greetingMessage,
+      outOfHoursMessage: values.outOfHoursMessage,
+      orderQueue: values.orderQueue,
+      integrationId: values.integrationId,
+      schedules,
+      promptId: selectedPrompt || null,
+    };
     try {
-      if (queueId) {
-        await api.put(`/queue/${queueId}`, {
-          ...values, schedules, promptId: selectedPrompt ? selectedPrompt : null
-        });
-		if (attachment != null) {
-          const formData = new FormData();
-          formData.append("file", attachment);
-          await api.post(`/queue/${queueId}/media-upload`, formData);
-        }
-      } else {
-        await api.post("/queue", {
-          ...values, schedules, promptId: selectedPrompt ? selectedPrompt : null
-        });
-		if (attachment != null) {
-          const formData = new FormData();
-          formData.append("file", attachment);
-          await api.post(`/queue/${queueId}/media-upload`, formData);
+      const { data: savedQueue } = queueId
+        ? await api.put(`/queue/${queueId}`, queueData)
+        : await api.post("/queue", queueData);
+      if (attachment != null) {
+        const formData = new FormData();
+        formData.append("file", attachment);
+        await api.post(`/queue/${savedQueue.id}/media-upload`, formData);
       }
-	  }
       toast.success("Queue saved successfully");
       handleClose();
     } catch (err) {

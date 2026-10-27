@@ -52,7 +52,8 @@ export const authorizeRequest = async (req: Request, actor: any): Promise<void> 
       "resetTokenHash", "resetTokenExpiresAt", "mustChangePassword", "mfaLastStep",
       "mediaPath", "mediaUrl", "path"].includes(key))) deny();
   if (write && body.id !== undefined) {
-    const routeId = req.params.id || req.params.userId || req.params.ticketId || req.params.queueId ||
+    const mappedId = resources[resource]?.[1];
+    const routeId = (mappedId && req.params[mappedId]) || req.params.id || req.params.userId || req.params.ticketId || req.params.queueId ||
       req.params.scheduleId || req.params.promptId || req.params.integrationId || req.params.tagId || req.params.fileId;
     if (resource !== "files" && (routeId === undefined || String(body.id) !== String(routeId))) deny();
   }

@@ -100,6 +100,8 @@ let pg, server, io;
   app.use("/auth", load("routes/authRoutes.ts").default);
   app.use(load('routes/ticketNoteRoutes.ts').default);
   app.use(load('routes/invoicesRoutes.ts').default);
+  app.put('/queue/:queueId', isAuth, load('controllers/QueueController.ts').update);
+  app.put('/whatsapp/:whatsappId', isAuth, (req, res) => res.json({ ok: true }));
   app.get('/contacts/export', isAuth, load('controllers/ContactExportController.ts').exportContacts);
   const uploadConfig = load('config/upload.ts').default;
   const upload = load('security/secureUpload.ts').default(uploadConfig);
@@ -204,6 +206,56 @@ let pg, server, io;
     assert.deepEqual(fresh.queues.map(q=>q.id), [q1.id]);
     await assert.rejects(loadSession(old));
     actors[`user${c1.id}`] = fresh; Object.assign(agent, { tokenVersion:fresh.tokenVersion });
+  });
+  test('Admin protegido: edita as proprias filas sem manutencao global e revoga sessoes antigas', async () => {
+    const account = await User.create({ name: 'Administrador protegido', email: 'protected-self@example.invalid', password: 'InitialPass123', profile: 'admin', super: true, blocked: false, companyId: c1.id, tokenVersion: 0 });
+    const actor = await User.findByPk(account.id, { include: [Queue, Company] });
+    const oldToken = token(actor);
+    const response = await request.put(`/users/${actor.id}`).set(auth(actor)).send({ name: actor.name, email: actor.email, password: '', profile: 'admin', blocked: false, companyId: c1.id, queueIds: [qOther.id], whatsappId: null, allTicket: 'enabled' });
+    assert.equal(response.status, 200, JSON.stringify(response.body));
+    const updated = await User.findByPk(actor.id, { include: [Queue, Company] });
+    assert.deepEqual(updated.queues.map(q => q.id), [qOther.id]);
+    assert.equal(updated.super, true); assert.equal(updated.profile, 'admin'); assert.equal(updated.blocked, false);
+    await assert.rejects(loadSession(oldToken));
+  });
+  test('Admin protegido: perfil, bloqueio, flags internas e contas alheias continuam protegidos', async () => {
+    const account = await User.create({ name: 'Protegido', email: 'protected-guard@example.invalid', password: 'InitialPass123', profile: 'admin', super: true, blocked: false, companyId: c1.id, tokenVersion: 0 });
+    const actor = await User.findByPk(account.id, { include: [Queue, Company] });
+    for (const body of [{ profile: 'user' }, { blocked: true }, { super: false }, { tokenVersion: 0 }, { companyId: c2.id }, { queueIds: [q2.id] }]) {
+      assert.equal((await request.put(`/users/${actor.id}`).set(auth(actor)).send(body)).status, 403);
+    }
+    assert.equal((await request.put(`/users/${actor.id}`).set(auth(admin)).send({ queueIds: [q1.id] })).status, 403);
+    const otherProtected = await User.create({ name: 'Outro protegido', email: 'other-protected@example.invalid', password: 'InitialPass123', profile: 'admin', super: true, companyId: c1.id });
+    assert.equal((await request.put(`/users/${otherProtected.id}`).set(auth(actor)).send({ queueIds: [q1.id] })).status, 403);
+  });
+  test('Admin comum: altera as proprias filas e pode remover todos os vinculos', async () => {
+    const account = await User.create({ name: 'Administrador comum', email: 'normal-self@example.invalid', password: 'InitialPass123', profile: 'admin', companyId: c1.id, tokenVersion: 0 });
+    let actor = await User.findByPk(account.id, { include: [Queue, Company] });
+    for (const queueIds of [[qOther.id], []]) {
+      assert.equal((await request.put(`/users/${actor.id}`).set(auth(actor)).send({ queueIds })).status, 200);
+      actor = await User.findByPk(actor.id, { include: [Queue, Company] });
+      assert.deepEqual(actor.queues.map(q => q.id), queueIds);
+    }
+  });
+  test('Fila: administrador edita dados sem reenviar metadados; caminhos e outra empresa continuam bloqueados', async () => {
+    const queue = await Queue.create({ name: 'Fila editavel', color: '#124578', companyId: c1.id });
+    const body = { name: 'Fila atualizada', color: '#124578', greetingMessage: 'Bem-vindo', outOfHoursMessage: '', schedules: [], orderQueue: null, integrationId: null, promptId: null };
+    const response = await request.put(`/queue/${queue.id}`).set(auth(admin)).send(body);
+    assert.equal(response.status, 201, JSON.stringify(response.body));
+    assert.equal((await Queue.findByPk(queue.id)).greetingMessage, 'Bem-vindo');
+    for (const bad of [{ ...body, mediaPath: null }, { ...body, id: q2.id }, { ...body, companyId: c2.id }]) {
+      assert.equal((await request.put(`/queue/${queue.id}`).set(auth(admin)).send(bad)).status, 403);
+    }
+    for (const actor of [agent, supervisor, actors[`admin${c2.id}`]]) {
+      assert.equal((await request.put(`/queue/${queue.id}`).set(auth(actor)).send(body)).status, 403);
+    }
+  });
+  test('Identificador: edicao de conexao aceita id correspondente e rejeita id ou empresa divergentes', async () => {
+    const Whatsapp = load('models/Whatsapp.ts').default;
+    const connection = await Whatsapp.create({ name: 'Conexao editavel', companyId: c1.id });
+    assert.equal((await request.put(`/whatsapp/${connection.id}`).set(auth(admin)).send({ id: connection.id, name: 'Conexao atualizada' })).status, 200);
+    assert.equal((await request.put(`/whatsapp/${connection.id}`).set(auth(admin)).send({ id: connection.id + 1000, name: 'Invalida' })).status, 403);
+    assert.equal((await request.put(`/whatsapp/${connection.id}`).set(auth(actors[`admin${c2.id}`])).send({ id: connection.id, name: 'Invalida' })).status, 403);
   });
   test('Notas: lista, leitura, criacao e alteracao nao atravessam empresa nem aceitam id do corpo', async () => {
     const response = await request.get('/ticket-notes').set(auth(admin));
