@@ -319,12 +319,7 @@ const QueueModal = ({ open, onClose, queueId }) => {
               initialValues={queue}
               enableReinitialize={true}
               validationSchema={QueueSchema}
-              onSubmit={(values, actions) => {
-                setTimeout(() => {
-                  handleSaveQueue(values);
-                  actions.setSubmitting(false);
-                }, 400);
-              }}
+              onSubmit={handleSaveQueue}
             >
               {({ touched, errors, isSubmitting, values }) => (
                 <Form>
@@ -451,6 +446,7 @@ const QueueModal = ({ open, onClose, queueId }) => {
                             getContentAnchorEl: null,
                           }}
                         >
+                          <MenuItem value="">{i18n.t("queueModal.form.noPrompt")}</MenuItem>
                           {prompts.map((prompt) => (
                             <MenuItem
                               key={prompt.id}

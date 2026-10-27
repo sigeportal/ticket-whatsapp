@@ -86,7 +86,8 @@
     "start": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:forms": "node tests/form-recovery.cjs"
   },
   "eslintConfig": {
     "extends": "react-app"

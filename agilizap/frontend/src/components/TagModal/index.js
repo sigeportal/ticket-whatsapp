@@ -158,6 +158,7 @@ const TagModal = ({ open, onClose, tagId, reload }) => {
 			}
 		} catch (err) {
 			toastError(err);
+			return;
 		}
 		handleClose();
 	};
@@ -179,12 +180,7 @@ const TagModal = ({ open, onClose, tagId, reload }) => {
 					initialValues={tag}
 					enableReinitialize={true}
 					validationSchema={TagSchema}
-					onSubmit={(values, actions) => {
-						setTimeout(() => {
-							handleSaveTag(values);
-							actions.setSubmitting(false);
-						}, 400);
-					}}
+					onSubmit={handleSaveTag}
 				>
 					{({ touched, errors, isSubmitting, values }) => (
 						<Form>

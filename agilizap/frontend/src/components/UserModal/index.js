@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 
 import * as Yup from "yup";
+import { passwordSchema } from "../../utils/passwordSchema";
 import { Formik, Form, Field } from "formik";
 import { toast } from "react-toastify";
 
@@ -103,12 +104,12 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const UserSchema = Yup.object().shape({
+const UserSchema = userId => Yup.object().shape({
 	name: Yup.string()
 		.min(2, "Too Short!")
 		.max(50, "Too Long!")
 		.required("Required"),
-	password: Yup.string().min(5, "Too Short!").max(50, "Too Long!"),
+	password: userId ? passwordSchema : passwordSchema.required("Required"),
 	email: Yup.string().email("Invalid email").required("Required"),
 });
 
@@ -197,13 +198,8 @@ const UserModal = ({ open, onClose, userId }) => {
 				<Formik
 					initialValues={user}
 					enableReinitialize={true}
-					validationSchema={UserSchema}
-					onSubmit={(values, actions) => {
-						setTimeout(() => {
-							handleSaveUser(values);
-							actions.setSubmitting(false);
-						}, 400);
-					}}
+					validationSchema={UserSchema(userId)}
+					onSubmit={handleSaveUser}
 				>
 					{({ touched, errors, isSubmitting }) => (
 						<Form>

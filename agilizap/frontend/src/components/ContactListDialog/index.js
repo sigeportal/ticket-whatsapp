@@ -97,6 +97,7 @@ const ContactListModal = ({ open, onClose, contactListId }) => {
       toast.success(i18n.t("contactList.dialog"));
     } catch (err) {
       toastError(err);
+      return;
     }
     handleClose();
   };
@@ -119,12 +120,7 @@ const ContactListModal = ({ open, onClose, contactListId }) => {
           initialValues={contactList}
           enableReinitialize={true}
           validationSchema={ContactListSchema}
-          onSubmit={(values, actions) => {
-            setTimeout(() => {
-              handleSaveContactList(values);
-              actions.setSubmitting(false);
-            }, 400);
-          }}
+          onSubmit={handleSaveContactList}
         >
           {({ touched, errors, isSubmitting }) => (
             <Form>

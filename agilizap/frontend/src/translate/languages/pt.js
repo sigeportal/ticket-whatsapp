@@ -297,6 +297,7 @@ const messages = {
 		  "deleteTitle": "Excluir",
 		},
         form: {
+          noPrompt: "Sem prompt",
           name: "Nome",
           color: "Cor",
           greetingMessage: "Mensagem de saudação",
@@ -989,6 +990,7 @@ const messages = {
         },
       },
       backendErrors: {
+        ERR_PASSWORD_POLICY: "Use ao menos 8 caracteres, incluindo maiúscula, minúscula e número (máximo de 72 bytes).",
         ERR_TICKET_ALREADY_CLAIMED: "Este ticket já foi assumido por outro atendente.",
         ERR_CANNOT_ACCEPT_TICKET_OTHER_USER: "Não é permitido assumir um ticket atribuído a outro atendente.",
         ERR_RESTRICTED_ATTENDANT_QUEUE: "Você não tem permissão para atender esta fila.",

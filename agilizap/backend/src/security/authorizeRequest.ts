@@ -160,8 +160,12 @@ export const authorizeRequest = async (req: Request, actor: any): Promise<void> 
     // Closing an existing ticket does not reassign it or require its owner to join a queue.
     const closingWithoutReassignment = actor.profile === "admin" && ticket && body.status === "closed" &&
       body.userId === undefined && body.queueId === undefined;
+    // An admin may take an existing ticket for themselves without changing its queue.
+    const adminSelfAssignment = actor.profile === "admin" && ticket && body.status === "open" &&
+      Number(assignedUserId) === Number(actor.id) &&
+      (body.queueId === undefined || Number(body.queueId) === Number(ticket.queueId));
     if (!target || target.companyId !== actor.companyId ||
-        (!closingWithoutReassignment && !target.queues.some(q => q.id === queueId))) deny();
+        (!closingWithoutReassignment && !adminSelfAssignment && !target.queues.some(q => q.id === queueId))) deny();
   }
   if (resource === "tickets" && write && actor.profile === "user") {
     if (body.userId !== undefined && Number(body.userId) !== Number(actor.id)) deny();

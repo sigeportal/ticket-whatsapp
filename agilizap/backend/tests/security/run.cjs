@@ -182,6 +182,29 @@ let pg, server, io;
       assert.equal((await request.put(`/tickets/${ticket.id}`).set(auth(actor)).send({ status: 'closed' })).status, 403);
     }
   });
+  test('REST: admin assume para si atendimento sem fila ou fora de seus vinculos', async () => {
+    const account = await User.create({ name: 'Admin aceite', email: 'admin-accept@example.invalid', password: 'InitialPass123', profile: 'admin', companyId: c1.id, tokenVersion: 0 });
+    const actor = await User.findByPk(account.id, { include: [Queue, Company] });
+    for (const queueId of [null, q1.id, qOther.id]) {
+      const ticket = await Ticket.create({ status: 'pending', companyId: c1.id, queueId, contactId: contact.id });
+      for (const body of [{ status: 'open', userId: actor.id }, { status: 'open', userId: actor.id, queueId }]) {
+        const response = await request.put(`/tickets/${ticket.id}`).set(auth(actor)).send(body);
+        assert.equal(response.status, 200, JSON.stringify(response.body));
+      }
+    }
+  });
+  test('REST: aceite administrativo nao libera transferencia, outro tenant ou atendente sem fila', async () => {
+    const ticket = await Ticket.create({ status: 'pending', companyId: c1.id, queueId: null, contactId: contact.id });
+    for (const [actor, body] of [
+      [agent, { status: 'open', userId: agent.id }],
+      [supervisor, { status: 'open', userId: supervisor.id }],
+      [actors[`admin${c2.id}`], { status: 'open', userId: actors[`admin${c2.id}`].id }],
+      [admin, { status: 'open', userId: agent.id }],
+      [admin, { status: 'open', userId: actors[`user${c2.id}`].id }],
+      [admin, { status: 'open', userId: admin.id, queueId: qOther.id }],
+      [admin, { status: 'open', userId: admin.id, queueId: q2.id }]
+    ]) assert.equal((await request.put(`/tickets/${ticket.id}`).set(auth(actor)).send(body)).status, 403);
+  });
   test('REST: encerramento administrativo nao contorna validacao de atribuicao ou transferencia', async () => {
     const ticket = await Ticket.create({ status: 'pending', companyId: c1.id, queueId: null, userId: agent.id, contactId: contact.id });
     for (const body of [
@@ -256,6 +279,17 @@ let pg, server, io;
     assert.equal((await request.put(`/whatsapp/${connection.id}`).set(auth(admin)).send({ id: connection.id, name: 'Conexao atualizada' })).status, 200);
     assert.equal((await request.put(`/whatsapp/${connection.id}`).set(auth(admin)).send({ id: connection.id + 1000, name: 'Invalida' })).status, 403);
     assert.equal((await request.put(`/whatsapp/${connection.id}`).set(auth(actors[`admin${c2.id}`])).send({ id: connection.id, name: 'Invalida' })).status, 403);
+  });
+  test('Fila: remove prompt persistido sem aceitar prompt de outra empresa', async () => {
+    const Prompt = load('models/Prompt.ts').default;
+    const prompt = await Prompt.create({ name: 'Prompt local', prompt: 'Teste', voice: 'texto', companyId: c1.id });
+    const foreign = await Prompt.create({ name: 'Prompt externo', prompt: 'Teste', voice: 'texto', companyId: c2.id });
+    const queue = await Queue.create({ name: 'Fila com prompt', color: '#abcdef', promptId: prompt.id, companyId: c1.id });
+    const body = { name: queue.name, color: queue.color, promptId: null };
+    assert.equal((await request.put(`/queue/${queue.id}`).set(auth(admin)).send({ ...body, promptId: foreign.id })).status, 403);
+    assert.equal((await Queue.findByPk(queue.id)).promptId, prompt.id);
+    assert.equal((await request.put(`/queue/${queue.id}`).set(auth(admin)).send(body)).status, 201);
+    assert.equal((await Queue.findByPk(queue.id)).promptId, null);
   });
   test('Notas: lista, leitura, criacao e alteracao nao atravessam empresa nem aceitam id do corpo', async () => {
     const response = await request.get('/ticket-notes').set(auth(admin));

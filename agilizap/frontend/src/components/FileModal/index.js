@@ -137,14 +137,9 @@ const FilesModal = ({ open, onClose, fileListId, reload }) => {
                     }
                 });
       
-              try {
-                const { data } = await api.post(`/files/uploadList/${id}`, formData);
-                setFiles([]);
-                return data;
-              } catch (err) {
-                toastError(err);
-              }
-            return null;
+            const { data } = await api.post(`/files/uploadList/${id}`, formData);
+            setFiles([]);
+            return data;
         }
 
         const fileData = { ...values, userId: user.id };
@@ -154,11 +149,11 @@ const FilesModal = ({ open, onClose, fileListId, reload }) => {
                 const { data } = await api.put(`/files/${fileListId}`, fileData)
                 if (data.options.length > 0)
 
-                    uploadFiles(data.options, values.options, fileListId)
+                    await uploadFiles(data.options, values.options, fileListId)
             } else {
                 const { data } = await api.post("/files", fileData);
                 if (data.options.length > 0)
-                    uploadFiles(data.options, values.options, data.id)
+                    await uploadFiles(data.options, values.options, data.id)
             }
             toast.success(i18n.t("fileModal.success"));
             if (typeof reload == 'function') {
@@ -166,6 +161,7 @@ const FilesModal = ({ open, onClose, fileListId, reload }) => {
             }            
         } catch (err) {
             toastError(err);
+            return;
         }
         handleClose();
     };
@@ -185,12 +181,7 @@ const FilesModal = ({ open, onClose, fileListId, reload }) => {
                     initialValues={fileList}
                     enableReinitialize={true}
                     validationSchema={FileListSchema}
-                    onSubmit={(values, actions) => {
-                        setTimeout(() => {
-                            handleSaveFileList(values);
-                            actions.setSubmitting(false);
-                        }, 400);
-                    }}
+                    onSubmit={handleSaveFileList}
                 >
                     {({ touched, errors, isSubmitting, values }) => (
                         <Form>

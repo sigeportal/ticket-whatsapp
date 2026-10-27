@@ -140,6 +140,7 @@ const AnnouncementModal = ({ open, onClose, announcementId, reload }) => {
       }
     } catch (err) {
       toastError(err);
+      return;
     }
     handleClose();
   };
@@ -197,12 +198,7 @@ const AnnouncementModal = ({ open, onClose, announcementId, reload }) => {
           initialValues={announcement}
           enableReinitialize={true}
           validationSchema={AnnouncementSchema}
-          onSubmit={(values, actions) => {
-            setTimeout(() => {
-              handleSaveAnnouncement(values);
-              actions.setSubmitting(false);
-            }, 400);
-          }}
+          onSubmit={handleSaveAnnouncement}
         >
           {({ touched, errors, isSubmitting, values }) => (
             <Form>
