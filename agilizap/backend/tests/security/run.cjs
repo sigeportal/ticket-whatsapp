@@ -26,12 +26,29 @@ require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileMo
 }).outputText, filename);
 const source = path.resolve(__dirname, '../../src');
 const logs = [];
+const messagingCalls = [];
 let database;
 const originalLoad = Module._load;
 Module._load = function(request, parent, ...rest) {
   const resolved = Module._resolveFilename(request, parent);
   if (resolved === path.join(source, 'database/index.ts')) return { __esModule: true, default: database };
   if (resolved === path.join(source, 'utils/logger.ts')) return { logger: Object.fromEntries(['info','error','warn','debug'].map(k => [k, (...args) => logs.push(args)])) };
+  if (resolved === path.join(source, 'helpers/SetTicketMessagesAsRead.ts')) return { __esModule: true, default: async () => {} };
+  if (resolved === path.join(source, 'helpers/GetTicketWbot.ts')) return { __esModule: true, default: async () => { throw new Error('No real WhatsApp in tests'); } };
+  if (/[\\/]services[\\/]WbotServices[\\/]/.test(resolved)) {
+    const name = path.basename(resolved, '.ts');
+    if (name === 'wbotMessageListener') return { verifyMessage: async () => {} };
+    if (['SendWhatsAppMessage','SendWhatsAppMedia','SendWhatsAppReaction','EditWhatsAppMessage','DeleteWhatsAppMessage','CheckNumber','GetProfilePicUrl'].includes(name)) {
+      return { __esModule: true, default: async data => {
+        messagingCalls.push({ name, data });
+        if (['EditWhatsAppMessage','DeleteWhatsAppMessage'].includes(name)) {
+          const message = await load('models/Message.ts').default.findByPk(data.messageId || data, { include: [{ model: load('models/Ticket.ts').default, as: 'ticket', include: ['contact'] }] });
+          return name === 'DeleteWhatsAppMessage' ? message : { message, ticket: message.ticket };
+        }
+        return {};
+      } };
+    }
+  }
   if (resolved === path.join(source, 'libs/wbot.ts') || /[\\/]services[\\/]WbotServices[\\/]/.test(resolved) || resolved === path.join(source, 'queues.ts')) {
     throw new Error('External runtime import forbidden in security harness: ' + request);
   }
@@ -99,7 +116,13 @@ let pg, server, io;
   app.use(load('routes/userRoutes.ts').default);
   app.use("/auth", load("routes/authRoutes.ts").default);
   app.use(load('routes/ticketNoteRoutes.ts').default);
+  app.use(load('routes/messageRoutes.ts').default);
+  app.use(load('routes/settingRoutes.ts').default);
+  app.use(load('routes/chatRoutes.ts').default);
+  app.put('/tickets/:ticketId/transfer-check', isAuth, load('controllers/TicketController.ts').update);
   app.use(load('routes/invoicesRoutes.ts').default);
+  app.put('/queue/:queueId', isAuth, load('controllers/QueueController.ts').update);
+  app.put('/whatsapp/:whatsappId', isAuth, (req, res) => res.json({ ok: true }));
   app.get('/contacts/export', isAuth, load('controllers/ContactExportController.ts').exportContacts);
   const uploadConfig = load('config/upload.ts').default;
   const upload = load('security/secureUpload.ts').default(uploadConfig);
@@ -161,6 +184,152 @@ let pg, server, io;
     assert.equal((await request.put(`/tickets/${t1.id}`).set(auth(supervisor)).send({ queueId: qOther.id })).status, 403);
     assert.equal((await request.post('/tickets').set(auth(agent)).send({ contactId: contact2.id, queueId: q1.id, userId: agent.id })).status, 403);
   });
+  test('REST: administrador encerra sem fila preservando responsavel e sem exigir vinculo a fila', async () => {
+    const adminWithoutQueues = await User.create({ name: 'Admin sem filas', email: 'admin-no-queue@example.invalid', password: 'InitialPass123', profile: 'admin', companyId: c1.id, tokenVersion: 0, blocked: false });
+    const actor = await User.findByPk(adminWithoutQueues.id, { include: [Queue, Company] });
+    for (const fields of [
+      { queueId: null, userId: null },
+      { queueId: null, userId: agent.id },
+      { queueId: qOther.id, userId: agent.id }
+    ]) {
+      const ticket = await Ticket.create({ status: 'pending', companyId: c1.id, contactId: contact.id, ...fields });
+      const response = await request.put(`/tickets/${ticket.id}`).set(auth(actor)).send({ status: 'closed', useIntegration: false, promptId: null, integrationId: null });
+      assert.equal(response.status, 200, JSON.stringify(response.body));
+    }
+  });
+  test('REST: encerramento sem fila continua negado a atendente, supervisor e administrador de outra empresa', async () => {
+    const ticket = await Ticket.create({ status: 'pending', companyId: c1.id, queueId: null, userId: null, contactId: contact.id });
+    for (const actor of [agent, supervisor, actors[`admin${c2.id}`]]) {
+      assert.equal((await request.put(`/tickets/${ticket.id}`).set(auth(actor)).send({ status: 'closed' })).status, 403);
+    }
+  });
+  test('REST: admin assume para si atendimento sem fila ou fora de seus vinculos', async () => {
+    const account = await User.create({ name: 'Admin aceite', email: 'admin-accept@example.invalid', password: 'InitialPass123', profile: 'admin', companyId: c1.id, tokenVersion: 0 });
+    const actor = await User.findByPk(account.id, { include: [Queue, Company] });
+    for (const queueId of [null, q1.id, qOther.id]) {
+      const ticket = await Ticket.create({ status: 'pending', companyId: c1.id, queueId, contactId: contact.id });
+      for (const body of [{ status: 'open', userId: actor.id }, { status: 'open', userId: actor.id, queueId }]) {
+        const response = await request.put(`/tickets/${ticket.id}`).set(auth(actor)).send(body);
+        assert.equal(response.status, 200, JSON.stringify(response.body));
+      }
+    }
+  });
+  test('REST: aceite administrativo nao libera transferencia, outro tenant ou atendente sem fila', async () => {
+    const ticket = await Ticket.create({ status: 'pending', companyId: c1.id, queueId: null, contactId: contact.id });
+    for (const [actor, body] of [
+      [agent, { status: 'open', userId: agent.id }],
+      [supervisor, { status: 'open', userId: supervisor.id }],
+      [actors[`admin${c2.id}`], { status: 'open', userId: actors[`admin${c2.id}`].id }],
+      [admin, { status: 'open', userId: agent.id }],
+      [admin, { status: 'open', userId: actors[`user${c2.id}`].id }],
+      [admin, { status: 'open', userId: admin.id, queueId: q2.id }]
+    ]) assert.equal((await request.put(`/tickets/${ticket.id}`).set(auth(actor)).send(body)).status, 403);
+  });
+  test('REST: encerramento administrativo nao contorna validacao de atribuicao ou transferencia', async () => {
+    const ticket = await Ticket.create({ status: 'pending', companyId: c1.id, queueId: null, userId: agent.id, contactId: contact.id });
+    for (const body of [
+      { status: 'closed', queueId: qOther.id },
+      { status: 'closed', userId: actors[`user${c2.id}`].id },
+      { status: 'closed', queueId: q2.id },
+      { status: 'open', userId: agent.id }
+    ]) {
+      assert.equal((await request.put(`/tickets/${ticket.id}`).set(auth(admin)).send(body)).status, 403);
+    }
+  });
+  test('Mensagens reais: texto, resposta, edicao, reacao e retry respeitam empresa, fila e responsavel', async () => {
+    const tickets = [];
+    for (const queueId of [null, q1.id, qOther.id]) tickets.push(await Ticket.create({ status: 'open', companyId: c1.id, contactId: contact.id, queueId, userId: agent.id }));
+    for (const ticket of tickets) {
+      const message = await Message.create({ id: 'matrix-' + ticket.id, companyId: c1.id, ticketId: ticket.id, contactId: contact.id, fromMe: true, status: 'failed', body: 'Anterior', reactions: [] });
+      for (const actor of Object.values(actors)) {
+        const allowed = actor.companyId === c1.id && (actor.profile === 'admin' || ticket.queueId === q1.id);
+        await Message.update({ status: 'failed' }, { where: { id: message.id } });
+        const before = messagingCalls.length;
+        for (const [url, body] of [
+          [`/messages/${ticket.id}`, { body: 'Olá', fromMe: true, read: 1 }],
+          [`/messages/${ticket.id}`, { body: 'Resposta', quotedMsg: { id: message.id } }],
+          [`/messages/edit/${message.id}`, { body: 'Editada' }],
+          [`/messages/${message.id}/reactions`, { type: '👍' }],
+          [`/messages/${message.id}/retry`, {}]
+        ]) assert.equal((await request.post(url).set(auth(actor)).send(body)).status, allowed ? 200 : 403, `${actor.profile} ${ticket.queueId} ${url}`);
+        assert.equal(messagingCalls.length - before, allowed ? 5 : 0);
+      }
+      for (const key of ['mediaUrl', 'mediaPath', 'path']) {
+        assert.equal((await request.post(`/messages/${ticket.id}`).set(auth(admin)).send({ body: 'Não', [key]: '/etc/passwd' })).status, 403);
+      }
+    }
+    const otherOwner = await Ticket.create({ status: 'open', companyId: c1.id, contactId: contact.id, queueId: q1.id, userId: supervisor.id });
+    assert.equal((await request.post(`/messages/${otherOwner.id}`).set(auth(agent)).send({ body: 'Outro responsável' })).status, 403);
+    assert.equal((await request.post(`/messages/${otherOwner.id}`).set(auth(admin)).send({ body: 'Admin' })).status, 200);
+  });
+  test('Mensagens reais: anexos e audio no ticket sem fila funcionam para admin; escopo e caminhos seguem protegidos', async () => {
+    const ticket = await Ticket.create({ status: 'open', companyId: c1.id, contactId: contact.id, queueId: null, userId: admin.id });
+    for (const [name, bytes, type] of [['image.png', Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex'), 'image/png'], ['audio.mp3', Buffer.from('ID3\x04\0\0\0\0\0\0test'), 'audio/mpeg']]) {
+      const response = await request.post(`/messages/${ticket.id}`).set(auth(admin)).field('fromMe', 'true').field('body', name).attach('medias', bytes, { filename: name, contentType: type });
+      assert.equal(response.status, 200, JSON.stringify(response.body));
+      assert.equal(messagingCalls.at(-1).name, 'SendWhatsAppMedia');
+    }
+    for (const actor of [agent, supervisor, actors[`admin${c2.id}`]]) assert.equal((await request.post(`/messages/${ticket.id}`).set(auth(actor)).field('body','Proibido').attach('medias',Buffer.from('ID3\x04\0\0\0\0\0\0test'),{filename:'audio.mp3',contentType:'audio/mpeg'})).status,403);
+    assert.equal((await request.post(`/messages/${ticket.id}`).set(auth(admin)).field('mediaPath','/etc/passwd')).status,403);
+  });
+  test('Transferencia real distingue redistribuicao autorizada de aceite concorrente', async () => {
+    const ticket = await Ticket.create({ status: 'open', companyId: c1.id, contactId: contact.id, queueId: q1.id, userId: agent.id });
+    let response = await request.put(`/tickets/${ticket.id}/transfer-check`).set(auth(admin)).send({ status:'open', userId:admin.id, queueId:qOther.id });
+    assert.equal(response.status,200,JSON.stringify(response.body));
+    await ticket.reload(); assert.equal(ticket.userId,admin.id); assert.equal(ticket.queueId,qOther.id);
+    response = await request.put(`/tickets/${ticket.id}/transfer-check`).set(auth(admin)).send({ status:'open', userId:agent.id, queueId:q1.id });
+    assert.equal(response.status,200,JSON.stringify(response.body));
+    response = await request.put(`/tickets/${ticket.id}/transfer-check`).set(auth(supervisor)).send({ status:'open', userId:supervisor.id, queueId:q1.id });
+    assert.equal(response.status,200,JSON.stringify(response.body));
+    assert.equal((await request.put(`/tickets/${ticket.id}/transfer-check`).set(auth(agent)).send({ status:'open', userId:agent.id, queueId:q1.id, allowTransfer:true })).status,403);
+    assert.equal((await request.put(`/tickets/${ticket.id}/transfer-check`).set(auth(admin)).send({ status:'open', userId:admin.id })).status,409);
+    await ticket.reload(); assert.equal(ticket.userId,supervisor.id);
+  });
+  test('Admin como destinatario dispensa vinculo de fila; supervisor e atendente continuam exigindo vinculo', async () => {
+    for (const body of [{ status: 'open', userId: admin.id, queueId: qOther.id }, { status: 'open', userId: admin.id, queueId: null }]) {
+      assert.equal((await request.put(`/tickets/${t1.id}`).set(auth(admin)).send(body)).status,200);
+    }
+    assert.equal((await request.put(`/tickets/${t1.id}`).set(auth(admin)).send({ userId: agent.id, queueId: qOther.id })).status,403);
+    assert.equal((await request.put(`/tickets/${t1.id}`).set(auth(supervisor)).send({ userId: admin.id, queueId: qOther.id })).status,403);
+  });
+  test('Encaminhamento real verifica destino antes de alterar ticket e admin usa arquivo persistido com nome completo', async () => {
+    const Whatsapp = load('models/Whatsapp.ts').default;
+    const connection = await Whatsapp.create({name:'Conexao encaminhamento',companyId:c1.id});
+    const source = await Ticket.create({status:'open',companyId:c1.id,contactId:contact.id,queueId:q1.id,userId:agent.id,whatsappId:connection.id});
+    const targetContact = await Contact.create({name:'Destino',number:'0000000078',companyId:c1.id});
+    const target = await Ticket.create({status:'pending',companyId:c1.id,contactId:targetContact.id,queueId:qOther.id,whatsappId:connection.id,unreadMessages:7});
+    const message = await Message.create({id:'forward-real',ticketId:source.id,companyId:c1.id,contactId:contact.id,body:'arquivo.com.pontos.png',mediaUrl:'arquivo.com.pontos.png',mediaType:'image',fromMe:true});
+    const before = messagingCalls.length;
+    assert.equal((await request.post('/message/forward').set(auth(agent)).send({messageId:message.id,contactId:targetContact.id})).status,403);
+    await target.reload(); assert.equal(target.userId,null); assert.equal(target.unreadMessages,7);
+    assert.equal(messagingCalls.length,before);
+    const response = await request.post('/message/forward').set(auth(admin)).send({messageId:message.id,contactId:targetContact.id});
+    assert.equal(response.status,200,JSON.stringify(response.body));
+    assert.equal(messagingCalls.at(-1).name,'SendWhatsAppMedia');
+    assert.equal(messagingCalls.at(-1).data.media.path,path.join(temp,'arquivo.com.pontos.png'));
+  });
+  test('Configuracao operacional da saudacao pode ser lida sem liberar segredos ou alteracoes', async () => {
+    const Setting = load('models/Setting.ts').default;
+    await Setting.create({ key: 'sendGreetingAccepted', value: 'enabled', companyId: c1.id });
+    await Setting.create({ key: 'apiSecret', value: 'segredo', companyId: c1.id });
+    for (const actor of [agent, supervisor]) {
+      const response = await request.get('/settings/sendGreetingAccepted').set(auth(actor));
+      assert.equal(response.status,200); assert.equal(response.body.value,'enabled');
+      for (const url of ['/settings', '/settings/apiSecret', `/settings/sendGreetingAccepted?companyId=${c2.id}`]) assert.equal((await request.get(url).set(auth(actor))).status,403);
+      assert.equal((await request.put('/settings/sendGreetingAccepted').set(auth(actor)).send({value:'disabled'})).status,403);
+    }
+  });
+  test('Chat interno: admin acessa conversas da empresa sem ser membro; demais perfis exigem participacao', async () => {
+    const Chat = load('models/Chat.ts').default, ChatUser = load('models/ChatUser.ts').default;
+    const chat = await Chat.create({title:'Conversa interna',companyId:c1.id,ownerId:agent.id});
+    await ChatUser.create({chatId:chat.id,userId:agent.id,unreads:0});
+    for (const [actor, allowed] of [[admin,true],[agent,true],[supervisor,false],[actors[`admin${c2.id}`],false]]) {
+      for (const url of [`/chats/${chat.uuid}`, `/chats/${chat.id}/messages`]) assert.equal((await request.get(url).set(auth(actor))).status,allowed?200:403);
+      assert.equal((await request.post(`/chats/${chat.id}/read`).set(auth(actor)).send({})).status,allowed?200:403);
+    }
+    assert.ok((await request.get('/chats').set(auth(admin))).body.records.some(row=>row.id===chat.id));
+    assert.equal((await ChatUser.count({where:{chatId:chat.id,userId:admin.id}})),0);
+  });
   test('Usuario: autopromocao, outro alvo, super e empresa no corpo sao rejeitados; campos pessoais funcionam sem apagar filas', async () => {
     for (const body of [{ profile:'admin' }, { super:true }, { companyId:c2.id }, { tokenVersion:999 }, { queueIds:[qOther.id] }]) {
       assert.equal((await request.put(`/users/${agent.id}`).set(auth(agent)).send(body)).status, 403);
@@ -173,6 +342,67 @@ let pg, server, io;
     assert.deepEqual(fresh.queues.map(q=>q.id), [q1.id]);
     await assert.rejects(loadSession(old));
     actors[`user${c1.id}`] = fresh; Object.assign(agent, { tokenVersion:fresh.tokenVersion });
+  });
+  test('Admin protegido: edita as proprias filas sem manutencao global e revoga sessoes antigas', async () => {
+    const account = await User.create({ name: 'Administrador protegido', email: 'protected-self@example.invalid', password: 'InitialPass123', profile: 'admin', super: true, blocked: false, companyId: c1.id, tokenVersion: 0 });
+    const actor = await User.findByPk(account.id, { include: [Queue, Company] });
+    const oldToken = token(actor);
+    const response = await request.put(`/users/${actor.id}`).set(auth(actor)).send({ name: actor.name, email: actor.email, password: '', profile: 'admin', blocked: false, companyId: c1.id, queueIds: [qOther.id], whatsappId: null, allTicket: 'enabled' });
+    assert.equal(response.status, 200, JSON.stringify(response.body));
+    const updated = await User.findByPk(actor.id, { include: [Queue, Company] });
+    assert.deepEqual(updated.queues.map(q => q.id), [qOther.id]);
+    assert.equal(updated.super, true); assert.equal(updated.profile, 'admin'); assert.equal(updated.blocked, false);
+    await assert.rejects(loadSession(oldToken));
+  });
+  test('Admin protegido: perfil, bloqueio, flags internas e contas alheias continuam protegidos', async () => {
+    const account = await User.create({ name: 'Protegido', email: 'protected-guard@example.invalid', password: 'InitialPass123', profile: 'admin', super: true, blocked: false, companyId: c1.id, tokenVersion: 0 });
+    const actor = await User.findByPk(account.id, { include: [Queue, Company] });
+    for (const body of [{ profile: 'user' }, { blocked: true }, { super: false }, { tokenVersion: 0 }, { companyId: c2.id }, { queueIds: [q2.id] }]) {
+      assert.equal((await request.put(`/users/${actor.id}`).set(auth(actor)).send(body)).status, 403);
+    }
+    assert.equal((await request.put(`/users/${actor.id}`).set(auth(admin)).send({ queueIds: [q1.id] })).status, 403);
+    const otherProtected = await User.create({ name: 'Outro protegido', email: 'other-protected@example.invalid', password: 'InitialPass123', profile: 'admin', super: true, companyId: c1.id });
+    assert.equal((await request.put(`/users/${otherProtected.id}`).set(auth(actor)).send({ queueIds: [q1.id] })).status, 403);
+  });
+  test('Admin comum: altera as proprias filas e pode remover todos os vinculos', async () => {
+    const account = await User.create({ name: 'Administrador comum', email: 'normal-self@example.invalid', password: 'InitialPass123', profile: 'admin', companyId: c1.id, tokenVersion: 0 });
+    let actor = await User.findByPk(account.id, { include: [Queue, Company] });
+    for (const queueIds of [[qOther.id], []]) {
+      assert.equal((await request.put(`/users/${actor.id}`).set(auth(actor)).send({ queueIds })).status, 200);
+      actor = await User.findByPk(actor.id, { include: [Queue, Company] });
+      assert.deepEqual(actor.queues.map(q => q.id), queueIds);
+    }
+  });
+  test('Fila: administrador edita dados sem reenviar metadados; caminhos e outra empresa continuam bloqueados', async () => {
+    const queue = await Queue.create({ name: 'Fila editavel', color: '#124578', companyId: c1.id });
+    const body = { name: 'Fila atualizada', color: '#124578', greetingMessage: 'Bem-vindo', outOfHoursMessage: '', schedules: [], orderQueue: null, integrationId: null, promptId: null };
+    const response = await request.put(`/queue/${queue.id}`).set(auth(admin)).send(body);
+    assert.equal(response.status, 201, JSON.stringify(response.body));
+    assert.equal((await Queue.findByPk(queue.id)).greetingMessage, 'Bem-vindo');
+    for (const bad of [{ ...body, mediaPath: null }, { ...body, id: q2.id }, { ...body, companyId: c2.id }]) {
+      assert.equal((await request.put(`/queue/${queue.id}`).set(auth(admin)).send(bad)).status, 403);
+    }
+    for (const actor of [agent, supervisor, actors[`admin${c2.id}`]]) {
+      assert.equal((await request.put(`/queue/${queue.id}`).set(auth(actor)).send(body)).status, 403);
+    }
+  });
+  test('Identificador: edicao de conexao aceita id correspondente e rejeita id ou empresa divergentes', async () => {
+    const Whatsapp = load('models/Whatsapp.ts').default;
+    const connection = await Whatsapp.create({ name: 'Conexao editavel', companyId: c1.id });
+    assert.equal((await request.put(`/whatsapp/${connection.id}`).set(auth(admin)).send({ id: connection.id, name: 'Conexao atualizada' })).status, 200);
+    assert.equal((await request.put(`/whatsapp/${connection.id}`).set(auth(admin)).send({ id: connection.id + 1000, name: 'Invalida' })).status, 403);
+    assert.equal((await request.put(`/whatsapp/${connection.id}`).set(auth(actors[`admin${c2.id}`])).send({ id: connection.id, name: 'Invalida' })).status, 403);
+  });
+  test('Fila: remove prompt persistido sem aceitar prompt de outra empresa', async () => {
+    const Prompt = load('models/Prompt.ts').default;
+    const prompt = await Prompt.create({ name: 'Prompt local', prompt: 'Teste', voice: 'texto', companyId: c1.id });
+    const foreign = await Prompt.create({ name: 'Prompt externo', prompt: 'Teste', voice: 'texto', companyId: c2.id });
+    const queue = await Queue.create({ name: 'Fila com prompt', color: '#abcdef', promptId: prompt.id, companyId: c1.id });
+    const body = { name: queue.name, color: queue.color, promptId: null };
+    assert.equal((await request.put(`/queue/${queue.id}`).set(auth(admin)).send({ ...body, promptId: foreign.id })).status, 403);
+    assert.equal((await Queue.findByPk(queue.id)).promptId, prompt.id);
+    assert.equal((await request.put(`/queue/${queue.id}`).set(auth(admin)).send(body)).status, 201);
+    assert.equal((await Queue.findByPk(queue.id)).promptId, null);
   });
   test('Notas: lista, leitura, criacao e alteracao nao atravessam empresa nem aceitam id do corpo', async () => {
     const response = await request.get('/ticket-notes').set(auth(admin));

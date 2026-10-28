@@ -191,7 +191,9 @@ export const update = async (
     ticketData,
     ticketId,
     companyId,
-    userId: Number(req.user.id)
+    userId: Number(req.user.id),
+    allowTransfer: ["admin", "supervisor"].includes(req.user.profile) &&
+      ticketData.status === "open" && ticketData.queueId !== undefined && ticketData.userId !== undefined
   });
 
   return res.status(200).json(result?.ticket || result);

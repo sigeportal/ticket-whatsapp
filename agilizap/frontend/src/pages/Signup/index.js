@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import qs from 'query-string'
 
 import * as Yup from "yup";
+import { passwordSchema } from "../../utils/passwordSchema";
 import { useHistory } from "react-router-dom";
 import { Link as RouterLink } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -70,7 +71,7 @@ const UserSchema = Yup.object().shape({
 		.min(2, "Too Short!")
 		.max(50, "Too Long!")
 		.required("Required"),
-	password: Yup.string().min(5, "Too Short!").max(50, "Too Long!"),
+	password: passwordSchema.required("Required"),
 	email: Yup.string().email("Invalid email").required("Required"),
 });
 

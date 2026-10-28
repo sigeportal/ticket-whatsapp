@@ -222,6 +222,7 @@ const CampaignModal = ({
     try {
       const dataValues = {};
       Object.entries(values).forEach(([key, value]) => {
+        if (![...Object.keys(initialState), "fileListId"].includes(key)) return;
         if (key === "scheduledAt" && value !== "" && value !== null) {
           dataValues[key] = moment(value).format("YYYY-MM-DD HH:mm:ss");
         } else {

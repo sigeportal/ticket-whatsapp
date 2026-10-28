@@ -338,8 +338,6 @@ const TicketListItemCustom = ({ ticket }) => {
     try {
       await api.put(`/tickets/${id}`, {
         status: "closed",
-        userId: user?.id,
-        queueId: ticket?.queue?.id,
         useIntegration: false,
         promptId: null,
         integrationId: null,
@@ -347,6 +345,7 @@ const TicketListItemCustom = ({ ticket }) => {
     } catch (err) {
       setLoading(false);
       toastError(err);
+      return;
     }
     if (isMounted.current) {
       setLoading(false);
@@ -435,8 +434,8 @@ const TicketListItemCustom = ({ ticket }) => {
 
       let settingIndex;
       try {
-        const { data } = await api.get("/settings/");
-        settingIndex = data.filter((s) => s.key === "sendGreetingAccepted");
+        const { data } = await api.get("/settings/sendGreetingAccepted");
+        settingIndex = [data];
       } catch (err) {
         toastError(err);
       }
@@ -459,7 +458,6 @@ const TicketListItemCustom = ({ ticket }) => {
     const message = {
       read: 1,
       fromMe: true,
-      mediaUrl: "",
       body: `*Mensagem Automática:*\n${msg.trim()}`,
     };
     try {

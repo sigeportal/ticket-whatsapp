@@ -157,6 +157,7 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
             }
         } catch (err) {
             toastError(err);
+            return;
         }
         handleClose();
     };
@@ -226,12 +227,7 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
                     initialValues={quickemessage}
                     enableReinitialize={true}
                     validationSchema={QuickeMessageSchema}
-                    onSubmit={(values, actions) => {
-                        setTimeout(() => {
-                            handleSaveQuickeMessage(values);
-                            actions.setSubmitting(false);
-                        }, 400);
-                    }}
+                    onSubmit={handleSaveQuickeMessage}
                 >
                     {({ touched, errors, isSubmitting, setFieldValue, values }) => (
                         <Form>

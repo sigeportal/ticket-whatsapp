@@ -211,6 +211,27 @@ let pg;
     assert.equal(updated.ticket.userId, user1.id);
   });
 
+  test('Admin assume atendimento sem fila passando pela autorizacao e servico, preservando concorrencia', async () => {
+    const comp = await Company.create({ name: 'Empresa Aceite Admin' });
+    const actor = await User.create({ name: 'Admin Aceite', email: 'admin-claim@test.invalid', profile: 'admin', companyId: comp.id });
+    const other = await User.create({ name: 'Outro Admin', email: 'admin-claim-other@test.invalid', profile: 'admin', companyId: comp.id });
+    const contact = await Contact.create({ name: 'Cliente Aceite', number: '0000000077', companyId: comp.id });
+    const ticket = await Ticket.create({ contactId: contact.id, status: 'pending', queueId: null, companyId: comp.id });
+    const { authorizeRequest } = load('security/authorizeRequest.ts');
+    const accept = async admin => {
+      const body = { status: 'open', userId: admin.id };
+      await authorizeRequest({ method: 'PUT', baseUrl: '', route: { path: '/tickets/:ticketId' }, params: { ticketId: String(ticket.id) }, query: {}, body }, admin);
+      return UpdateTicketService({ ticketData: body, ticketId: ticket.id, companyId: comp.id, userId: admin.id });
+    };
+    const result = await accept(actor);
+    assert.equal(result.ticket.status, 'open');
+    assert.equal(result.ticket.userId, actor.id);
+    assert.equal(result.ticket.queueId, null);
+    await assert.rejects(accept(other), err => err.message === 'ERR_TICKET_ALREADY_CLAIMED' && err.statusCode === 409);
+    await ticket.reload();
+    assert.equal(ticket.userId, actor.id);
+  });
+
   // Global Homologation Scenario 2: Concurrent ticket claiming (409 Conflict)
   test('Cenário 2: Concorrência ao assumir ticket (um vencedor atômico, perdedor com 409 Conflict)', async () => {
     const comp = await Company.create({ name: 'Empresa Concorrencia' });
@@ -584,6 +605,24 @@ let pg;
     const detail = await show(chat.uuid);
     assert.equal(detail.users.find(p => p.userId === colleague.id).user.online, false);
     assert.equal(await ChatUser.count({ where: { chatId: chat.id } }), 2);
+  });
+
+  test('Encerramento administrativo sem fila preserva responsavel e registra o administrador na auditoria', async () => {
+    const company = await Company.create({ name: 'Encerramento sem fila' });
+    const admin = await User.create({ name: 'Administrador', email: 'close-admin@example.invalid', passwordHash: 'hash', profile: 'admin', companyId: company.id });
+    const owner = await User.create({ name: 'Responsável original', email: 'close-owner@example.invalid', passwordHash: 'hash', profile: 'user', companyId: company.id });
+    for (const userId of [null, owner.id]) {
+      const contact = await Contact.create({ name: 'Contato de teste', number: `556599${userId || 0}`, companyId: company.id });
+      const ticket = await Ticket.create({ status: 'pending', queueId: null, userId, contactId: contact.id, companyId: company.id });
+      const result = await UpdateTicketService({ ticketData: { status: 'closed', useIntegration: false, promptId: null, integrationId: null }, ticketId: ticket.id, companyId: company.id, userId: admin.id });
+      assert.equal(result.ticket.status, 'closed');
+      assert.equal(result.ticket.queueId, null);
+      assert.equal(result.ticket.userId, userId);
+      assert.ok(result.ticket.closedAt);
+      const audit = await AuditLog.findOne({ where: { companyId: company.id, resource: 'ticket', action: 'close', targetId: String(ticket.id) } });
+      assert.ok(audit);
+      assert.equal(audit.userId, admin.id);
+    }
   });
 
   // Execute all tests

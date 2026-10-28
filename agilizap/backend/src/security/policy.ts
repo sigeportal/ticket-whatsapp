@@ -15,7 +15,12 @@ export const personalFields = ["name", "email", "password"];
 export const adminFields = [...personalFields, "profile", "companyId", "queueIds", "whatsappId", "allTicket", "blocked"];
 export const validateUserChange = (actor: any, target: any, data: any): void => {
   if (!actor || !target || actor.companyId !== target.companyId || target.super && !actor.super) deny();
-  if (target.super && process.env.PLATFORM_MAINTENANCE_ENABLED !== "true") deny();
+  if (target.super && process.env.PLATFORM_MAINTENANCE_ENABLED !== "true") {
+    // Self-service may change personal data and queue membership, never protected privileges.
+    if (actor.profile !== "admin" || Number(actor.id) !== Number(target.id) ||
+        (data.profile !== undefined && data.profile !== target.profile) ||
+        (data.blocked !== undefined && data.blocked !== target.blocked)) deny();
+  }
   if (actor.profile !== "admin" && Number(actor.id) !== Number(target.id)) deny();
   const allowed = actor.profile === "admin" ? adminFields : personalFields;
   if (Object.keys(data).some(key => !allowed.includes(key))) deny();

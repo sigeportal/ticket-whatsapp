@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 
 import * as Yup from "yup";
+import { passwordSchema } from "../../utils/passwordSchema";
 import { Formik, Form, Field } from "formik";
 import { toast } from "react-toastify";
 
@@ -56,12 +57,12 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const UserSchema = Yup.object().shape({
+const UserSchema = userId => Yup.object().shape({
   name: Yup.string()
     .min(2, "Too Short!")
     .max(50, "Too Long!")
     .required("Required"),
-  password: Yup.string().min(5, "Too Short!").max(50, "Too Long!"),
+  password: userId ? passwordSchema : passwordSchema.required("Required"),
   email: Yup.string().email("Invalid email").required("Required"),
 });
 
@@ -78,6 +79,7 @@ const ModalUsers = ({ open, onClose, userId, companyId }) => {
   const { user: loggedInUser } = useContext(AuthContext);
 
   const [user, setUser] = useState(initialState);
+  const protectedSelf = Boolean(user.super) && Number(userId) === Number(loggedInUser.id);
   const [selectedQueueIds, setSelectedQueueIds] = useState([]);
 
   useEffect(() => {
@@ -89,7 +91,7 @@ const ModalUsers = ({ open, onClose, userId, companyId }) => {
           setUser((prevState) => {
             return { ...prevState, ...data };
           });
-          const userQueueIds = data.queues?.map((queue) => queue.id);
+          const userQueueIds = data.queues?.map((queue) => queue.id) || [];
           setSelectedQueueIds(userQueueIds);
         } catch (err) {
           toastError(err);
@@ -103,10 +105,15 @@ const ModalUsers = ({ open, onClose, userId, companyId }) => {
   const handleClose = () => {
     onClose();
     setUser(initialState);
+    setSelectedQueueIds([]);
   };
 
   const handleSaveUser = async (values) => {
-    const userData = { ...values, companyId, queueIds: selectedQueueIds };
+    const fields = loggedInUser.profile === "admin"
+      ? ["name", "email", "password", "profile"]
+      : ["name", "email", "password"];
+    const userData = Object.fromEntries(fields.filter(key => values[key] !== undefined).map(key => [key, values[key]]));
+    if (loggedInUser.profile === "admin") Object.assign(userData, { companyId, queueIds: selectedQueueIds });
     try {
       if (userId) {
         await api.put(`/users/${userId}`, userData);
@@ -116,6 +123,7 @@ const ModalUsers = ({ open, onClose, userId, companyId }) => {
       toast.success(i18n.t("userModal.success"));
     } catch (err) {
       toastError(err);
+      return;
     }
     handleClose();
   };
@@ -137,13 +145,8 @@ const ModalUsers = ({ open, onClose, userId, companyId }) => {
         <Formik
           initialValues={user}
           enableReinitialize={true}
-          validationSchema={UserSchema}
-          onSubmit={(values, actions) => {
-            setTimeout(() => {
-              handleSaveUser(values);
-              actions.setSubmitting(false);
-            }, 400);
-          }}
+          validationSchema={UserSchema(userId)}
+          onSubmit={handleSaveUser}
         >
           {({ touched, errors, isSubmitting }) => (
             <Form>
@@ -201,6 +204,7 @@ const ModalUsers = ({ open, onClose, userId, companyId }) => {
                             as={Select}
                             label={i18n.t("userModal.form.profile")}
                             name="profile"
+                            disabled={protectedSelf}
                             labelId="profile-selection-label"
                             id="profile-selection"
                             required

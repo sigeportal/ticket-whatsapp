@@ -159,6 +159,7 @@ const messages = {
 					edit: "Edit queue",
 				},
 				form: {
+          noPrompt: "No prompt",
 					name: "Name",
 					color: "Color",
 					greetingMessage: "Greeting Message",
@@ -369,6 +370,7 @@ const messages = {
 				},
 			},
 			backendErrors: {
+        ERR_PASSWORD_POLICY: "Use at least 8 characters, including uppercase, lowercase and a number (maximum 72 bytes).",
         ERR_TICKET_ALREADY_CLAIMED: "This ticket has already been claimed by another attendant.",
         ERR_CANNOT_ACCEPT_TICKET_OTHER_USER: "Cannot accept a ticket assigned to another user.",
         ERR_RESTRICTED_ATTENDANT_QUEUE: "You do not have permission for this queue.",

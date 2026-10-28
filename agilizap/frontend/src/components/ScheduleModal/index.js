@@ -160,7 +160,11 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 	};
 
 	const handleSaveSchedule = async values => {
-		const scheduleData = { ...values, userId: user.id };
+		const scheduleData = {
+			body: values.body, contactId: values.contactId, sendAt: values.sendAt,
+			sendConfirmation: values.sendConfirmation, confirmationMessage: values.confirmationMessage,
+			userId: user.id,
+		};
 		try {
 			if (scheduleId) {
 				await api.put(`/schedules/${scheduleId}`, scheduleData);
@@ -192,6 +196,7 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 			}
 		} catch (err) {
 			toastError(err);
+			return;
 		}
 		setCurrentContact(initialContact);
 		setSchedule(initialState);
@@ -261,12 +266,7 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 					initialValues={schedule}
 					enableReinitialize={true}
 					validationSchema={ScheduleSchema}
-					onSubmit={(values, actions) => {
-						setTimeout(() => {
-							handleSaveSchedule(values);
-							actions.setSubmitting(false);
-						}, 400);
-					}}
+					onSubmit={handleSaveSchedule}
 				>
 					{({ touched, errors, isSubmitting, values, setFieldValue }) => (
 						<Form>

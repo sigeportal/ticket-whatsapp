@@ -151,10 +151,10 @@ const TicketActionButtonsCustom = ({ ticket }) => {
     try {
       await api.put(`/tickets/${ticket.id}`, {
         status: status,
-        userId: userId || null,
+        ...(status !== "closed" && { userId: userId || null }),
         useIntegration: status === "closed" ? false : ticket.useIntegration,
-        promptId: status === "closed" ? false : ticket.promptId,
-        integrationId: status === "closed" ? false : ticket.integrationId,
+        promptId: status === "closed" ? null : ticket.promptId,
+        integrationId: status === "closed" ? null : ticket.integrationId,
       });
 
       setLoading(false);

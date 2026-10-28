@@ -663,11 +663,13 @@ const MessageInputCustom = (props) => {
       formData.append("fromMe", true);
 
       await api.post(`/messages/${ticketId}`, formData);
+      return true;
     } catch (err) {
       toastError(err);
+      return false;
+    } finally {
       setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleQuickAnswersClick = async (value) => {
@@ -677,11 +679,11 @@ const MessageInputCustom = (props) => {
           responseType: "blob",
         });
 
-        handleUploadQuickMessageMedia(data, value.value);
-        setInputMessage("");
+        if (await handleUploadQuickMessageMedia(data, value.value)) setInputMessage("");
         return;
       } catch (err) {
         toastError(err);
+        return;
       }
     }
 
@@ -696,46 +698,29 @@ const MessageInputCustom = (props) => {
     const formData = new FormData();
     formData.append("fromMe", true);
 
-    medias.forEach(async (media) => {
-      const file = media;
-
-      if (!file) {
-        return;
-      }
-
-      if (media?.type.split("/")[0] === "image") {
-        new Compressor(file, {
-          quality: 0.7,
-          async success(media) {
-            formData.append("medias", media);
-            formData.append("body", media.name);
-          },
-          error(err) {
-            console.log(err.message);
-          },
-        });
-      } else {
+    try {
+      const prepared = await Promise.all(medias.filter(Boolean).map(media =>
+        media.type.split("/")[0] === "image"
+          ? new Promise((resolve, reject) => new Compressor(media, { quality: 0.7, success: resolve, error: reject }))
+          : media
+      ));
+      prepared.forEach(media => {
         formData.append("medias", media);
         formData.append("body", media.name);
-      }
-    });
-
-    setTimeout(async () => {
-      try {
-        await api.post(`/messages/${ticketId}`, formData, {
-          onUploadProgress: (event) => {
-            let progress = Math.round((event.loaded * 100) / event.total);
-            setPercentLoading(progress);
-          },
-        });
-        setLoading(false);
-        setMedias([]);
-        setPercentLoading(0);
-      } catch (err) {
-        setLoading(false);
-        toastError(err);
-      }
-    }, 2000);
+      });
+      await api.post(`/messages/${ticketId}`, formData, {
+        onUploadProgress: (event) => {
+          let progress = Math.round((event.loaded * 100) / event.total);
+          setPercentLoading(progress);
+        },
+      });
+      setMedias([]);
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setLoading(false);
+      setPercentLoading(0);
+    }
   };
 
   const handleSendMessage = async () => {
@@ -745,11 +730,10 @@ const MessageInputCustom = (props) => {
     const message = {
       read: 1,
       fromMe: true,
-      mediaUrl: "",
       body: signMessage
         ? `*${user?.name}:*\n${inputMessage.trim()}`
         : inputMessage.trim(),
-      quotedMsg: replyingMessage,
+      quotedMsg: replyingMessage ? { id: replyingMessage.id } : null,
     };
     try {
       await api.post(`/messages/${ticketId}`, message);

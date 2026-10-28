@@ -289,6 +289,7 @@ queueModal: {
     edit: "Editar cola",
   },
   form: {
+          noPrompt: "Sin prompt",
     name: "Nombre",
     color: "Color",
     greetingMessage: "Mensaje de saludo",
@@ -928,6 +929,7 @@ transferTicketModal: {
     },
   },
   backendErrors: {
+        ERR_PASSWORD_POLICY: "Use al menos 8 caracteres, con mayúscula, minúscula y número (máximo 72 bytes).",
         ERR_TICKET_ALREADY_CLAIMED: "Este ticket ya ha sido asignado a otro atendente.",
         ERR_CANNOT_ACCEPT_TICKET_OTHER_USER: "No se puede aceptar un ticket asignado a otro atendente.",
         ERR_RESTRICTED_ATTENDANT_QUEUE: "No tienes permiso para esta cola.",
