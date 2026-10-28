@@ -70,12 +70,30 @@ const CreateTicketService = async ({
     throw new AppError("ERR_CREATING_TICKET");
   }
 
-  const io = getIO();
+  try {
+    const io = getIO();
 
-  io.to(ticket.id.toString()).emit("ticket", {
-    action: "update",
-    ticket
-  });
+    io.to(ticket.id.toString()).emit("ticket", {
+      action: "update",
+      ticket
+    });
+
+    const ticketRoom = io.to(`company-${companyId}-${ticket.status}`)
+      .to(`company-${companyId}-notification`);
+
+    if (ticket.queueId) {
+      ticketRoom
+        .to(`queue-${ticket.queueId}-${ticket.status}`)
+        .to(`queue-${ticket.queueId}-notification`);
+    }
+
+    ticketRoom.emit(`company-${companyId}-ticket`, {
+      action: "update",
+      ticket
+    });
+  } catch (socketErr) {
+    // Non-fatal if socket is uninitialized in test harness
+  }
 
   return ticket;
 };

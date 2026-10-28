@@ -224,7 +224,7 @@ const Quickemessages = () => {
     const companyId = user.companyId;
     const socket = socketManager.getSocket(companyId);
 
-    socket.on(`company${companyId}-quickemessage`, (data) => {
+    socket.on(`company-${companyId}-quickmessage`, (data) => {
       if (data.action === "update" || data.action === "create") {
         dispatch({ type: "UPDATE_QUICKMESSAGES", payload: data.record });
       }

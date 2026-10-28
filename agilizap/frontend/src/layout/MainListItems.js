@@ -614,6 +614,10 @@ const MainListItems = (props) => {
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
 
+    socket.on("ready", () => {
+      socket.emit("joinNotification");
+    });
+
     let debounceTimer = null;
     const handleTicketUpdate = () => {
       if (debounceTimer) clearTimeout(debounceTimer);
@@ -630,6 +634,7 @@ const MainListItems = (props) => {
       if (debounceTimer) clearTimeout(debounceTimer);
       socket.off(`company-${companyId}-ticket`, handleTicketUpdate);
       socket.off(`company-${companyId}-appMessage`, handleTicketUpdate);
+      socket.disconnect();
     };
   }, [socketManager]);
 

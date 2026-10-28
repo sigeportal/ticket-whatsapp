@@ -106,11 +106,16 @@ const Ticket = () => {
     socket.on("ready", () => socket.emit("joinChatBox", `${ticket.id}`));
 
     socket.on(`company-${companyId}-ticket`, (data) => {
-      if (data.action === "update" && data.ticket.id === ticket.id) {
+      if (data.action === "update" && (data.ticket?.id === ticket.id || +data.ticket?.id === +ticket.id)) {
+        if (data.ticket.status === "closed") {
+          toast.info("Este atendimento foi encerrado.");
+          history.push("/tickets");
+          return;
+        }
         setTicket(data.ticket);
       }
 
-      if (data.action === "delete" && data.ticketId === ticket.id) {
+      if (data.action === "delete" && (data.ticketId === ticket.id || +data.ticketId === +ticket.id)) {
         // toast.success("Ticket deleted sucessfully.");
         history.push("/tickets");
       }

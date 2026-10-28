@@ -101,10 +101,15 @@ export const ClosedAllOpenTickets = async (companyId: number): Promise<void> => 
               userId: ticket.userId,
             })
 
-            io.to(`company-${companyId}-open`).to(`queue-${ticket.queueId}-open`).emit(`company-${companyId}-ticket`, {
-              action: "delete",
-              ticketId: showTicket.id
-            });
+            io.to(`company-${companyId}-open`)
+              .to(`queue-${ticket.queueId}-open`)
+              .to(`company-${companyId}-notification`)
+              .to(`queue-${ticket.queueId}-notification`)
+              .to(showTicket.id.toString())
+              .emit(`company-${companyId}-ticket`, {
+                action: "delete",
+                ticketId: showTicket.id
+              });
 
           }
         }
