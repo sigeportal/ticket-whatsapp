@@ -69,7 +69,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   });
 
   const io = getIO();
-  io.to(`company-${req.user.companyId}-mainchannel`).emit(`company-announcement`, {
+  io.to(`company-${req.user.companyId}-mainchannel`).emit(`company-${req.user.companyId}-announcement`, {
     action: "create",
     record
   });
@@ -109,7 +109,7 @@ export const update = async (
   });
 
   const io = getIO();
-  io.to(`company-${req.user.companyId}-mainchannel`).emit(`company-announcement`, {
+  io.to(`company-${req.user.companyId}-mainchannel`).emit(`company-${req.user.companyId}-announcement`, {
     action: "update",
     record
   });
@@ -163,7 +163,7 @@ export const mediaUpload = async (
     await announcement.reload();
 
     const io = getIO();
-    io.to(`company-${req.user.companyId}-mainchannel`).emit(`company-announcement`, {
+    io.to(`company-${req.user.companyId}-mainchannel`).emit(`company-${req.user.companyId}-announcement`, {
       action: "update",
       record: announcement
     });
@@ -195,7 +195,7 @@ export const deleteMedia = async (
     await announcement.reload();
 
     const io = getIO();
-    io.to(`company-${req.user.companyId}-mainchannel`).emit(`company-announcement`, {
+    io.to(`company-${req.user.companyId}-mainchannel`).emit(`company-${req.user.companyId}-announcement`, {
       action: "update",
       record: announcement
     });

@@ -67,7 +67,8 @@ export const reconcileOverdueSchedules = async (
       const io = getIO();
       io.to(`company-${schedule.companyId}-admin`)
         .to(`user-${schedule.userId}`)
-        .emit("schedule", {
+        .to(`company-${schedule.companyId}-mainchannel`)
+        .emit(`company-${schedule.companyId}-schedule`, {
           action: "update",
           schedule
         });
@@ -153,7 +154,8 @@ export const reviewSchedule = async ({
     const io = getIO();
     io.to(`company-${companyId}-admin`)
       .to(`user-${schedule.userId}`)
-      .emit("schedule", {
+      .to(`company-${companyId}-mainchannel`)
+      .emit(`company-${companyId}-schedule`, {
         action: "update",
         schedule
       });

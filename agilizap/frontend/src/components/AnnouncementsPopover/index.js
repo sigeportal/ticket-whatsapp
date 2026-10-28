@@ -26,6 +26,7 @@ import api from "../../services/api";
 import { isArray } from "lodash";
 import moment from "moment";
 import { SocketContext } from "../../context/Socket/SocketContext";
+import { AuthContext } from "../../context/Auth/AuthContext";
 
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
@@ -173,6 +174,7 @@ export default function AnnouncementsPopover() {
   const [announcement, setAnnouncement] = useState({});
   const [showAnnouncementDialog, setShowAnnouncementDialog] = useState(false);
 
+  const { user } = useContext(AuthContext);
   const socketManager = useContext(SocketContext);
 
   useEffect(() => {
@@ -190,14 +192,14 @@ export default function AnnouncementsPopover() {
   }, [searchParam, pageNumber]);
 
   useEffect(() => {
-    const companyId = localStorage.getItem("companyId");
+    const companyId = user?.companyId || localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
     
     if (!socket) {
       return () => {}; 
     }
 
-    socket.on(`company-announcement`, (data) => {
+    socket.on(`company-${companyId}-announcement`, (data) => {
       if (data.action === "update" || data.action === "create") {
         dispatch({ type: "UPDATE_ANNOUNCEMENTS", payload: data.record });
         setInvisible(false);
@@ -209,7 +211,7 @@ export default function AnnouncementsPopover() {
     return () => {
       socket.disconnect();
     };
-  }, [socketManager]);
+  }, [socketManager, user]);
 
   const fetchAnnouncements = async () => {
     try {

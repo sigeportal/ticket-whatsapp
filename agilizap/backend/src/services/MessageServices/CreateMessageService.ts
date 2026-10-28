@@ -3,6 +3,8 @@ import { getIO } from "../../libs/socket";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 import Whatsapp from "../../models/Whatsapp";
+import User from "../../models/User";
+import Tag from "../../models/Tag";
 
 interface MessageData {
   id: string;
@@ -56,6 +58,16 @@ const CreateMessageService = async ({
             "contact",
             "queue",
             {
+              model: User,
+              as: "user",
+              attributes: ["id", "name"]
+            },
+            {
+              model: Tag,
+              as: "tags",
+              attributes: ["id", "name", "color"]
+            },
+            {
               model: Whatsapp,
               as: "whatsapp",
               attributes: ["name"]
@@ -92,6 +104,16 @@ const CreateMessageService = async ({
         include: [
           "contact",
           "queue",
+          {
+            model: User,
+            as: "user",
+            attributes: ["id", "name"]
+          },
+          {
+            model: Tag,
+            as: "tags",
+            attributes: ["id", "name", "color"]
+          },
           {
             model: Whatsapp,
             as: "whatsapp",

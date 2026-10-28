@@ -204,7 +204,7 @@ const Schedules = () => {
     handleOpenScheduleModalFromContactId();
     const socket = socketManager.getSocket(user.companyId);
 
-    socket.on(`company${user.companyId}-schedule`, (data) => {
+    socket.on(`company-${user.companyId}-schedule`, (data) => {
       if (data.action === "update" || data.action === "create") {
         dispatch({ type: "UPDATE_SCHEDULES", payload: data.schedule });
       }

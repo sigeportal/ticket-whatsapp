@@ -60,10 +60,13 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   });
 
   const io = getIO();
-  io.to(`user-${schedule.userId}`).to(`company-${companyId}-admin`).emit("schedule", {
-    action: "create",
-    schedule
-  });
+  io.to(`user-${schedule.userId}`)
+    .to(`company-${companyId}-admin`)
+    .to(`company-${companyId}-mainchannel`)
+    .emit(`company-${companyId}-schedule`, {
+      action: "create",
+      schedule
+    });
 
   return res.status(200).json(schedule);
 };
@@ -92,10 +95,13 @@ export const update = async (
   const schedule = await UpdateService({ scheduleData, id: scheduleId, companyId });
 
   const io = getIO();
-  io.to(`user-${schedule.userId}`).to(`company-${companyId}-admin`).emit("schedule", {
-    action: "update",
-    schedule
-  });
+  io.to(`user-${schedule.userId}`)
+    .to(`company-${companyId}-admin`)
+    .to(`company-${companyId}-mainchannel`)
+    .emit(`company-${companyId}-schedule`, {
+      action: "update",
+      schedule
+    });
 
   return res.status(200).json(schedule);
 };
@@ -110,10 +116,12 @@ export const remove = async (
   await DeleteService(scheduleId, companyId);
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit("schedule", {
-    action: "delete",
-    scheduleId
-  });
+  io.to(`company-${companyId}-admin`)
+    .to(`company-${companyId}-mainchannel`)
+    .emit(`company-${companyId}-schedule`, {
+      action: "delete",
+      scheduleId
+    });
 
   return res.status(200).json({ message: "Schedule deleted" });
 };

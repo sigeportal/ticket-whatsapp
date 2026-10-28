@@ -926,6 +926,8 @@ const verifyMediaMessage = async (
 
     io.to(`company-${ticket.companyId}-closed`)
       .to(`queue-${ticket.queueId}-closed`)
+      .to(`company-${ticket.companyId}-notification`)
+      .to(`queue-${ticket.queueId}-notification`)
       .emit(`company-${ticket.companyId}-ticket`, {
         action: "delete",
         ticket,
@@ -934,6 +936,8 @@ const verifyMediaMessage = async (
 
     io.to(`company-${ticket.companyId}-${ticket.status}`)
       .to(`queue-${ticket.queueId}-${ticket.status}`)
+      .to(`company-${ticket.companyId}-notification`)
+      .to(`queue-${ticket.queueId}-notification`)
       .to(ticket.id.toString())
       .emit(`company-${ticket.companyId}-ticket`, {
         action: "update",
@@ -1005,6 +1009,8 @@ export const verifyMessage = async (
 
     io.to(`company-${ticket.companyId}-closed`)
       .to(`queue-${ticket.queueId}-closed`)
+      .to(`company-${ticket.companyId}-notification`)
+      .to(`queue-${ticket.queueId}-notification`)
       .emit(`company-${ticket.companyId}-ticket`, {
         action: "delete",
         ticket,
@@ -1013,6 +1019,9 @@ export const verifyMessage = async (
 
     io.to(`company-${ticket.companyId}-${ticket.status}`)
       .to(`queue-${ticket.queueId}-${ticket.status}`)
+      .to(`company-${ticket.companyId}-notification`)
+      .to(`queue-${ticket.queueId}-notification`)
+      .to(ticket.id.toString())
       .emit(`company-${ticket.companyId}-ticket`, {
         action: "update",
         ticket,
@@ -1415,6 +1424,8 @@ export const handleRating = async (
     rated: true,
   });
 
+  const oldQueueId = ticket.queueId;
+
   await ticket.update({
     queueId: null,
     chatbot: null,
@@ -1424,7 +1435,9 @@ export const handleRating = async (
   });
 
   io.to(`company-${ticket.companyId}-open`)
-    .to(`queue-${ticket.queueId}-open`)
+    .to(`queue-${oldQueueId}-open`)
+    .to(`company-${ticket.companyId}-notification`)
+    .to(`queue-${oldQueueId}-notification`)
     .emit(`company-${ticket.companyId}-ticket`, {
       action: "delete",
       ticket,
@@ -1433,6 +1446,8 @@ export const handleRating = async (
 
   io.to(`company-${ticket.companyId}-${ticket.status}`)
     .to(`queue-${ticket.queueId}-${ticket.status}`)
+    .to(`company-${ticket.companyId}-notification`)
+    .to(`queue-${oldQueueId}-notification`)
     .to(ticket.id.toString())
     .emit(`company-${ticket.companyId}-ticket`, {
       action: "update",
@@ -2318,10 +2333,13 @@ const verifyCampaignMessageAndCloseTicket = async (
       where: { id: message.key.id!, companyId },
     });
     const ticket = await Ticket.findByPk(messageRecord.ticketId);
+    const oldQueueId = ticket.queueId;
     await ticket.update({ status: "closed" });
 
     io.to(`company-${ticket.companyId}-open`)
-      .to(`queue-${ticket.queueId}-open`)
+      .to(`queue-${oldQueueId}-open`)
+      .to(`company-${ticket.companyId}-notification`)
+      .to(`queue-${oldQueueId}-notification`)
       .emit(`company-${ticket.companyId}-ticket`, {
         action: "delete",
         ticket,
@@ -2330,6 +2348,8 @@ const verifyCampaignMessageAndCloseTicket = async (
 
     io.to(`company-${ticket.companyId}-${ticket.status}`)
       .to(`queue-${ticket.queueId}-${ticket.status}`)
+      .to(`company-${ticket.companyId}-notification`)
+      .to(`queue-${oldQueueId}-notification`)
       .to(ticket.id.toString())
       .emit(`company-${ticket.companyId}-ticket`, {
         action: "update",

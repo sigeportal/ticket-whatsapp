@@ -235,6 +235,7 @@ export const closeAll = async (req: Request, res: Response): Promise<Response> =
   });
 
   tickets.forEach(async ticket => {
+    const oldStatus = ticket.status;
 
     await ticket.update({
       status: "closed",
@@ -242,13 +243,13 @@ export const closeAll = async (req: Request, res: Response): Promise<Response> =
       promptId: null,
       integrationId: null,
       unreadMessages: 0
-    })
+    });
 
     const io = getIO();
     io.to(`${ticket.id}`)
-      .to(`company-${companyId}-${ticket.status}`)
+      .to(`company-${companyId}-${oldStatus}`)
       .to(`company-${companyId}-notification`)
-      .to(`queue-${ticket.queueId}-${ticket.status}`)
+      .to(`queue-${ticket.queueId}-${oldStatus}`)
       .to(`queue-${ticket.queueId}-notification`)
       .emit(`company-${companyId}-ticket`, {
         action: "delete",

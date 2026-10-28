@@ -213,12 +213,40 @@ const TicketsListCustom = (props) => {
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
 
+    const isQueueAllowed = (ticket) => {
+      if (profile === "admin") {
+        return (
+          !ticket.queueId ||
+          !selectedQueueIds ||
+          selectedQueueIds.length === 0 ||
+          selectedQueueIds.indexOf(ticket.queueId) > -1
+        );
+      }
+      const queueIds = queues.map((q) => q.id);
+      if (!ticket.queueId) return false;
+      if (queueIds.indexOf(ticket.queueId) === -1) return false;
+      return (
+        !selectedQueueIds ||
+        selectedQueueIds.length === 0 ||
+        selectedQueueIds.indexOf(ticket.queueId) > -1
+      );
+    };
+
     const shouldUpdateTicket = (ticket) =>
       (!ticket.userId || ticket.userId === user?.id || showAll) &&
-      (!ticket.queueId || selectedQueueIds.indexOf(ticket.queueId) > -1);
+      isQueueAllowed(ticket);
 
     const notBelongsToUserQueues = (ticket) =>
-      ticket.queueId && selectedQueueIds.indexOf(ticket.queueId) === -1;
+      ticket.queueId &&
+      ((profile === "admin" &&
+        selectedQueueIds &&
+        selectedQueueIds.length > 0 &&
+        selectedQueueIds.indexOf(ticket.queueId) === -1) ||
+        (profile !== "admin" &&
+          (queues.map((q) => q.id).indexOf(ticket.queueId) === -1 ||
+            (selectedQueueIds &&
+              selectedQueueIds.length > 0 &&
+              selectedQueueIds.indexOf(ticket.queueId) === -1))));
 
     socket.on("ready", () => {
       if (status) {
@@ -229,7 +257,6 @@ const TicketsListCustom = (props) => {
     });
 
     socket.on(`company-${companyId}-ticket`, (data) => {
-      
       if (data.action === "updateUnread") {
         dispatch({
           type: "RESET_UNREAD",
@@ -237,7 +264,11 @@ const TicketsListCustom = (props) => {
         });
       }
 
-      if (data.action === "update" && shouldUpdateTicket(data.ticket) && data.ticket.status === status) {
+      if (
+        (data.action === "update" || data.action === "create") &&
+        shouldUpdateTicket(data.ticket) &&
+        data.ticket.status === status
+      ) {
         dispatch({
           type: "UPDATE_TICKET",
           payload: data.ticket,
@@ -254,19 +285,21 @@ const TicketsListCustom = (props) => {
     });
 
     socket.on(`company-${companyId}-appMessage`, (data) => {
-      const queueIds = queues.map((q) => q.id);
-      if (
-        profile === "user" &&
-        (queueIds.indexOf(data.ticket?.queue?.id) === -1 ||
-          data.ticket.queue === null)
-      ) {
+      const ticket = data.ticket;
+      if (!ticket) return;
+
+      if (!isQueueAllowed(ticket)) {
         return;
       }
 
-      if (data.action === "create" && shouldUpdateTicket(data.ticket) && ( status === undefined || data.ticket.status === status)) {
+      if (
+        data.action === "create" &&
+        shouldUpdateTicket(ticket) &&
+        (status === undefined || ticket.status === status)
+      ) {
         dispatch({
           type: "UPDATE_TICKET_UNREAD_MESSAGES",
-          payload: data.ticket,
+          payload: ticket,
         });
       }
     });

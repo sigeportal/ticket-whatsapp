@@ -6,6 +6,7 @@ import FindOrCreateATicketTrakingService from "./FindOrCreateATicketTrakingServi
 import Setting from "../../models/Setting";
 import Whatsapp from "../../models/Whatsapp";
 import { logAuditEvent } from "../../security/audit";
+import { getIO } from "../../libs/socket";
 
 const FindOrCreateTicketService = async (
   contact: Contact,
@@ -105,7 +106,7 @@ const FindOrCreateTicketService = async (
       where: { id: whatsappId }
     });
 
-        try {
+    try {
       ticket = await Ticket.create({
         contactId: targetContactId,
         status: "pending",
@@ -158,6 +159,35 @@ const FindOrCreateTicketService = async (
   }
 
   ticket = await ShowTicketService(ticket.id, companyId);
+
+  try {
+    const io = getIO();
+    if (recentClosedTicket) {
+      io.to(`company-${companyId}-closed`)
+        .to(`queue-${recentClosedTicket.queueId}-closed`)
+        .emit(`company-${companyId}-ticket`, {
+          action: "delete",
+          ticketId: ticket.id
+        });
+    }
+
+    const ticketRoom = io.to(`company-${companyId}-${ticket.status}`)
+      .to(`company-${companyId}-notification`);
+
+    if (ticket.queueId) {
+      ticketRoom
+        .to(`queue-${ticket.queueId}-${ticket.status}`)
+        .to(`queue-${ticket.queueId}-notification`);
+    }
+
+    ticketRoom.emit(`company-${companyId}-ticket`, {
+      action: "update",
+      ticket
+    });
+  } catch (socketErr) {
+    // Non-fatal if socket is uninitialized in test harness
+  }
+
   return ticket;
 };
 

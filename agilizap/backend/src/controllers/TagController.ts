@@ -43,9 +43,10 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   });
 
   const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit("tag", {
+  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-tag`, {
     action: "create",
-    tag
+    tag,
+    tagId: tag.id
   });
 
   return res.status(200).json(tag);
@@ -81,9 +82,10 @@ export const update = async (
   const tag = await UpdateService({ tagData, id: tagId });
 
   const io = getIO();
-  io.to(`company-${req.user.companyId}-mainchannel`).emit("tag", {
+  io.to(`company-${req.user.companyId}-mainchannel`).emit(`company-${req.user.companyId}-tag`, {
     action: "update",
-    tag
+    tag,
+    tagId: tag.id
   });
 
   return res.status(200).json(tag);
@@ -98,7 +100,7 @@ export const remove = async (
   await DeleteService(tagId);
 
   const io = getIO();
-  io.to(`company-${req.user.companyId}-mainchannel`).emit("tag", {
+  io.to(`company-${req.user.companyId}-mainchannel`).emit(`company-${req.user.companyId}-tag`, {
     action: "delete",
     tagId
   });
