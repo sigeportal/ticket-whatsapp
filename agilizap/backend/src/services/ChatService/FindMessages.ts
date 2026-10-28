@@ -10,6 +10,7 @@ interface Request {
   chatId: string;
   ownerId: number;
   companyId: number;
+  isAdmin?: boolean;
   pageNumber?: string;
 }
 
@@ -21,7 +22,7 @@ interface Response {
 
 const FindMessages = async ({
   chatId,
-  ownerId, companyId,
+  ownerId, companyId, isAdmin = false,
   pageNumber = "1"
 }: Request): Promise<Response> => {
   if (!await Chat.findOne({ where: { id: chatId, companyId } })) throw new AppError("ERR_NO_PERMISSION", 403);
@@ -29,7 +30,7 @@ const FindMessages = async ({
     where: { chatId, userId: ownerId }
   });
 
-  if (userInChat === 0) {
+  if (!isAdmin && userInChat === 0) {
     throw new AppError("UNAUTHORIZED", 400);
   }
 

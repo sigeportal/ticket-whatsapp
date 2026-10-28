@@ -40,6 +40,7 @@ interface Request {
   ticketId: string | number;
   companyId: number;
   userId?: number;
+  allowTransfer?: boolean;
 }
 
 interface Response {
@@ -52,7 +53,8 @@ const UpdateTicketService = async ({
   ticketData,
   ticketId,
   companyId,
-  userId: requestUserId
+  userId: requestUserId,
+  allowTransfer = false
 }: Request): Promise<Response> => {
 
   try {
@@ -116,7 +118,7 @@ const UpdateTicketService = async ({
     // Atomic conditional claim when an attendant is accepting an unassigned or pending ticket
     const isClaiming = (status === "open" && !isNil(userId)) || (!isNil(userId) && isNil(oldUserId));
     if (isClaiming && oldUserId !== userId) {
-      if (!isNil(oldUserId) && oldUserId !== userId) {
+      if (!allowTransfer && !isNil(oldUserId) && oldUserId !== userId) {
         throw new AppError("ERR_TICKET_ALREADY_CLAIMED", 409);
       }
 
@@ -127,10 +129,10 @@ const UpdateTicketService = async ({
           where: {
             id: ticket.id,
             companyId,
-            [Op.or]: [
+            ...(allowTransfer ? { userId: ticket.userId, status: oldStatus, queueId: oldQueueId } : { [Op.or]: [
               { userId: null },
               { userId: userId }
-            ]
+            ] })
           }
         }
       );

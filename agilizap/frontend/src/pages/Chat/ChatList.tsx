@@ -317,7 +317,7 @@ export default function ChatList({
                     }
                   />
 
-                  {chat.ownerId === user.id && (
+                  {(chat.ownerId === user.id || user.profile === "admin") && (
                     <ListItemSecondaryAction style={{ top: "auto", bottom: 6, transform: "none" }}>
                       <Tooltip title="Editar Conversa" arrow>
                         <IconButton

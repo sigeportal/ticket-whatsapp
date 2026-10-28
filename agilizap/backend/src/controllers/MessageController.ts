@@ -1,5 +1,10 @@
 import { Request, Response } from "express";
 import AppError from "../errors/AppError";
+import { ticketAccess } from "../security/authorizeRequest";
+import { deny } from "../security/policy";
+import { Op } from "sequelize";
+import uploadConfig from "../config/upload";
+import { confinedPath } from "../security/media";
 
 import formatBody from "../helpers/Mustache";
 import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
@@ -247,18 +252,6 @@ export const addReaction = async (req: Request, res: Response): Promise<Response
   }
 };
 
-function obterNomeEExtensaoDoArquivo(url) {
-  var urlObj = new URL(url);
-  var pathname = urlObj.pathname;
-  var filename = pathname.split('/').pop();
-  var parts = filename.split('.');
-
-  var nomeDoArquivo = parts[0];
-  var extensao = parts[1];
-
-  return `${nomeDoArquivo}.${extensao}`;
-}
-
 export const forwardMessage = async (
   req: Request,
   res: Response
@@ -287,6 +280,15 @@ export const forwardMessage = async (
   }
 
   const ticket = await ShowTicketService(message.ticketId, message.companyId);
+
+  const destination = await Ticket.findOne({ where: {
+    companyId, contactId: contact.id, whatsappId: ticket.whatsappId,
+    status: { [Op.in]: ["open", "pending"] }
+  } });
+  if (destination) {
+    await ticketAccess(res.locals.actor, destination.id);
+    if (req.user.profile === "user" && destination.userId && Number(destination.userId) !== Number(userId)) deny();
+  }
 
   const createTicket = await FindOrCreateTicketService(
     contact,
@@ -322,16 +324,12 @@ export const forwardMessage = async (
     await SendWhatsAppMessage({ body, ticket: createTicket, quotedMsg, isForwarded: message.fromMe ? false : true });
   } else {
 
-    const mediaUrl = message.mediaUrl.replace(`:${process.env.PORT}`, '');
-    const fileName = obterNomeEExtensaoDoArquivo(mediaUrl);
+    const filePath = confinedPath(uploadConfig.directory, message.getDataValue("mediaUrl"));
+    const fileName = path.basename(filePath);
 
     if (body === fileName) {
       body = "";
     }
-
-    const publicFolder = path.join(__dirname, '..', '..', '..', 'backend', 'public');
-
-    const filePath = path.join(publicFolder, fileName);
 
     const mediaSrc = {
       fieldname: 'medias',

@@ -434,8 +434,8 @@ const TicketListItemCustom = ({ ticket }) => {
 
       let settingIndex;
       try {
-        const { data } = await api.get("/settings/");
-        settingIndex = data.filter((s) => s.key === "sendGreetingAccepted");
+        const { data } = await api.get("/settings/sendGreetingAccepted");
+        settingIndex = [data];
       } catch (err) {
         toastError(err);
       }
@@ -458,7 +458,6 @@ const TicketListItemCustom = ({ ticket }) => {
     const message = {
       read: 1,
       fromMe: true,
-      mediaUrl: "",
       body: `*Mensagem Automática:*\n${msg.trim()}`,
     };
     try {

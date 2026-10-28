@@ -35,7 +35,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   const ownerId = +req.user.id;
 
   const { records, count, hasMore } = await ListService({
-    ownerId, companyId: req.user.companyId,
+    ownerId, companyId: req.user.companyId, isAdmin: req.user.profile === "admin",
     pageNumber
   });
 
@@ -164,7 +164,7 @@ export const checkAsRead = async (
   const { id } = req.params;
 
   const chatUser = await ChatUser.findOne({ where: { chatId: id, userId } });
-  await chatUser.update({ unreads: 0 });
+  if (chatUser) await chatUser.update({ unreads: 0 });
 
   const chat = await Chat.findByPk(id, {
     include: [
@@ -197,7 +197,7 @@ export const messages = async (
 
   const { records, count, hasMore } = await FindMessages({
     chatId,
-    ownerId, companyId: req.user.companyId,
+    ownerId, companyId: req.user.companyId, isAdmin: req.user.profile === "admin",
     pageNumber
   });
 

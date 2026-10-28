@@ -15,6 +15,7 @@ import { makeStyles } from "@material-ui/core";
 import MarkdownWrapper from "../MarkdownWrapper";
 import MoodIcon from "@material-ui/icons/Mood";
 import api from "../../services/api";
+import toastError from "../../errors/toastError";
 import whatsBackgroundDark from "../../assets/wa-background-dark.png"
 
 const useStyles = makeStyles((theme) => ({
@@ -129,14 +130,13 @@ const EditMessageModal = ({ open, onClose, onSave, message }) => {
         const messages = {
           read: 1,
           fromMe: true,
-          mediaUrl: "",
           body: editedMessage,
           quotedMsg: null,
         };
         await api.post(`/messages/edit/${message.id}`,messages)
         onClose(false)
       } catch (err) {
-        
+        toastError(err);
       }
     }
   };

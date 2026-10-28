@@ -114,7 +114,7 @@ const AnnouncementModal = ({ open, onClose, announcementId, reload }) => {
   };
 
   const handleSaveAnnouncement = async (values) => {
-    const announcementData = { ...values };
+    const announcementData = { title: values.title, text: values.text, priority: values.priority, status: values.status };
     try {
       if (announcementId) {
         await api.put(`/announcements/${announcementId}`, announcementData);

@@ -6,6 +6,7 @@ import User from "../../models/User";
 interface Request {
   ownerId: number;
   companyId: number;
+  isAdmin?: boolean;
   pageNumber?: string;
 }
 
@@ -16,7 +17,7 @@ interface Response {
 }
 
 const ListService = async ({
-  ownerId, companyId,
+  ownerId, companyId, isAdmin = false,
   pageNumber = "1"
 }: Request): Promise<Response> => {
   const chatUsers = await ChatUser.findAll({
@@ -31,9 +32,9 @@ const ListService = async ({
   const { count, rows: records } = await Chat.findAndCountAll({
     where: {
       companyId,
-      id: {
+      ...(!isAdmin && { id: {
         [Op.in]: chatIds
-      }
+      } })
     },
     include: [
       { model: User, as: "owner", attributes: ["id", "name"] },

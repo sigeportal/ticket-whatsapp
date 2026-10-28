@@ -63,15 +63,16 @@ export const authorizeRequest = async (req: Request, actor: any): Promise<void> 
   if (resource === "queue-options" && actor.profile !== "admin") deny();
   if (resource === "queue-alerts" && actor.profile !== "admin" && actor.profile !== "supervisor") deny();
   if (req.method === "DELETE" && resource !== "auth" && actor.profile !== "admin") deny();
+  const operationalSetting = resource === "settings" && req.method === "GET" && req.params.settingKey === "sendGreetingAccepted";
   if (["settings", "prompt", "queueIntegration", "whatsapp", "whatsappsession", "whatsapp-restart",
-       "campaign-settings", "plans", "campaigns", "contact-lists", "contact-list-items", "files", "invoices", "subscription"].includes(resource) && actor.profile !== "admin") deny();
+       "campaign-settings", "plans", "campaigns", "contact-lists", "contact-list-items", "files", "invoices", "subscription"].includes(resource) && actor.profile !== "admin" && !operationalSetting) deny();
   if (write && ["queue", "queue-options", "companies"].includes(resource) && actor.profile !== "admin") deny();
   // Legacy reports aggregate the entire company. Queue-scoped supervisor reports need scoped queries first.
   if (resource === "dashboard" && actor.profile !== "admin") deny();
   if (resource === "companies" && req.params.id && Number(req.params.id) !== actor.companyId) deny();
   if (resource === "chats" && req.params.id && req.method === "GET" && req.path.split("/").length === 3) {
     const chat = await Chat.findOne({ where: { uuid: req.params.id, companyId: actor.companyId } });
-    if (!chat || !await ChatUser.findOne({ where: { chatId: chat.id, userId: actor.id } })) deny();
+    if (!chat || actor.profile !== "admin" && !await ChatUser.findOne({ where: { chatId: chat.id, userId: actor.id } })) deny();
     return;
   }
   if (resource === "chats" && Array.isArray(body.users)) {
@@ -104,8 +105,10 @@ export const authorizeRequest = async (req: Request, actor: any): Promise<void> 
   const messageId = req.params.messageId || (resource === "message" ? body.messageId : null);
   if (messageId) {
     const message = await tenantRecord(actor, Message, messageId);
-    await ticketAccess(actor, message.ticketId);
+    ticket = await ticketAccess(actor, message.ticketId);
   }
+  if (write && ["messages", "message"].includes(resource) && actor.profile === "user" &&
+      Number(ticket?.userId) !== Number(actor.id)) deny();
   if (body.quotedMsg?.id) {
     const quoted = await tenantRecord(actor, Message, body.quotedMsg.id);
     await ticketAccess(actor, quoted.ticketId);
@@ -157,15 +160,10 @@ export const authorizeRequest = async (req: Request, actor: any): Promise<void> 
   if (resource === "tickets" && write && assignedUserId) {
     const target = await User.findByPk(assignedUserId, { include: [Queue] });
     const queueId = body.queueId === undefined ? ticket?.queueId : Number(body.queueId);
-    // Closing an existing ticket does not reassign it or require its owner to join a queue.
-    const closingWithoutReassignment = actor.profile === "admin" && ticket && body.status === "closed" &&
-      body.userId === undefined && body.queueId === undefined;
-    // An admin may take an existing ticket for themselves without changing its queue.
-    const adminSelfAssignment = actor.profile === "admin" && ticket && body.status === "open" &&
-      Number(assignedUserId) === Number(actor.id) &&
-      (body.queueId === undefined || Number(body.queueId) === Number(ticket.queueId));
+    const assigning = !ticket || body.userId !== undefined || body.queueId !== undefined;
+    // Admin destinations are company-wide. Queue membership applies to attendants and supervisors.
     if (!target || target.companyId !== actor.companyId ||
-        (!closingWithoutReassignment && !adminSelfAssignment && !target.queues.some(q => q.id === queueId))) deny();
+        (assigning && target.profile !== "admin" && !target.queues.some(q => q.id === queueId))) deny();
   }
   if (resource === "tickets" && write && actor.profile === "user") {
     if (body.userId !== undefined && Number(body.userId) !== Number(actor.id)) deny();
