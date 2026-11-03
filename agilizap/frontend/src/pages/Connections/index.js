@@ -715,7 +715,7 @@ const Connections = () => {
 		const total = whatsApps?.length || 0;
 		const connected = whatsApps?.filter(w => w.status === "CONNECTED").length || 0;
 		const qrcode = whatsApps?.filter(w => w.status === "qrcode").length || 0;
-		const disconnected = whatsApps?.filter(w => w.status === "DISCONNECTED" || w.status === "TIMEOUT").length || 0;
+		const disconnected = whatsApps?.filter(w => ["DISCONNECTED", "TIMEOUT", "RECONNECT_PAUSED"].includes(w.status)).length || 0;
 		return { total, connected, qrcode, disconnected };
 	}, [whatsApps]);
 
@@ -856,26 +856,30 @@ const Connections = () => {
 						</span>
 					</Tooltip>
 				);
+			case "RECONNECT_PAUSED":
 			case "DISCONNECTED":
 				return (
 					<Tooltip
 						title={
-							i18n.t("connections.toolTips.disconnected.title") ||
+							status === "RECONNECT_PAUSED"
+								? "Limite de tentativas atingido. Você pode reconectar manualmente."
+								: i18n.t("connections.toolTips.disconnected.title") ||
 							"Sessão desconectada. Clique para reconectar."
 						}
 					>
 						<span className={`${classes.statusBadge} ${classes.statusDisconnected}`}>
 							<span className={`${classes.statusDot} ${classes.dotRed}`} />
-							Desconectado
+							{status === "RECONNECT_PAUSED" ? "Reconexão automática pausada" : "Desconectado"}
 						</span>
 					</Tooltip>
 				);
+			case "RECONNECTING":
 			case "OPENING":
 				return (
-					<Tooltip title="Iniciando e autenticando sessão...">
+					<Tooltip title={status === "RECONNECTING" ? "Tentando recuperar a sessão automaticamente" : "Iniciando e autenticando sessão..."}>
 						<span className={`${classes.statusBadge} ${classes.statusOpening}`}>
 							<CircularProgress size={12} className={classes.statusSpinner} />
-							Conectando...
+							{status === "RECONNECTING" ? "Reconectando..." : "Conectando..."}
 						</span>
 					</Tooltip>
 				);
@@ -975,7 +979,7 @@ const Connections = () => {
 							</Button>
 						)}
 
-						{whatsApp.status === "DISCONNECTED" && (
+						{["DISCONNECTED", "RECONNECT_PAUSED"].includes(whatsApp.status) && (
 							<div className={classes.cardActionsGrid}>
 								<Button
 									size="small"
@@ -998,9 +1002,9 @@ const Connections = () => {
 							</div>
 						)}
 
-						{whatsApp.status === "CONNECTED" && (
+						{["CONNECTED", "RECONNECTING"].includes(whatsApp.status) && (
 							<div className={classes.cardActionsGrid}>
-								<Button
+								{whatsApp.status === "CONNECTED" && <Button
 									size="small"
 									variant="outlined"
 									className={classes.btnActionSync}
@@ -1008,7 +1012,7 @@ const Connections = () => {
 									onClick={() => handleSyncTickets(whatsApp.id)}
 								>
 									Sincronizar
-								</Button>
+								</Button>}
 								<Button
 									size="small"
 									variant="outlined"

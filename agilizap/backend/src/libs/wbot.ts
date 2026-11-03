@@ -34,7 +34,11 @@ export type Session = WASocket & {
 const sessions: Session[] = [];
 const reconnectTimeoutMap = new Map<number, NodeJS.Timeout>();
 const reconnectRetriesMap = new Map<number, number>();
+const stableConnectionTimers = new Map<number, NodeJS.Timeout>();
+const startingSessions = new Map<number, symbol>();
 const retriesQrCodeMap = new Map<number, number>();
+const MAX_RECONNECT_ATTEMPTS = 10;
+const STABLE_CONNECTION_MS = 60_000;
 
 /**
  * Calcula o tempo de espera com backoff exponencial e jitter
@@ -79,10 +83,14 @@ export const removeWbot = async (
 ): Promise<void> => {
   try {
     clearReconnectTimeout(whatsappId);
+    startingSessions.delete(whatsappId);
+    clearTimeout(stableConnectionTimers.get(whatsappId));
+    stableConnectionTimers.delete(whatsappId);
     const sessionIndex = sessions.findIndex(s => s.id === whatsappId);
 
     if (sessionIndex !== -1) {
       const session = sessions[sessionIndex];
+      sessions.splice(sessionIndex, 1);
 
       // Remove todos os event listeners para evitar memory leaks
       try {
@@ -91,7 +99,6 @@ export const removeWbot = async (
         session.ev.removeAllListeners("messages.upsert");
         session.ev.removeAllListeners("messages.update");
         session.ev.removeAllListeners("presence.update");
-        session.ws?.removeAllListeners();
       } catch (evErr) {
         logger.warn(`Error clearing listeners for session #${whatsappId}: ${evErr}`);
       }
@@ -105,14 +112,11 @@ export const removeWbot = async (
       }
 
       try {
-        if (session.ws) {
-          session.ws.close();
-        }
+        session.end(undefined);
       } catch (wsErr) {
         logger.warn(`Error closing websocket for session #${whatsappId}: ${wsErr}`);
       }
 
-      sessions.splice(sessionIndex, 1);
     }
 
     if (isLogout) {
@@ -148,139 +152,293 @@ export const restartWbot = async (
 /**
  * Agenda reconexão de forma segura com verificação de status no banco
  */
-export const scheduleReconnect = (
+const updateConnectionStatus = async (whatsapp: Whatsapp, status: string): Promise<void> => {
+  await whatsapp.update({ status, qrcode: "" });
+  getIO().to(`company-${whatsapp.companyId}-admin`).emit(
+    `company-${whatsapp.companyId}-whatsappSession`,
+    { action: "update", session: whatsapp }
+  );
+};
+
+const scheduleReconnect = async (
   whatsapp: Whatsapp,
-  delayMs: number
-): void => {
-  clearReconnectTimeout(whatsapp.id);
+  reason: number | string
+): Promise<void> => {
+  const { id } = whatsapp;
+  const attempts = reconnectRetriesMap.get(id) || 0;
+  if (attempts >= MAX_RECONNECT_ATTEMPTS) {
+    logger.warn(`WhatsApp #${id}: automatic reconnect paused after ${attempts} attempts (reason: ${reason}).`);
+    await updateConnectionStatus(whatsapp, "RECONNECT_PAUSED");
+    return;
+  }
+
+  const delay = reason === DisconnectReason.restartRequired && attempts === 0
+    ? 1000
+    : calculateBackoff(attempts);
+  logger.info(`WhatsApp #${id}: scheduling reconnect in ${delay}ms (reason: ${reason}).`);
+  const statusUpdate = updateConnectionStatus(whatsapp, "RECONNECTING").catch(err => {
+    logger.error(`Could not update reconnect status for WhatsApp #${id}: ${err}`);
+  });
 
   const timeout = setTimeout(async () => {
-    reconnectTimeoutMap.delete(whatsapp.id);
+    await statusUpdate;
+    if (reconnectTimeoutMap.get(id) !== timeout) return;
+    const attempt = attempts + 1;
+    reconnectRetriesMap.set(id, attempt);
     try {
-      const currentWapp = await Whatsapp.findByPk(whatsapp.id);
-      if (!currentWapp || currentWapp.status === "DISCONNECTED") {
-        logger.info(`Skipping reconnect for WhatsApp #${whatsapp.id} (status: ${currentWapp?.status || "null"})`);
-        return;
-      }
-
-      logger.info(`Reconnecting WhatsApp #${whatsapp.id} (${whatsapp.name})...`);
+      const currentWapp = await Whatsapp.findByPk(id);
       const { StartWhatsAppSession } = await import(
         "../services/WbotServices/StartWhatsAppSession"
       );
-      await StartWhatsAppSession(currentWapp, currentWapp.companyId);
+      if (reconnectTimeoutMap.get(id) !== timeout) return;
+      reconnectTimeoutMap.delete(id);
+      if (!currentWapp || currentWapp.status !== "RECONNECTING") return;
+      logger.info(`WhatsApp #${id}: reconnect attempt ${attempt}/${MAX_RECONNECT_ATTEMPTS} (reason: ${reason}).`);
+      await StartWhatsAppSession(currentWapp, currentWapp.companyId, true);
     } catch (err) {
-      logger.error(`Error during scheduled reconnect for #${whatsapp.id}: ${err}`);
+      logger.error(`Error during scheduled reconnect for #${id}: ${err}`);
+      if (reconnectTimeoutMap.get(id) === timeout) {
+        reconnectTimeoutMap.delete(id);
+        await scheduleReconnect(whatsapp, "startup failure").catch(error => logger.error(error));
+      }
     }
-  }, delayMs);
+  }, delay);
 
-  reconnectTimeoutMap.set(whatsapp.id, timeout);
+  reconnectTimeoutMap.set(id, timeout);
+  await statusUpdate;
 };
 
 /**
  * Inicializa a conexão com Baileys Multi-Device com resiliência total
  */
-export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const io = getIO();
+export const initWASocket = async (
+  whatsapp: Whatsapp,
+  reconnecting = false
+): Promise<Session | undefined> => {
+  const { id, name } = whatsapp;
+  if (startingSessions.has(id)) return;
+  const cleanup = removeWbot(id, false);
+  const start = Symbol();
+  startingSessions.set(id, start);
+  if (!reconnecting) reconnectRetriesMap.delete(id);
+  try {
+    await cleanup;
+    if (startingSessions.get(id) !== start) return;
+    const io = getIO();
 
-      const whatsappUpdate = await Whatsapp.findOne({
-        where: { id: whatsapp.id }
-      });
+    const whatsappUpdate = await Whatsapp.findOne({
+      where: { id: whatsapp.id }
+    });
 
-      if (!whatsappUpdate) {
-        return reject(new Error("WHATSAPP_NOT_FOUND"));
-      }
+    if (startingSessions.get(id) !== start || !whatsappUpdate) return;
+    const pairingRequested = whatsappUpdate.status === "pairing";
+    if (!reconnecting) await updateConnectionStatus(whatsappUpdate, "OPENING");
+    if (startingSessions.get(id) !== start) return;
 
-      const { id, name } = whatsappUpdate;
+    const { version, isLatest } = await fetchLatestBaileysVersion({ timeout: 10_000 });
+    logger.info(`Using WA v${version.join(".")}, isLatest: ${isLatest}. Starting session "${name}" (#${id}).`);
 
-      // Limpa qualquer conexão anterior para evitar sockets órfãos
-      await removeWbot(id, false);
+    const { state, saveState } = await authState(whatsappUpdate);
+    if (startingSessions.get(id) !== start) return;
 
-      const { version, isLatest } = await fetchLatestBaileysVersion();
-      logger.info(`Using WA v${version.join(".")}, isLatest: ${isLatest}. Starting session "${name}" (#${id}).`);
+    const msgRetryCounterCache = new NodeCache();
+    const userDevicesCache: CacheStore = new NodeCache();
 
-      const { state, saveState } = await authState(whatsappUpdate);
+    const wsocket: Session = makeWASocket({
+      logger: loggerBaileys,
+      printQRInTerminal: false,
+      browser: Browsers.ubuntu("Chrome"),
+      auth: {
+        creds: state.creds,
+        keys: makeCacheableSignalKeyStore(state.keys, logger),
+      },
+      version,
+      msgRetryCounterCache,
+      shouldIgnoreJid: jid => isJidBroadcast(jid),
+      connectTimeoutMs: 60000,
+      defaultQueryTimeoutMs: 60000,
+      keepAliveIntervalMs: 25000,
+    });
 
-      const msgRetryCounterCache = new NodeCache();
-      const userDevicesCache: CacheStore = new NodeCache();
+    wsocket.id = whatsappUpdate.id;
 
-      const wsocket: Session = makeWASocket({
-        logger: loggerBaileys,
-        printQRInTerminal: false,
-        browser: Browsers.ubuntu("Chrome"),
-        auth: {
-          creds: state.creds,
-          keys: makeCacheableSignalKeyStore(state.keys, logger),
-        },
-        version,
-        msgRetryCounterCache,
-        shouldIgnoreJid: jid => isJidBroadcast(jid),
-        connectTimeoutMs: 60000,
-        defaultQueryTimeoutMs: 60000,
-        keepAliveIntervalMs: 25000,
-      });
+    // Registra a sessão ativa em memória
+    const existingIndex = sessions.findIndex(s => s.id === id);
+    if (existingIndex !== -1) {
+      sessions[existingIndex] = wsocket;
+    } else {
+      sessions.push(wsocket);
+    }
 
-      wsocket.id = whatsappUpdate.id;
-
-      // Registra a sessão ativa em memória
-      const existingIndex = sessions.findIndex(s => s.id === id);
-      if (existingIndex !== -1) {
-        sessions[existingIndex] = wsocket;
-      } else {
-        sessions.push(wsocket);
-      }
-
-      // Suporte a Pairing Code (Código de 8 dígitos) quando explicitamente solicitado
-      if (!state.creds.registered && whatsappUpdate.status === "pairing" && whatsappUpdate.number) {
-        const cleanNumber = whatsappUpdate.number.replace(/\D/g, "");
-        if (cleanNumber.length >= 10) {
-          setTimeout(async () => {
-            try {
-              if (!wsocket.authState.creds.registered) {
-                const code = await wsocket.requestPairingCode(cleanNumber);
-                logger.info(`Pairing Code generated for WhatsApp #${id} (${cleanNumber}): ${code}`);
-                await whatsappUpdate.update({
-                  qrcode: code,
-                  status: "qrcode",
-                  retries: 0
-                });
-                io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
-                  `company-${whatsappUpdate.companyId}-whatsappSession`,
-                  {
-                    action: "update",
-                    session: whatsappUpdate
-                  }
-                );
-              }
-            } catch (errPair) {
-              logger.warn(`Could not request pairing code for #${id}: ${errPair}`);
+    // Suporte a Pairing Code (Código de 8 dígitos) quando explicitamente solicitado
+    if (!state.creds.registered && pairingRequested && whatsappUpdate.number) {
+      const cleanNumber = whatsappUpdate.number.replace(/\D/g, "");
+      if (cleanNumber.length >= 10) {
+        setTimeout(async () => {
+          try {
+            if (sessions.includes(wsocket) && !wsocket.authState.creds.registered) {
+              const code = await wsocket.requestPairingCode(cleanNumber);
+              if (!sessions.includes(wsocket)) return;
+              logger.info(`Pairing Code generated for WhatsApp #${id} (${cleanNumber}): ${code}`);
+              await whatsappUpdate.update({
+                qrcode: code,
+                status: "qrcode",
+                retries: 0
+              });
+              io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
+                `company-${whatsappUpdate.companyId}-whatsappSession`,
+                {
+                  action: "update",
+                  session: whatsappUpdate
+                }
+              );
             }
-          }, 3500);
-        }
+          } catch (errPair) {
+            logger.warn(`Could not request pairing code for #${id}: ${errPair}`);
+          }
+        }, 3500);
       }
+    }
 
-      // 1. Connection Update Listener
-      wsocket.ev.on(
-        "connection.update",
-        async ({ connection, lastDisconnect, qr }) => {
-          logger.info(`[Socket #${id} - ${name}] Connection Update: ${connection || "pending"} | QR: ${!!qr}`);
+    // 1. Connection Update Listener
+    wsocket.ev.on(
+      "connection.update",
+      async ({ connection, lastDisconnect, qr }) => {
+        if (!sessions.includes(wsocket)) return;
+        logger.info(`[Socket #${id} - ${name}] Connection Update: ${connection || "pending"} | QR: ${!!qr}`);
 
-          const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
+        const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
 
-          if (connection === "open") {
-            clearReconnectTimeout(id);
-            reconnectRetriesMap.delete(id);
+        if (connection === "open") {
+          clearReconnectTimeout(id);
+          if (reconnectRetriesMap.has(id) && !stableConnectionTimers.has(id)) {
+            stableConnectionTimers.set(id, setTimeout(() => {
+              stableConnectionTimers.delete(id);
+              if (sessions.includes(wsocket)) reconnectRetriesMap.delete(id);
+            }, STABLE_CONNECTION_MS));
+          }
+          retriesQrCodeMap.delete(id);
+
+          const number = jidNormalizedUser(wsocket.user?.id || "").split("@")[0];
+
+          await whatsappUpdate.update({
+            status: "CONNECTED",
+            qrcode: "",
+            retries: 0,
+            number: number || whatsappUpdate.number,
+            session: "connected"
+          });
+
+          if (!sessions.includes(wsocket)) return;
+          io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
+            `company-${whatsappUpdate.companyId}-whatsappSession`,
+            {
+              action: "update",
+              session: whatsappUpdate
+            }
+          );
+        }
+
+        if (connection === "close") {
+        logger.warn(`[Socket #${id} - ${name}] Connection closed with status code: ${statusCode} (${lastDisconnect?.error?.message ?? "unknown"})`);
+
+          // 401: Logged Out pelo dispositivo
+          if (statusCode === DisconnectReason.loggedOut) {
+            await whatsappUpdate.update({
+              status: "DISCONNECTED",
+              session: "",
+              qrcode: "",
+              number: ""
+            });
+            await removeWbot(id, true);
+            await DeleteBaileysService(id);
+            await deleteSessionFiles(id);
+
+            io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
+              `company-${whatsappUpdate.companyId}-whatsappSession`,
+              {
+                action: "update",
+                session: whatsappUpdate
+              }
+            );
+            return;
+          }
+
+          // 403: Forbidden / Banido
+          if (statusCode === 403) {
+            logger.error(`[Socket #${id} - ${name}] Access forbidden or number banned (403).`);
+            await whatsappUpdate.update({
+              status: "DISCONNECTED",
+              session: "",
+              qrcode: ""
+            });
+            await removeWbot(id, true);
+            await DeleteBaileysService(id);
+            await deleteSessionFiles(id);
+
+            io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
+              `company-${whatsappUpdate.companyId}-whatsappSession`,
+              {
+                action: "update",
+                session: whatsappUpdate
+              }
+            );
+            return;
+          }
+
+          // 440: Connection Replaced (aberto em outra sessão/navegador)
+          if (statusCode === DisconnectReason.connectionReplaced) {
+            logger.warn(`[Socket #${id} - ${name}] Connection replaced by another session (440).`);
+            await whatsappUpdate.update({
+              status: "DISCONNECTED",
+              qrcode: ""
+            });
+            await removeWbot(id, false);
+
+            io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
+              `company-${whatsappUpdate.companyId}-whatsappSession`,
+              {
+                action: "update",
+                session: whatsappUpdate
+              }
+            );
+            return;
+          }
+
+          // Baileys also reports 500 for unrecognized stream errors.
+          void removeWbot(id, false);
+          await scheduleReconnect(whatsappUpdate, statusCode ?? "unknown")
+            .catch(err => logger.error(`Could not reconnect WhatsApp #${id}: ${err}`));
+          return;
+        }
+
+        if (qr !== undefined) {
+          const currentRetries = retriesQrCodeMap.get(id) || 0;
+
+          if (currentRetries >= 5) {
+            logger.info(`[Socket #${id} - ${name}] Reached maximum QR code attempts (5). Setting DISCONNECTED.`);
+            await whatsappUpdate.update({
+              status: "DISCONNECTED",
+              qrcode: ""
+            });
+            await removeWbot(id, false);
             retriesQrCodeMap.delete(id);
 
-            const number = jidNormalizedUser(wsocket.user?.id || "").split("@")[0];
+            io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
+              `company-${whatsappUpdate.companyId}-whatsappSession`,
+              {
+                action: "update",
+                session: whatsappUpdate
+              }
+            );
+          } else {
+            retriesQrCodeMap.set(id, currentRetries + 1);
+            logger.info(`[Socket #${id} - ${name}] QR code attempt ${currentRetries + 1}/5 generated.`);
 
             await whatsappUpdate.update({
-              status: "CONNECTED",
-              qrcode: "",
-              retries: 0,
-              number: number || whatsappUpdate.number,
-              session: "connected"
+              qrcode: qr,
+              status: "qrcode",
+              retries: 0
             });
 
             io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
@@ -291,206 +449,63 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
               }
             );
           }
-
-          if (connection === "close") {
-            logger.warn(`[Socket #${id} - ${name}] Connection closed with status code: ${statusCode}`);
-
-            // 401: Logged Out pelo dispositivo
-            if (statusCode === DisconnectReason.loggedOut) {
-              await whatsappUpdate.update({
-                status: "DISCONNECTED",
-                session: "",
-                qrcode: "",
-                number: ""
-              });
-              await removeWbot(id, true);
-              await DeleteBaileysService(id);
-              await deleteSessionFiles(id);
-
-              io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
-                `company-${whatsappUpdate.companyId}-whatsappSession`,
-                {
-                  action: "update",
-                  session: whatsappUpdate
-                }
-              );
-              return;
-            }
-
-            // 403: Forbidden / Banido
-            if (statusCode === 403) {
-              logger.error(`[Socket #${id} - ${name}] Access forbidden or number banned (403).`);
-              await whatsappUpdate.update({
-                status: "DISCONNECTED",
-                session: "",
-                qrcode: ""
-              });
-              await removeWbot(id, true);
-              await DeleteBaileysService(id);
-              await deleteSessionFiles(id);
-
-              io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
-                `company-${whatsappUpdate.companyId}-whatsappSession`,
-                {
-                  action: "update",
-                  session: whatsappUpdate
-                }
-              );
-              return;
-            }
-
-            // 440: Connection Replaced (aberto em outra sessão/navegador)
-            if (statusCode === DisconnectReason.connectionReplaced) {
-              logger.warn(`[Socket #${id} - ${name}] Connection replaced by another session (440).`);
-              await whatsappUpdate.update({
-                status: "DISCONNECTED",
-                qrcode: ""
-              });
-              await removeWbot(id, false);
-
-              io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
-                `company-${whatsappUpdate.companyId}-whatsappSession`,
-                {
-                  action: "update",
-                  session: whatsappUpdate
-                }
-              );
-              return;
-            }
-
-            // 500: Bad Session (sessão corrompida)
-            if (statusCode === DisconnectReason.badSession) {
-              logger.error(`[Socket #${id} - ${name}] Bad session (500). Resetting files.`);
-              await whatsappUpdate.update({
-                status: "DISCONNECTED",
-                session: "",
-                qrcode: ""
-              });
-              await removeWbot(id, true);
-              await deleteSessionFiles(id);
-
-              io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
-                `company-${whatsappUpdate.companyId}-whatsappSession`,
-                {
-                  action: "update",
-                  session: whatsappUpdate
-                }
-              );
-              return;
-            }
-
-            // 515: Restart Required (WhatsApp pede reinicialização do handshake)
-            if (statusCode === DisconnectReason.restartRequired) {
-              logger.info(`[Socket #${id} - ${name}] Restart required (515). Reconnecting in 1000ms...`);
-              await removeWbot(id, false);
-              scheduleReconnect(whatsappUpdate, 1000);
-              return;
-            }
-
-            // Outras desconexões de rede (408 TimedOut, 428 ConnectionClosed, falhas temporárias)
-            const retries = reconnectRetriesMap.get(id) || 0;
-            reconnectRetriesMap.set(id, retries + 1);
-            const backoffDelay = calculateBackoff(retries);
-
-            logger.warn(
-              `[Socket #${id} - ${name}] Temporary disconnect (${statusCode || "network"}). Scheduling reconnect in ${backoffDelay}ms (attempt #${retries + 1}).`
-            );
-
-            await removeWbot(id, false);
-            scheduleReconnect(whatsappUpdate, backoffDelay);
-          }
-
-          if (qr !== undefined) {
-            const currentRetries = retriesQrCodeMap.get(id) || 0;
-
-            if (currentRetries >= 5) {
-              logger.info(`[Socket #${id} - ${name}] Reached maximum QR code attempts (5). Setting DISCONNECTED.`);
-              await whatsappUpdate.update({
-                status: "DISCONNECTED",
-                qrcode: ""
-              });
-              await removeWbot(id, false);
-              retriesQrCodeMap.delete(id);
-
-              io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
-                `company-${whatsappUpdate.companyId}-whatsappSession`,
-                {
-                  action: "update",
-                  session: whatsappUpdate
-                }
-              );
-            } else {
-              retriesQrCodeMap.set(id, currentRetries + 1);
-              logger.info(`[Socket #${id} - ${name}] QR code attempt ${currentRetries + 1}/5 generated.`);
-
-              await whatsappUpdate.update({
-                qrcode: qr,
-                status: "qrcode",
-                retries: 0
-              });
-
-              io.to(`company-${whatsappUpdate.companyId}-admin`).emit(
-                `company-${whatsappUpdate.companyId}-whatsappSession`,
-                {
-                  action: "update",
-                  session: whatsappUpdate
-                }
-              );
-            }
-          }
         }
-      );
+      }
+    );
 
-      // 2. Creds update listener
-      wsocket.ev.on("creds.update", saveState);
+    // 2. Creds update listener
+    wsocket.ev.on("creds.update", saveState);
 
-      // 3. Presence update listener
-      wsocket.ev.on(
-        "presence.update",
-        async ({ id: remoteJid, presences }) => {
-          try {
-            if (!presences[remoteJid]?.lastKnownPresence) {
-              return;
-            }
-            const contact = await Contact.findOne({
-              where: {
-                number: remoteJid.replace(/\D/g, ""),
-                companyId: whatsappUpdate.companyId
-              }
-            });
-            if (!contact) {
-              return;
-            }
-            const ticket = await Ticket.findOne({
-              where: {
-                contactId: contact.id,
-                whatsappId: whatsappUpdate.id,
-                status: {
-                  [Op.or]: ["open", "pending"]
-                }
-              }
-            });
-
-            if (ticket) {
-              io.to(ticket.id.toString())
-                .to(`company-${whatsappUpdate.companyId}-${ticket.status}`)
-                .to(`queue-${ticket.queueId}-${ticket.status}`)
-                .emit(`company-${whatsappUpdate.companyId}-presence`, {
-                  ticketId: ticket.id,
-                  presence: presences[remoteJid].lastKnownPresence
-                });
-            }
-          } catch (error) {
-            logger.error(`presence.update error for #${id}: ${error}`);
+    // 3. Presence update listener
+    wsocket.ev.on(
+      "presence.update",
+      async ({ id: remoteJid, presences }) => {
+        try {
+          if (!presences[remoteJid]?.lastKnownPresence) {
+            return;
           }
-        }
-      );
+          const contact = await Contact.findOne({
+            where: {
+              number: remoteJid.replace(/\D/g, ""),
+              companyId: whatsappUpdate.companyId
+            }
+          });
+          if (!contact) {
+            return;
+          }
+          const ticket = await Ticket.findOne({
+            where: {
+              contactId: contact.id,
+              whatsappId: whatsappUpdate.id,
+              status: {
+                [Op.or]: ["open", "pending"]
+              }
+            }
+          });
 
-      resolve(wsocket);
-    } catch (error) {
-      Sentry.captureException(error);
-      logger.error(`initWASocket error: ${error}`);
-      reject(error);
-    }
-  });
+          if (ticket) {
+            io.to(ticket.id.toString())
+              .to(`company-${whatsappUpdate.companyId}-${ticket.status}`)
+              .to(`queue-${ticket.queueId}-${ticket.status}`)
+              .emit(`company-${whatsappUpdate.companyId}-presence`, {
+                ticketId: ticket.id,
+                presence: presences[remoteJid].lastKnownPresence
+              });
+          }
+        } catch (error) {
+          logger.error(`presence.update error for #${id}: ${error}`);
+        }
+      }
+    );
+
+    return wsocket;
+  } catch (error) {
+    if (startingSessions.get(id) !== start) return;
+    Sentry.captureException(error);
+    logger.error(`initWASocket error: ${error}`);
+    void removeWbot(id, false);
+    await scheduleReconnect(whatsapp, "startup failure").catch(err => logger.error(err));
+  } finally {
+    if (startingSessions.get(id) === start) startingSessions.delete(id);
+  }
 };

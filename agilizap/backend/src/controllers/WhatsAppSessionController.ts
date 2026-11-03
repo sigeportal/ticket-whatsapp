@@ -1,10 +1,11 @@
 import { Request, Response } from "express";
-import { getWbot, removeWbot } from "../libs/wbot";
+import { removeWbot } from "../libs/wbot";
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
 import { StartWhatsAppSession } from "../services/WbotServices/StartWhatsAppSession";
 import UpdateWhatsAppService from "../services/WhatsappService/UpdateWhatsAppService";
 import DeleteBaileysService from "../services/BaileysServices/DeleteBaileysService";
 import { deleteSessionFiles } from "../helpers/authState";
+import { getIO } from "../libs/socket";
 
 import AppError from "../errors/AppError";
 
@@ -63,18 +64,15 @@ const remove = async (req: Request, res: Response): Promise<Response> => {
   const { companyId } = req.user;
   const whatsapp = await ShowWhatsAppService(whatsappId, companyId);
 
+  const stopping = removeWbot(whatsapp.id);
   await whatsapp.update({ status: "DISCONNECTED", session: "", qrcode: "", number: "" });
-
-  try {
-    const wbot = getWbot(whatsapp.id);
-    await wbot.logout();
-  } catch (err) {
-    // Socket was already disconnected or not initialized
-  }
-
-  await removeWbot(whatsapp.id, false);
+  await stopping;
   await DeleteBaileysService(whatsapp.id);
   await deleteSessionFiles(whatsapp.id);
+  getIO().to(`company-${companyId}-admin`).emit(
+    `company-${companyId}-whatsappSession`,
+    { action: "update", session: whatsapp }
+  );
 
   return res.status(200).json({ message: "Session disconnected." });
 };
