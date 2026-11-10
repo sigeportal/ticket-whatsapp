@@ -88,7 +88,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test:forms": "node tests/form-recovery.cjs",
-    "test:messages": "node tests/message-flows.cjs"
+    "test:messages": "node tests/message-flows.cjs",
+    "test:realtime": "node tests/socket-realtime.cjs"
   },
   "eslintConfig": {
     "extends": "react-app"

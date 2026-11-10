@@ -1,65 +1,66 @@
 import { getSessionToken } from "../../services/sessionToken";
 import { createContext } from "react";
 import openSocket from "socket.io-client";
-import { isExpired, decodeToken } from "react-jwt";
+import { isExpired } from "react-jwt";
 
 class ManagedSocket {
   constructor(socketManager) {
     this.socketManager = socketManager;
     this.rawSocket = socketManager.currentSocket;
     this.callbacks = [];
-    this.joins = [];
-
-    this.rawSocket.on("connect", () => {
-      if (this.rawSocket.io.opts.query?.r && !this.rawSocket.recovered) {
-        const refreshJoinsOnReady = () => {
-          for (const j of this.joins) {
-            console.debug("refreshing join", j);
-            this.rawSocket.emit(`join${j.event}`, ...j.params);
-          }
-          this.rawSocket.off("ready", refreshJoinsOnReady);
-        };
-        for (const j of this.callbacks) {
-          this.rawSocket.off(j.event, j.callback);
-          this.rawSocket.on(j.event, j.callback);
-        }
-        
-        this.rawSocket.on("ready", refreshJoinsOnReady);
-      }
-    });
+    this.joins = new Map();
+    this.roomSubscriptions = socketManager.roomSubscriptions;
+    this.closed = false;
   }
   
   on(event, callback) {
-    if (event === "ready" || event === "connect") {
-      return this.socketManager.onReady(callback);
-    }
+    if (this.closed) return;
+    if (event === "connect") event = "ready";
     this.callbacks.push({event, callback});
-    return this.rawSocket.on(event, callback);
+    this.rawSocket.on(event, callback);
+    if (event === "ready" && this.socketManager.socketReady) callback();
   }
   
   off(event, callback) {
+    if (event === "connect") event = "ready";
     const i = this.callbacks.findIndex((c) => c.event === event && c.callback === callback);
-    this.callbacks.splice(i, 1);
+    if (i !== -1) this.callbacks.splice(i, 1);
     return this.rawSocket.off(event, callback);
   }
   
   emit(event, ...params) {
+    if (this.closed) return;
     if (event.startsWith("join")) {
-      this.joins.push({ event: event.substring(4), params });
-      console.log("Joining", { event: event.substring(4), params});
+      const key = JSON.stringify([event, ...params]);
+      if (this.joins.has(key)) return;
+      this.joins.set(key, { event, params });
+      const subscription = this.roomSubscriptions.get(key);
+      if (subscription) {
+        subscription.count++;
+      } else {
+        this.roomSubscriptions.set(key, { event, params, count: 1 });
+        if (this.socketManager.socketReady) this.rawSocket.emit(event, ...params);
+      }
+      return;
     }
     return this.rawSocket.emit(event, ...params);
   }
   
   disconnect() {
-    for (const j of this.joins) {
-      this.rawSocket.emit(`leave${j.event}`, ...j.params);
-    }
-    this.joins = [];
+    if (this.closed) return;
+    this.closed = true;
     for (const c of this.callbacks) {
       this.rawSocket.off(c.event, c.callback);
     }
     this.callbacks = [];
+    for (const [key, j] of this.joins) {
+      const subscription = this.roomSubscriptions.get(key);
+      if (--subscription.count === 0) {
+        this.roomSubscriptions.delete(key);
+        if (this.rawSocket.connected) this.rawSocket.emit(`leave${j.event.substring(4)}`, ...j.params);
+      }
+    }
+    this.joins.clear();
   }
 }
 
@@ -75,6 +76,7 @@ const SocketManager = {
   currentUserId: -1,
   currentSocket: null,
   socketReady: false,
+  roomSubscriptions: new Map(),
 
   getSocket: function(companyId) {
     let userId = null;
@@ -91,6 +93,8 @@ const SocketManager = {
     }
 
     if (companyId !== this.currentCompanyId || userId !== this.currentUserId) {
+      this.socketReady = false;
+      this.roomSubscriptions = new Map();
       if (this.currentSocket) {
         console.warn("closing old socket - company or user changed");
         this.currentSocket.removeAllListeners();
@@ -135,6 +139,7 @@ const SocketManager = {
       });
       
       this.currentSocket.on("disconnect", (reason) => {
+        this.socketReady = false;
         console.warn(`socket disconnected because: ${reason}`);
         if (reason.startsWith("io server disconnect")) {
           console.warn("Reconnecting socket");
@@ -155,8 +160,12 @@ const SocketManager = {
         console.warn("socket connected", params);
       })
       
-      this.onReady(() => {
+      this.currentSocket.on("ready", () => {
         this.socketReady = true;
+        // The server drops rooms on disconnect. Restore each shared subscription once.
+        for (const { event, params } of this.roomSubscriptions.values()) {
+          this.currentSocket.emit(event, ...params);
+        }
       });
 
     }
