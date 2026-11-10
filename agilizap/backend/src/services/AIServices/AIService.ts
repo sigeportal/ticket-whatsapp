@@ -32,8 +32,9 @@ export interface AIResponseResult {
 }
 
 const sanitizeName = (name: string): string => {
-  let sanitized = (name || "").split(" ")[0];
+  let sanitized = (name || "").trim().split(/\s+/)[0];
   sanitized = sanitized.replace(/[^a-zA-Z0-9]/g, "");
+  if (/^\d/.test(sanitized)) return "";
   return sanitized.substring(0, 60);
 };
 
@@ -232,7 +233,11 @@ export const generateAIResponse = async (
     };
   }
 
-  const clientName = sanitizeName(contact?.name || "Amigo(a)");
+  const clientName = sanitizeName(contact?.name || "");
+  const clientReference = clientName || "o cliente";
+  const clientNameRule = clientName
+    ? `O nome do cliente é ${clientName}.`
+    : "O nome do cliente não foi identificado. Responda sem mencionar o nome e nunca use números de telefone, códigos ou identificadores como nome.";
 
   let companyQueues: Queue[] = [];
   try {
@@ -263,14 +268,14 @@ ${companyQueues.map(q => `* Se for assunto de ${q.name.toLowerCase()}: inclua ao
 
   const turnControlRule =
     assistantTurnsCount === 0
-      ? `- Esta é a PRIMEIRA interação desta conversa. Cumprimente ${clientName} de forma breve e cordial.`
+      ? `- Esta é a PRIMEIRA interação desta conversa. Cumprimente ${clientReference} de forma breve e cordial.`
       : assistantTurnsCount === 1
-      ? `- ATENÇÃO: Você JÁ cumprimentou ${clientName} anteriormente nesta conversa. É PROIBIDO iniciar a resposta com "Olá", "Oi", "Bom dia/Boa tarde" ou se apresentar novamente! Vá direto ao ponto.
+      ? `- ATENÇÃO: Você JÁ cumprimentou ${clientReference} anteriormente nesta conversa. É PROIBIDO iniciar a resposta com "Olá", "Oi", "Bom dia/Boa tarde" ou se apresentar novamente! Vá direto ao ponto.
 - Se o cliente já informou o problema, a rotina/tela e o erro (ou se for assunto financeiro/comercial claro), TRANSFIRA IMEDIATAMENTE agora. Caso falte saber qual é o erro/tela, faça NO MÁXIMO 1 pergunta direta e objetiva.`
       : `- ATENÇÃO MÁXIMA (LIMITE DE TRIAGEM ATINGIDO - ${assistantTurnsCount} interações anteriores): É TERMINANTEMENTE PROIBIDO iniciar com "Olá" e PROIBIDO fazer novas perguntas! Com base nas informações que o cliente já passou no histórico, ENCAMINHE IMEDIATAMENTE nesta resposta para o setor responsável, incluindo a ação de transferência e o bloco [RESUMO_IA].`;
 
   const promptSystem = `Você atua como Assistente de Triagem e Encaminhamento Rápido para atendimento.
-O nome do cliente é ${clientName}. Sua resposta deve ser curta, objetiva e usar no máximo ${prompt.maxTokens || 500} tokens.
+${clientNameRule} Sua resposta deve ser curta, objetiva e usar no máximo ${prompt.maxTokens || 500} tokens.
 
 DIRETRIZES DA EMPRESA:
 ${prompt.prompt}
