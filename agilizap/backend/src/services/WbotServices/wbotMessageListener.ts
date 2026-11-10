@@ -380,6 +380,12 @@ export const getBodyMessage = (msg: proto.IWebMessageInfo): string | null => {
 
   try {
     let type = getTypeMessage(msg);
+    const content = extractMessageContent(msg.message);
+    const document = content?.documentMessage;
+    if (document) {
+      return document.caption?.trim() || document.title || document.fileName || "Documento";
+    }
+    if (content?.imageMessage) return content.imageMessage.caption?.trim() || "Imagem";
 
     const types = {
       conversation: msg?.message?.conversation,
@@ -403,8 +409,6 @@ export const getBodyMessage = (msg: proto.IWebMessageInfo): string | null => {
         msg.message?.locationMessage?.degreesLongitude
       ),
       liveLocationMessage: `Latitude: ${msg.message?.liveLocationMessage?.degreesLatitude} - Longitude: ${msg.message?.liveLocationMessage?.degreesLongitude}`,
-      documentMessage: msg.message?.documentMessage?.title,
-      documentWithCaptionMessage: msg.message?.documentWithCaptionMessage?.message?.documentMessage?.caption,
       audioMessage: "Áudio",
       listMessage: getBodyButton(msg) || msg.message?.listResponseMessage?.title,
       listResponseMessage: msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId,
@@ -676,8 +680,10 @@ const handleOpenAi = async (
   mediaSent: Message | undefined
 ): Promise<void> => {
   const bodyMessage = getBodyMessage(msg);
+  const content = extractMessageContent(msg.message);
+  const attachment = content?.documentMessage || content?.imageMessage;
 
-  if (!bodyMessage && !msg.message?.audioMessage) return;
+  if (!bodyMessage && !attachment && !content?.audioMessage) return;
   if (msg.messageStubType) return;
 
   let prompt = null;
@@ -721,14 +727,23 @@ const handleOpenAi = async (
     });
 
     let audioFilePath: string | undefined;
-    if (msg.message?.audioMessage && mediaSent?.mediaUrl) {
+    if (content?.audioMessage && mediaSent?.mediaUrl) {
       const mediaFileName = mediaSent.mediaUrl.split("/").pop();
       if (mediaFileName) {
         audioFilePath = `${publicFolder}/${mediaFileName}`;
       }
     }
 
-    const aiResult = await generateAIResponse({
+    // Attachments without context go to humans; the text/audio AI flow cannot read their contents.
+    const attachmentWithoutContext = !!attachment && !attachment.caption?.trim();
+    const aiResult = attachmentWithoutContext ? {
+      text: "Recebi seu arquivo. Vou encaminhá-lo à nossa equipe para dar continuidade ao atendimento.",
+      transferQueue: true,
+      queueId: prompt.queueId,
+      summary: "*Motivo:* Anexo recebido sem legenda.\n*Anexo:* " +
+        (content.documentMessage?.fileName || content.documentMessage?.title || (content.imageMessage ? "Imagem" : "Documento")) +
+        "\n*Ação:* Analisar o arquivo e confirmar a solicitação com o cliente. O conteúdo do anexo não foi analisado pela IA."
+    } : await generateAIResponse({
       prompt,
       ticket,
       contact,
@@ -740,7 +755,7 @@ const handleOpenAi = async (
     let response = aiResult.text;
 
     if (response && response.trim() !== "") {
-      if (prompt.voice === "texto") {
+      if (prompt.voice === "texto" || attachmentWithoutContext) {
         const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, {
           text: response
         });
@@ -1864,14 +1879,14 @@ const handleMessage = async (
 
     const bodyMessage = getBodyMessage(msg);
     const msgType = getTypeMessage(msg);
+    const content = extractMessageContent(msg.message);
 
     const hasMedia =
-      msg.message?.audioMessage ||
-      msg.message?.imageMessage ||
-      msg.message?.videoMessage ||
-      msg.message?.documentMessage ||
-      msg.message?.documentWithCaptionMessage ||
-      msg.message.stickerMessage;
+      content?.audioMessage ||
+      content?.imageMessage ||
+      content?.videoMessage ||
+      content?.documentMessage ||
+      content?.stickerMessage;
     if (msg.key.fromMe) {
       if (/\u200e/.test(bodyMessage)) return;
 
@@ -1930,6 +1945,11 @@ const handleMessage = async (
 
     const ticket = await FindOrCreateTicketService(contact, wbot.id!, unreadMessages, companyId, groupContact);
 
+    // Reactions remain in the conversation history but do not start triage or integrations.
+    if (msgType === "reactionMessage") {
+      await verifyMessage(msg, ticket, contact);
+      return;
+    }
 
 
     await provider(ticket, msg, companyId, contact, wbot as WASocket);

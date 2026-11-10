@@ -80,6 +80,8 @@ Module._load = function(request, parent, ...rest) {
 const load = name => require(path.join(source, name));
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
+const budgetDate = new Date();
+const budgetPeriod = `${budgetDate.getFullYear()}-${String(budgetDate.getMonth() + 1).padStart(2, '0')}`;
 
 let pg;
 
@@ -184,7 +186,7 @@ let pg;
     status: true,
     aiMonthlyBudgetLimit: 100.0,
     aiMonthlySpent: 0,
-    aiBudgetPeriod: '2026-10',
+    aiBudgetPeriod: budgetPeriod,
     aiRequestsCount: 0
   });
 
@@ -396,7 +398,7 @@ Ação: Transferir para a fila [Financeiro]
       status: true,
       aiMonthlyBudgetLimit: 10.0,
       aiMonthlySpent: 10.5,
-      aiBudgetPeriod: '2026-10',
+      aiBudgetPeriod: budgetPeriod,
       aiRequestsCount: 50
     });
 

@@ -285,6 +285,43 @@ let pg, server, io;
     assert.equal((await request.put(`/tickets/${ticket.id}/transfer-check`).set(auth(admin)).send({ status:'open', userId:admin.id })).status,409);
     await ticket.reload(); assert.equal(ticket.userId,supervisor.id);
   });
+  test('Historico integral e paginado acompanha transferencia de supervisor, com e sem troca de fila', async () => {
+    const transferring = await User.create({ name: 'Supervisor de transferencia', email: 'history-supervisor@example.invalid', password: 'InitialPass123', profile: 'supervisor', companyId: c1.id, tokenVersion: 0, blocked: false });
+    await transferring.$set('queues', [q1.id, qOther.id]);
+    const sender = await User.findByPk(transferring.id, { include: [Queue, Company] });
+    for (const changeQueue of [true, false]) for (const recipient of [agent, supervisor, admin]) {
+      const sourceQueue = changeQueue ? qOther.id : q1.id;
+      const ticket = await Ticket.create({ status: 'open', companyId: c1.id, contactId: contact.id, queueId: sourceQueue, userId: sender.id });
+      const originals = Array.from({ length: 45 }, (_, i) => ({
+        id: `history-${ticket.id}-${String(i).padStart(2, '0')}`, body: `Mensagem ${i}`,
+        companyId: c1.id, ticketId: ticket.id, contactId: contact.id,
+        queueId: i < 30 ? sourceQueue : i < 40 ? null : q1.id,
+        createdAt: new Date('2026-01-01T00:00:00Z')
+      }));
+      await Message.bulkCreate(originals);
+      // Legacy inconsistent data must never leak across the company boundary.
+      await Message.create({ id: `history-foreign-${ticket.id}`, companyId: c2.id, ticketId: ticket.id, body: 'Privado B' });
+      const transferred = await request.put(`/tickets/${ticket.id}/transfer-check`).set(auth(sender)).send({ status: 'open', userId: recipient.id, queueId: q1.id });
+      assert.equal(transferred.status, 200, JSON.stringify(transferred.body));
+      assert.equal(transferred.body.id, ticket.id, 'Transfer preserves the ticket');
+      const received = [];
+      for (let pageNumber = 1; pageNumber <= 3; pageNumber++) {
+        const response = await request.get(`/messages/${ticket.id}`).query({ pageNumber }).set(auth(recipient));
+        assert.equal(response.status, 200, JSON.stringify(response.body));
+        assert.equal(response.body.count, 45, `${recipient.profile}: historical queue must not truncate the ticket`);
+        assert.equal(response.body.messages.length, pageNumber < 3 ? 20 : 5);
+        assert.equal(response.body.hasMore, pageNumber < 3);
+        received.unshift(...response.body.messages.map(message => message.id));
+      }
+      assert.deepEqual(received, originals.map(message => message.id), 'All pages are complete and consistently ordered, including equal timestamps');
+      const persisted = await Message.findAll({ where: { ticketId: ticket.id, companyId: c1.id }, order: [['id', 'ASC']] });
+      assert.deepEqual(persisted.map(message => [message.id, message.queueId, message.body]), originals.map(message => [message.id, message.queueId, message.body]), 'Transfer does not rewrite message history');
+      assert.equal((await request.get(`/messages/${ticket.id}`).set(auth(actors[`admin${c2.id}`]))).status, 403);
+      await ticket.reload();
+      await ticket.update({ queueId: qOther.id });
+      for (const actor of [agent, supervisor]) assert.equal((await request.get(`/messages/${ticket.id}`).set(auth(actor))).status, 403, 'Current queue access is still enforced');
+    }
+  });
   test('Admin como destinatario dispensa vinculo de fila; supervisor e atendente continuam exigindo vinculo', async () => {
     for (const body of [{ status: 'open', userId: admin.id, queueId: qOther.id }, { status: 'open', userId: admin.id, queueId: null }]) {
       assert.equal((await request.put(`/tickets/${t1.id}`).set(auth(admin)).send(body)).status,200);
