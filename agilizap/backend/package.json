@@ -17,7 +17,7 @@
     "test:security": "node tests/security/run.cjs",
     "test:governance": "node tests/governance/run.cjs",
     "test:reliability": "node tests/reliability/run.cjs",
-    "test:ai-supervision": "node tests/ai-supervision/incoming-messages.cjs && node tests/ai-supervision/run.cjs",
+    "test:ai-supervision": "node tests/ai-supervision/client-name.cjs && node tests/ai-supervision/incoming-messages.cjs && node tests/ai-supervision/run.cjs",
     "test:operation": "node tests/operation/run.cjs",
     "test:homologation": "node tests/homologation/run.cjs"
   },
