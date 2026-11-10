@@ -11,7 +11,6 @@ import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
 import { getIO } from "../libs/socket";
 import Ticket from "../models/Ticket";
 import Message from "../models/Message";
-import Queue from "../models/Queue";
 import User from "../models/User";
 import Whatsapp from "../models/Whatsapp";
 import { isNil } from "lodash";
@@ -46,23 +45,12 @@ type MessageData = {
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { ticketId } = req.params;
   const { pageNumber } = req.query as IndexQuery;
-  const { companyId, profile } = req.user;
-  const queues: number[] = [];
-
-  if (profile !== "admin") {
-    const user = await User.findByPk(req.user.id, {
-      include: [{ model: Queue, as: "queues" }]
-    });
-    user.queues.forEach(queue => {
-      queues.push(queue.id);
-    });
-  }
+  const { companyId } = req.user;
 
   const { count, messages, ticket, hasMore } = await ListMessagesService({
     pageNumber,
     ticketId,
-    companyId,
-    queues
+    companyId
   });
 
   SetTicketMessagesAsRead(ticket);
