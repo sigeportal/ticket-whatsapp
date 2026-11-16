@@ -143,10 +143,14 @@ export const authorizeRequest = async (req: Request, actor: any): Promise<void> 
   }
   for (const [field, model] of Object.entries({ contactId: Contact, userId: User, queueId: Queue,
     whatsappId: Whatsapp, promptId: Prompt, integrationId: QueueIntegrations,
-    contactListId: ContactList, fileId: Files, fileListId: Files })) {
+    contactListId: ContactList, fileId: Files, fileListId: Files,
+    tagListId: Tag, transferQueueId: Queue })) {
     for (const id of [body[field], req.query[field], req.params[field]]) {
       if (id !== undefined && id !== null && id !== "" && Number(id) !== 0) {
-        const record = await tenantRecord(actor, model, id);
+        // CampaignModal initializes tagListId to "Nenhuma" when no tag is selected.
+        if (field === "tagListId" && id === "Nenhuma") continue;
+        if ((typeof id !== "number" && typeof id !== "string") || !Number.isInteger(Number(id)) || Number(id) <= 0) deny();
+        const record = await tenantRecord(actor, model, Number(id));
         if (field === "queueId" && actor.profile !== "admin" && !actor.queues.some((q: any) => q.id === record.id)) deny();
       }
     }
