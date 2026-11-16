@@ -200,21 +200,23 @@ async function handleSendMessage(job) {
 
 async function handleCloseTicketsAutomatic() {
   const job = new CronJob('*/1 * * * *', async () => {
-    const companies = await Company.findAll();
-    companies.map(async c => {
-
-      try {
-        const companyId = c.id;
-        await ClosedAllOpenTickets(companyId);
-      } catch (e: any) {
-        Sentry.captureException(e);
-        logger.error("ClosedAllOpenTickets -> Verify: error", e.message);
-        throw e;
+    try {
+      const companies = await Company.findAll();
+      for (const c of companies) {
+        try {
+          const companyId = c.id;
+          await ClosedAllOpenTickets(companyId);
+        } catch (e: any) {
+          Sentry.captureException(e);
+          logger.error("ClosedAllOpenTickets -> Verify: error", e.message);
+        }
       }
-
-    });
+    } catch (e: any) {
+      Sentry.captureException(e);
+      logger.error("handleCloseTicketsAutomatic -> Verify: error", e.message);
+    }
   });
-  job.start()
+  job.start();
 }
 
 async function handleVerifySchedules(job) {
