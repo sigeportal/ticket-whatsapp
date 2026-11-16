@@ -106,7 +106,21 @@ class User extends Model<User> {
   @BelongsTo(() => Whatsapp)
   whatsapp: Whatsapp;
 
+  private static readonly SESSION_REVOKING_FIELDS = [
+    "passwordHash",
+    "tokenVersion",
+    "blocked",
+    "profile",
+    "companyId"
+  ] as const;
+
   @AfterUpdate
+  static async revokeSocketsOnSensitiveChange(instance: User): Promise<void> {
+    if (User.SESSION_REVOKING_FIELDS.some(field => instance.changed(field))) {
+      await User.revokeSockets(instance);
+    }
+  }
+
   @AfterDestroy
   static async revokeSockets(instance: User): Promise<void> {
     const { disconnectUser } = await import("../libs/socket");
@@ -116,8 +130,9 @@ class User extends Model<User> {
   @BeforeUpdate
   @BeforeCreate
   static hashPassword = async (instance: User): Promise<void> => {
-    if (instance.password) {
+    if (instance.password && (instance.isNewRecord || instance.changed("password"))) {
       instance.passwordHash = await hash(instance.password, 12);
+      instance.setDataValue("password", undefined as any);
     }
   };
 

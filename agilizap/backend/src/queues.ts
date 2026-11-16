@@ -847,9 +847,13 @@ async function handleLoginStatus(job) {
   );
   for (let item of users) {
     try {
-      const user = await User.findByPk(item.id);
-      await user.update({ online: false });
-      logger.info(`Usuário passado para offline: ${item.id}`);
+      const [updatedCount] = await User.update(
+        { online: false },
+        { where: { id: item.id, online: true } }
+      );
+      if (updatedCount > 0) {
+        logger.info(`Usuário passado para offline: ${item.id}`);
+      }
     } catch (e: any) {
       Sentry.captureException(e);
     }
