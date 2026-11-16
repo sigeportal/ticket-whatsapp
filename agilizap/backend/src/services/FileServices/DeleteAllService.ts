@@ -2,15 +2,13 @@ import Files from "../../models/Files";
 import AppError from "../../errors/AppError";
 
 const DeleteAllService = async (companyId: number): Promise<void> => {
-  await Files.findAll({
-    where: { companyId }
-  });
-
-  if (!Files) {
-    throw new AppError("ERR_NO_RATING_FOUND", 404);
+  if (!Number.isInteger(companyId) || companyId <= 0) {
+    throw new AppError("ERR_INVALID_COMPANY", 400);
   }
 
-  await Files.destroy({ where: {} });
+  await Files.destroy({
+    where: { companyId }
+  });
 };
 
 export default DeleteAllService;
