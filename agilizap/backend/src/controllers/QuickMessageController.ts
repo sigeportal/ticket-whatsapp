@@ -13,9 +13,10 @@ import QuickMessage from "../models/QuickMessage";
 
 import { head } from "lodash";
 import fs from "fs";
-import path from "path";
 
 import AppError from "../errors/AppError";
+import uploadConfig from "../config/upload";
+import { confinedPath } from "../security/media";
 
 type IndexQuery = {
   searchParam: string;
@@ -160,15 +161,22 @@ export const mediaUpload = async (
 
   try {
     const quickmessage = await QuickMessage.findByPk(id);
-    
-    quickmessage.update ({
+    if (!quickmessage) {
+      throw new AppError("ERR_NO_QUICKMESSAGE_FOUND", 404);
+    }
+    if (!file) {
+      throw new AppError("ERR_INVALID_MEDIA", 400);
+    }
+
+    await quickmessage.update({
       mediaPath: file.filename,
       mediaName: file.originalname
     });
 
     return res.send({ mensagem: "Arquivo Anexado" });
-    } catch (err: any) {
-      throw new AppError(err.message);
+  } catch (err: any) {
+    if (err instanceof AppError) throw err;
+    throw new AppError(err.message);
   }
 };
 
@@ -177,22 +185,32 @@ export const deleteMedia = async (
   res: Response
 ): Promise<Response> => {
   const { id } = req.params;
-  const { companyId } = req.user
 
   try {
     const quickmessage = await QuickMessage.findByPk(id);
-    const filePath = path.resolve("public","quickMessage",quickmessage.mediaName);
-    const fileExists = fs.existsSync(filePath);
-    if (fileExists) {
-      fs.unlinkSync(filePath);
+    if (!quickmessage) {
+      throw new AppError("ERR_NO_QUICKMESSAGE_FOUND", 404);
     }
-    quickmessage.update ({
+
+    const storedMediaPath = quickmessage.getDataValue("mediaPath");
+    if (storedMediaPath) {
+      const filePath = confinedPath(
+        uploadConfig.directory,
+        `quickMessage/${storedMediaPath}`
+      );
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    await quickmessage.update({
       mediaPath: null,
       mediaName: null
     });
 
     return res.send({ mensagem: "Arquivo Excluído" });
-    } catch (err: any) {
-      throw new AppError(err.message);
+  } catch (err: any) {
+    if (err instanceof AppError) throw err;
+    throw new AppError(err.message);
   }
 };
