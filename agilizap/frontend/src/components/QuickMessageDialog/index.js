@@ -126,7 +126,13 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
 
     const handleSaveQuickeMessage = async (values) => {
 
-        const { mediaPath: ignoredPath, ...fields } = values;
+        const {
+            mediaPath: ignoredPath,
+            mediaName: ignoredName,
+            mediaUrl: ignoredUrl,
+            path: ignoredFilePath,
+            ...fields
+        } = values;
         const quickemessageData = { ...fields, isMedia: true };
 
         try {
@@ -173,6 +179,7 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
             setQuickemessage((prev) => ({
                 ...prev,
                 mediaPath: null,
+                mediaName: null,
             }));
             toast.success(i18n.t("quickMessages.toasts.deleted"));
             if (typeof reload == "function") {

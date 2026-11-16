@@ -125,6 +125,7 @@ let pg, server, io;
   app.use(load('routes/invoicesRoutes.ts').default);
   app.use(load('routes/filesRoutes.ts').default);
   app.use(load('routes/campaignRoutes.ts').default);
+  app.use(load('routes/quickMessageRoutes.ts').default);
   app.put('/queue/:queueId', isAuth, load('controllers/QueueController.ts').update);
   app.post('/whatsapp', isAuth, (req, res) => res.json({ ok: true }));
   app.put('/whatsapp/:whatsappId', isAuth, (req, res) => res.json({ ok: true }));
@@ -963,6 +964,86 @@ let pg, server, io;
     assert.equal(removeFieldARes.status, 200);
     assert.equal(await ContactCustomField.findByPk(fieldA.id), null);
     assert.ok(await ContactCustomField.findByPk(fieldB.id));
+  });
+  test('QuickMessages: bloqueia mediaName no body e usa confinedPath sobre mediaPath em deleteMedia', async () => {
+    const QuickMessage = load('models/QuickMessage.ts').default;
+    const freshAdmin = await User.findByPk(admin.id, { include: [Queue, Company] });
+    const freshAgent = await User.findByPk(agent.id, { include: [Queue, Company] });
+    const otherAdmin = await User.findByPk(actors[`admin${c2.id}`].id, { include: [Queue, Company] });
+    const outsideVictim = path.join(temp, 'outside-victim.txt');
+    fs.writeFileSync(outsideVictim, 'nao-apagar');
+
+    // 1. authorizeRequest bloqueia mediaName, mediaPath, mediaUrl e path em POST e PUT
+    for (const key of ['mediaName', 'mediaPath', 'mediaUrl', 'path']) {
+      assert.equal((await request.post('/quick-messages').set(auth(freshAdmin)).send({
+        shortcode: 'ataque',
+        message: 'Tentativa traversal',
+        geral: false,
+        [key]: '../outside-victim.txt'
+      })).status, 403, `POST com ${key} deveria falhar`);
+    }
+
+    // 2. Fluxo legitimo: cria, edita sem mediaName, anexa e remove arquivo fisico sem deixar orfao
+    const created = await request.post('/quick-messages').set(auth(freshAdmin)).send({
+      shortcode: 'boasvindas',
+      message: 'Ola! Segue anexo.',
+      geral: true
+    });
+    assert.equal(created.status, 200, JSON.stringify(created.body));
+    const qmId = created.body.id;
+
+    for (const key of ['mediaName', 'mediaPath', 'mediaUrl', 'path']) {
+      assert.equal((await request.put(`/quick-messages/${qmId}`).set(auth(freshAdmin)).send({
+        shortcode: 'boasvindas',
+        message: 'Editado',
+        geral: true,
+        [key]: key === 'mediaName' ? 'original.png' : '../outside-victim.txt'
+      })).status, 403, `PUT com ${key} deveria falhar`);
+    }
+
+    assert.equal((await request.put(`/quick-messages/${qmId}`).set(auth(freshAdmin)).send({
+      shortcode: 'boasvindas',
+      message: 'Editado sem mediaName',
+      geral: true
+    })).status, 200);
+
+    const pngBytes = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex');
+    const uploaded = await request.post(`/quick-messages/${qmId}/media-upload`)
+      .set(auth(freshAdmin))
+      .attach('file', pngBytes, { filename: 'anexo-rapido.png', contentType: 'image/png' });
+    assert.equal(uploaded.status, 200, JSON.stringify(uploaded.body));
+
+    const recordAfterUpload = await QuickMessage.findByPk(qmId);
+    const storedHexName = recordAfterUpload.getDataValue('mediaPath');
+    assert.ok(storedHexName && /^[a-f0-9]+\.png$/.test(storedHexName));
+    assert.equal(recordAfterUpload.mediaName, 'anexo-rapido.png');
+    const diskFile = path.join(temp, 'quickMessage', storedHexName);
+    assert.equal(fs.existsSync(diskFile), true);
+
+    // Atendente e admin de outra empresa nao podem remover anexo
+    assert.equal((await request.delete(`/quick-messages/${qmId}/media-upload`).set(auth(freshAgent))).status, 403);
+    assert.equal((await request.delete(`/quick-messages/${qmId}/media-upload`).set(auth(otherAdmin))).status, 403);
+    assert.equal(fs.existsSync(diskFile), true);
+
+    // Remocao legitima apaga o arquivo real (mediaPath) e limpa mediaPath/mediaName antes de responder
+    const deleted = await request.delete(`/quick-messages/${qmId}/media-upload`).set(auth(freshAdmin));
+    assert.equal(deleted.status, 200, JSON.stringify(deleted.body));
+    assert.equal(fs.existsSync(diskFile), false, 'Arquivo fisico em quickMessage nao pode ficar orfao');
+    const recordAfterDelete = await QuickMessage.findByPk(qmId);
+    assert.equal(recordAfterDelete.getDataValue('mediaPath'), null);
+    assert.equal(recordAfterDelete.mediaName, null);
+
+    // 3. Defesa em profundidade: mediaName malicioso no banco nao e usado, e mediaPath invalido e rejeitado por confinedPath
+    await recordAfterDelete.update({ mediaName: '../outside-victim.txt', mediaPath: null });
+    assert.equal((await request.delete(`/quick-messages/${qmId}/media-upload`).set(auth(freshAdmin))).status, 200);
+    assert.equal(fs.existsSync(outsideVictim), true, 'Arquivo externo nao pode ser apagado via mediaName');
+
+    await recordAfterDelete.update({ mediaPath: '../outside-victim.txt', mediaName: 'ok.txt' });
+    assert.equal((await request.delete(`/quick-messages/${qmId}/media-upload`).set(auth(freshAdmin))).status, 400);
+    assert.equal(fs.existsSync(outsideVictim), true, 'Arquivo externo nao pode ser apagado via mediaPath traversal');
+
+    fs.rmSync(outsideVictim, { force: true });
+    await recordAfterDelete.destroy();
   });
   let failed=0;
   for(const {name,fn} of tests) {

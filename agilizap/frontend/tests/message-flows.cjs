@@ -105,5 +105,19 @@ const handler = (component, name, scope) => {
     for (const key of ['mediaPath','mediaUrl','createdAt','id']) assert.equal(key in payload,false,`${component}/${key}`);
     checks++;
   }
+  let qmPayload;
+  await handler('QuickMessageDialog', 'handleSaveQuickeMessage', {
+    quickemessageId: 1, attachment: null,
+    api: { put: async (url, data) => { assert.equal(url, '/quick-messages/1'); qmPayload = data; } },
+    toast: { success() {} }, i18n: { t: key => key }, reload: null, handleClose() {},
+    toastError: error => { throw error; }
+  })({
+    shortcode: 'ola', message: 'Oi', geral: false, status: true,
+    mediaPath: 'stored.png', mediaName: 'original.png', mediaUrl: '/public/stored.png', path: 'x'
+  });
+  for (const key of ['mediaPath', 'mediaName', 'mediaUrl', 'path']) {
+    assert.equal(key in qmPayload, false, `QuickMessageDialog/${key}`);
+  }
+  checks++;
   console.log(`PASS ${checks} checks: text, quotes, editing, greeting, media, quick replies and audio`);
 })().catch(error=>{console.error(error);process.exitCode=1;});

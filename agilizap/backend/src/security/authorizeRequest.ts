@@ -50,7 +50,7 @@ export const authorizeRequest = async (req: Request, actor: any): Promise<void> 
   if (body.blocked !== undefined && (resource !== "users" || actor.profile !== "admin" || typeof body.blocked !== "boolean")) deny();
   if (write && Object.keys(body).some(key => ["super", "tokenVersion", "passwordHash", "resetPassword",
       "resetTokenHash", "resetTokenExpiresAt", "mustChangePassword", "mfaLastStep",
-      "mediaPath", "mediaUrl", "path"].includes(key))) deny();
+      "mediaPath", "mediaUrl", "path", "mediaName"].includes(key))) deny();
   if (write && body.id !== undefined) {
     const mappedId = resources[resource]?.[1];
     const routeId = (mappedId && req.params[mappedId]) || req.params.id || req.params.userId || req.params.ticketId || req.params.queueId ||
