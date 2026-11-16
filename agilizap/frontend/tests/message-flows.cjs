@@ -58,6 +58,8 @@ const handler = (component, name, scope) => {
     const events = [], callbacks = [];
     const first = new File(['image'], 'image.png', { type: 'image/png' });
     const second = new File(['audio'], 'audio.mp3', { type: 'audio/mpeg' });
+    const compressedBlob = new Blob(['compressed'], { type: 'image/png' });
+    compressedBlob.name = 'image.png';
     const saving = handler('MessageInputCustom', 'handleUploadMedia', {
       medias: [first, second], FormData, ticketId: 7,
       Compressor: class { constructor(file, options) { callbacks.push(options); } },
@@ -67,19 +69,55 @@ const handler = (component, name, scope) => {
     })({ preventDefault() {} });
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(events.some(([key]) => key === 'sent'), false);
-    if (failCompression) callbacks[0].error(Error('Compression failed')); else callbacks[0].success(first);
+    if (failCompression) callbacks[0].error(Error('Compression failed')); else callbacks[0].success(compressedBlob);
     await saving;
     assert.equal(events.some(([key]) => key === 'clear'), !failCompression);
     assert.equal(events.some(([key]) => key === 'sent'), !failCompression); checks++;
   }
+  {
+    const callbacks = [];
+    const unnamed = new File(['image'], 'foto.jpg', { type: 'image/jpeg' });
+    const blobWithoutName = new Blob(['compressed'], { type: 'image/jpeg' });
+    const saving = handler('MessageInputCustom', 'handleUploadMedia', {
+      medias: [unnamed], FormData, ticketId: 7,
+      Compressor: class { constructor(file, options) { callbacks.push(options); } },
+      setLoading: () => {}, setPercentLoading: () => {},
+      setMedias: () => {}, toastError: error => { throw error; },
+      api: { post: async (_url, data) => { assert.equal(data.getAll('medias')[0].name, 'image.jpg'); } }
+    })({ preventDefault() {} });
+    await new Promise(resolve => setImmediate(resolve));
+    callbacks[0].success(blobWithoutName);
+    await saving;
+    checks++;
+  }
   for (const stage of ['download', 'send', 'success']) {
-    let cleared = false;
+    let cleared = false, forwardedMediaPath = null;
     await handler('MessageInputCustom','handleQuickAnswersClick',{
       api: { get: async () => { if(stage==='download')throw Error('HTTP 403');return {data:new Blob(['image'])}; } },
-      handleUploadQuickMessageMedia: async () => stage === 'success',
+      handleUploadQuickMessageMedia: async (_blob, _msg, mediaPath) => { forwardedMediaPath = mediaPath; return stage === 'success'; },
       setInputMessage: () => { cleared=true; }, toastError: () => {}
     })({mediaPath:'/public/test.png',value:'Resposta'});
-    assert.equal(cleared, stage==='success'); checks++;
+    assert.equal(cleared, stage==='success');
+    if (stage !== 'download') assert.equal(forwardedMediaPath, '/public/test.png');
+    checks++;
+  }
+  for (const [mime, mediaPath, expectedExt] of [
+    ['audio/mpeg', 'https://host/public/quickMessage/a1b2.mp3', '.mp3'],
+    ['text/plain;charset=utf-8', 'https://host/public/quickMessage/a1b2.txt?v=1', '.txt'],
+    ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', '/public/quickMessage/a1b2.docx', '.docx'],
+    ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '/public/quickMessage/a1b2.xlsx', '.xlsx'],
+    ['audio/mpeg', undefined, '.mp3'],
+    ['text/plain;charset=utf-8', undefined, '.txt']
+  ]) {
+    let uploadedName;
+    const ok = await handler('MessageInputCustom', 'handleUploadQuickMessageMedia', {
+      ticketId: 7, FormData,
+      setLoading: () => {}, toastError: error => { throw error; },
+      api: { post: async (url, data) => { assert.equal(url, '/messages/7'); uploadedName = data.getAll('medias')[0].name; } }
+    })(new Blob(['data'], { type: mime }), 'Resposta rápida', mediaPath);
+    assert.equal(ok, true);
+    assert.ok(uploadedName.endsWith(expectedExt), `Expected ${uploadedName} to end with ${expectedExt}`);
+    checks++;
   }
   const audio = new Blob([Buffer.alloc(10001)], { type: 'audio/mpeg' });
   let sentAudio = false;
