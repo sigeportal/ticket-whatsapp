@@ -51,7 +51,15 @@ Module._load = function(request, parent, ...rest) {
   }
   if (resolved === path.join(source, 'services/CampaignService/CancelService.ts')) return { CancelService: async () => {} };
   if (resolved === path.join(source, 'services/CampaignService/RestartService.ts')) return { RestartService: async () => {} };
-  if (resolved === path.join(source, 'libs/wbot.ts') || /[\\/]services[\\/]WbotServices[\\/]/.test(resolved) || resolved === path.join(source, 'queues.ts')) {
+  if (resolved === path.join(source, 'queues.ts')) {
+    return {
+      __esModule: true,
+      sendScheduledMessages: { getJobCounts: async () => ({ waiting: 0, active: 0, completed: 0, failed: 0 }) },
+      messageQueue: { client: { ping: async () => 'PONG' }, getJobCounts: async () => ({ waiting: 0, active: 0, completed: 0, failed: 0 }) },
+      campaignQueue: { getJobCounts: async () => ({ waiting: 0, active: 0, completed: 0, failed: 0 }) }
+    };
+  }
+  if (resolved === path.join(source, 'libs/wbot.ts') || /[\\/]services[\\/]WbotServices[\\/]/.test(resolved)) {
     throw new Error('External runtime import forbidden in security harness: ' + request);
   }
   if (resolved === path.join(source, 'helpers/UpdateDeletedUserOpenTicketsStatus.ts')) return { __esModule: true, default: async () => { throw new Error('Real messaging forbidden'); } };
@@ -126,6 +134,7 @@ let pg, server, io;
   app.use(load('routes/filesRoutes.ts').default);
   app.use(load('routes/campaignRoutes.ts').default);
   app.use(load('routes/quickMessageRoutes.ts').default);
+  app.use(load('routes/healthRoutes.ts').default);
   app.put('/queue/:queueId', isAuth, load('controllers/QueueController.ts').update);
   app.post('/whatsapp', isAuth, (req, res) => res.json({ ok: true }));
   app.put('/whatsapp/:whatsappId', isAuth, (req, res) => res.json({ ok: true }));
@@ -1044,6 +1053,111 @@ let pg, server, io;
 
     fs.rmSync(outsideVictim, { force: true });
     await recordAfterDelete.destroy();
+  });
+  test('Health: /health/whatsapp e /health/metrics exigem isAuth e isolam dados por empresa', async () => {
+    const Whatsapp = load('models/Whatsapp.ts').default;
+    const QueueWaitAlert = load('models/QueueWaitAlert.ts').default;
+    const { HealthController } = load('controllers/HealthController.ts');
+    const freshAdmin = await User.findByPk(admin.id, { include: [Queue, Company] });
+    const otherAdmin = await User.findByPk(actors[`admin${c2.id}`].id, { include: [Queue, Company] });
+
+    await c1.update({ name: 'Empresa A Health', aiMonthlyBudgetLimit: 100.00, aiMonthlySpent: 15.25, aiBudgetPeriod: '2026-11' });
+    await c2.update({ name: 'Empresa B Secreta', aiMonthlyBudgetLimit: 500.00, aiMonthlySpent: 250.75, aiBudgetPeriod: '2026-11' });
+
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const wppA1 = await Whatsapp.create({ name: 'WPP_HEALTH_A_OK', companyId: c1.id, status: 'CONNECTED' });
+    const wppA2 = await Whatsapp.create({ name: 'WPP_HEALTH_A_DOWN', companyId: c1.id, status: 'DISCONNECTED', updatedAt: tenMinutesAgo });
+    const wppB1 = await Whatsapp.create({ name: 'WPP_HEALTH_B_SECRETO', companyId: c2.id, status: 'DISCONNECTED', updatedAt: tenMinutesAgo });
+    await database.query('UPDATE "Whatsapps" SET "updatedAt" = $1 WHERE id IN ($2, $3)', { bind: [tenMinutesAgo, wppA2.id, wppB1.id] });
+
+    const msgFailedA = await Message.create({ id: 'health-msg-a-fail', body: 'a', ticketId: t1.id, contactId: contact.id, companyId: c1.id, status: 'failed' });
+    const msgFailedB1 = await Message.create({ id: 'health-msg-b-fail-1', body: 'b1', ticketId: t2.id, contactId: contact2.id, companyId: c2.id, status: 'failed' });
+    const msgFailedB2 = await Message.create({ id: 'health-msg-b-fail-2', body: 'b2', ticketId: t2.id, contactId: contact2.id, companyId: c2.id, status: 'uncertain' });
+
+    const alertA = await QueueWaitAlert.create({
+      ticketId: t1.id, companyId: c1.id, queueId: q1.id, episodeId: 'ep-health-a',
+      waitingSince: tenMinutesAgo, alertedAt: new Date(), businessMinutesWaiting: 12, recipientUserIds: [freshAdmin.id]
+    });
+    const alertB1 = await QueueWaitAlert.create({
+      ticketId: t2.id, companyId: c2.id, queueId: q2.id, episodeId: 'ep-health-b1',
+      waitingSince: tenMinutesAgo, alertedAt: new Date(), businessMinutesWaiting: 15, recipientUserIds: [otherAdmin.id]
+    });
+    const alertB2 = await QueueWaitAlert.create({
+      ticketId: t2.id, companyId: c2.id, queueId: q2.id, episodeId: 'ep-health-b2',
+      waitingSince: tenMinutesAgo, alertedAt: new Date(), businessMinutesWaiting: 20, recipientUserIds: [otherAdmin.id]
+    });
+
+    try {
+      // 1. Probes publicos permanecem acessiveis sem autenticacao
+      assert.equal((await request.get('/health')).status, 200);
+      assert.equal((await request.get('/health/live')).status, 200);
+      assert.equal((await request.get('/health/ready')).status, 200);
+
+      // 2. /health/whatsapp e /health/metrics rejeitam requisicoes anonimas
+      assert.equal((await request.get('/health/whatsapp')).status, 401);
+      assert.equal((await request.get('/health/metrics')).status, 401);
+      assert.equal((await request.get('/health/whatsapp').set('Authorization', 'Bearer token-invalido')).status, 401);
+      assert.equal((await request.get('/health/metrics').set('Authorization', 'Bearer token-invalido')).status, 401);
+
+      // 3. Tentativa de sobrescrever companyId via query e bloqueada pelo authorizeRequest
+      assert.equal((await request.get(`/health/whatsapp?companyId=${c2.id}`).set(auth(freshAdmin))).status, 403);
+      assert.equal((await request.get(`/health/metrics?companyId=${c2.id}`).set(auth(freshAdmin))).status, 403);
+
+      // 4. Defesa em profundidade caso HealthController seja chamado diretamente sem req.user
+      for (const method of ['whatsapp', 'metrics']) {
+        let directStatus = 0;
+        let directBody = null;
+        const mockRes = { status(code) { directStatus = code; return mockRes; }, json(data) { directBody = data; return mockRes; } };
+        await HealthController[method]({}, mockRes);
+        assert.equal(directStatus, 401);
+        assert.equal(directBody.error, 'ERR_SESSION_EXPIRED');
+      }
+
+      // 5. /health/whatsapp autenticado retorna apenas conexoes da empresa do usuario
+      const wppResA = await request.get('/health/whatsapp').set(auth(freshAdmin));
+      assert.equal(wppResA.status, 200, JSON.stringify(wppResA.body));
+      assert.ok(wppResA.body.connections.every(c => Number(c.companyId) === Number(c1.id)));
+      assert.ok(wppResA.body.connections.some(c => c.name === 'WPP_HEALTH_A_OK'));
+      assert.ok(wppResA.body.connections.some(c => c.name === 'WPP_HEALTH_A_DOWN'));
+      assert.ok(!wppResA.body.connections.some(c => c.name === 'WPP_HEALTH_B_SECRETO'));
+
+      const wppResB = await request.get('/health/whatsapp').set(auth(otherAdmin));
+      assert.equal(wppResB.status, 200, JSON.stringify(wppResB.body));
+      assert.ok(wppResB.body.connections.every(c => Number(c.companyId) === Number(c2.id)));
+      assert.ok(wppResB.body.connections.some(c => c.name === 'WPP_HEALTH_B_SECRETO'));
+      assert.ok(!wppResB.body.connections.some(c => c.name === 'WPP_HEALTH_A_OK'));
+
+      // 6. /health/metrics autenticado retorna apenas aiSpend, contadores e alertas da propria empresa
+      const metricsResA = await request.get('/health/metrics').set(auth(freshAdmin));
+      assert.equal(metricsResA.status, 200, JSON.stringify(metricsResA.body));
+      assert.equal(metricsResA.body.aiSpend.length, 1);
+      assert.equal(Number(metricsResA.body.aiSpend[0].companyId), Number(c1.id));
+      assert.equal(metricsResA.body.aiSpend[0].name, 'Empresa A Health');
+      assert.equal(Number(metricsResA.body.aiSpend[0].spent), 15.25);
+
+      const expectedFailedA = await Message.count({ where: { companyId: c1.id, status: 'failed' } });
+      const expectedUncertainA = await Message.count({ where: { companyId: c1.id, status: 'uncertain' } });
+      const expectedAlertsA = await QueueWaitAlert.count({ where: { companyId: c1.id, resolvedAt: null } });
+      assert.equal(metricsResA.body.messageStats.failed, expectedFailedA);
+      assert.equal(metricsResA.body.messageStats.uncertain, expectedUncertainA);
+      assert.equal(metricsResA.body.unresolvedQueueAlerts, expectedAlertsA);
+
+      const serializedA = JSON.stringify(metricsResA.body);
+      assert.equal(serializedA.includes('Empresa B Secreta'), false);
+      assert.equal(serializedA.includes('WPP_HEALTH_B_SECRETO'), false);
+      const waAlertsA = metricsResA.body.activeOperationalAlerts.filter(a => a.type === 'WHATSAPP_DISCONNECTED');
+      assert.ok(waAlertsA.every(a => Number(a.details?.companyId) === Number(c1.id)));
+      const msgAlertA = metricsResA.body.activeOperationalAlerts.find(a => a.type === 'MESSAGE_DELIVERY_FAILURE');
+      assert.equal(msgAlertA?.details?.failedCount, expectedFailedA + expectedUncertainA);
+      const qwaAlertA = metricsResA.body.activeOperationalAlerts.find(a => a.type === 'QUEUE_WAIT_OVERDUE');
+      assert.equal(qwaAlertA?.details?.count, expectedAlertsA);
+    } finally {
+      await Promise.all([
+        alertA.destroy(), alertB1.destroy(), alertB2.destroy(),
+        msgFailedA.destroy(), msgFailedB1.destroy(), msgFailedB2.destroy(),
+        wppA1.destroy(), wppA2.destroy(), wppB1.destroy()
+      ]);
+    }
   });
   let failed=0;
   for(const {name,fn} of tests) {
