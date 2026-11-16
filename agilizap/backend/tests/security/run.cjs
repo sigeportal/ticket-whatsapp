@@ -49,6 +49,8 @@ Module._load = function(request, parent, ...rest) {
       } };
     }
   }
+  if (resolved === path.join(source, 'services/CampaignService/CancelService.ts')) return { CancelService: async () => {} };
+  if (resolved === path.join(source, 'services/CampaignService/RestartService.ts')) return { RestartService: async () => {} };
   if (resolved === path.join(source, 'libs/wbot.ts') || /[\\/]services[\\/]WbotServices[\\/]/.test(resolved) || resolved === path.join(source, 'queues.ts')) {
     throw new Error('External runtime import forbidden in security harness: ' + request);
   }
@@ -122,8 +124,19 @@ let pg, server, io;
   app.put('/tickets/:ticketId/transfer-check', isAuth, load('controllers/TicketController.ts').update);
   app.use(load('routes/invoicesRoutes.ts').default);
   app.use(load('routes/filesRoutes.ts').default);
+  app.use(load('routes/campaignRoutes.ts').default);
   app.put('/queue/:queueId', isAuth, load('controllers/QueueController.ts').update);
+  app.post('/whatsapp', isAuth, (req, res) => res.json({ ok: true }));
   app.put('/whatsapp/:whatsappId', isAuth, (req, res) => res.json({ ok: true }));
+  app.put('/contacts/:contactId/security-check', isAuth, async (req, res) => {
+    const UpdateContactService = load('services/ContactServices/UpdateContactService.ts').default;
+    const updated = await UpdateContactService({
+      contactData: req.body,
+      contactId: req.params.contactId,
+      companyId: req.user.companyId
+    });
+    return res.json(updated);
+  });
   app.get('/contacts/export', isAuth, load('controllers/ContactExportController.ts').exportContacts);
   const uploadConfig = load('config/upload.ts').default;
   const upload = load('security/secureUpload.ts').default(uploadConfig);
@@ -839,6 +852,117 @@ let pg, server, io;
     assert.equal(await Files.count({where:{companyId:c2.id}}),1);
     await FilesOptions.destroy({where:{fileId:[fileA1.id,fileA2.id,fileB1.id]}});
     await Files.destroy({where:{id:[fileB1.id]}});
+  });
+  test('IDOR multi-tenant: tagListId em campanhas, transferQueueId em whatsapp e extraInfo em contatos', async () => {
+    const Tag = load('models/Tag.ts').default;
+    const TicketTag = load('models/TicketTag.ts').default;
+    const ContactList = load('models/ContactList.ts').default;
+    const ContactListItem = load('models/ContactListItem.ts').default;
+    const Campaign = load('models/Campaign.ts').default;
+    const Whatsapp = load('models/Whatsapp.ts').default;
+    const ContactCustomField = load('models/ContactCustomField.ts').default;
+    const CampaignController = load('controllers/CampaignController.ts');
+    const freshAdmin = await User.findByPk(admin.id, { include: [Queue, Company] });
+    const freshAgent = await User.findByPk(agent.id, { include: [Queue, Company] });
+
+    // 1. Campanhas: tagListId de outra empresa, sintaxe invalida, "Nenhuma" e isolamento em createContactListFromTag
+    const tagA = await Tag.create({ name: 'Tag A', color: '#111111', companyId: c1.id });
+    const tagB = await Tag.create({ name: 'Tag B', color: '#222222', companyId: c2.id });
+    const taggedContactA = await Contact.create({ name: 'Cliente A Tag', number: '5511999900001', email: 'a@example.invalid', companyId: c1.id });
+    const taggedTicketA = await Ticket.create({ status: 'open', companyId: c1.id, queueId: q1.id, contactId: taggedContactA.id });
+    await TicketTag.create({ ticketId: taggedTicketA.id, tagId: tagA.id });
+    // Simula vinculo cruzado inconsistente no banco para validar defesa em profundidade
+    await TicketTag.create({ ticketId: t2.id, tagId: tagA.id });
+    await TicketTag.create({ ticketId: t2.id, tagId: tagB.id });
+
+    const beforeLists = await ContactList.count();
+    const beforeCampaigns = await Campaign.count();
+    assert.equal((await request.post('/campaigns').set(auth(freshAgent)).send({ name: 'Campanha Bloqueada', tagListId: tagA.id })).status, 403);
+    assert.equal((await request.post('/campaigns').set(auth(freshAdmin)).send({ name: 'Campanha Cross', tagListId: tagB.id })).status, 403);
+    assert.equal((await request.post('/campaigns').set(auth(freshAdmin)).send({ name: 'Campanha Cross Str', tagListId: String(tagB.id) })).status, 403);
+    assert.equal((await request.post('/campaigns').set(auth(freshAdmin)).send({ name: 'Campanha Invalida', tagListId: 'invalida' })).status, 403);
+    assert.equal(await ContactList.count(), beforeLists);
+    assert.equal(await Campaign.count(), beforeCampaigns);
+
+    // Defesa em profundidade caso store seja chamado diretamente sem authorizeRequest
+    await assert.rejects(
+      CampaignController.store({ user: { companyId: c1.id }, body: { name: 'Direta Cross', tagListId: tagB.id } }, { status: () => ({ json: () => {} }) }),
+      err => err.statusCode === 403
+    );
+
+    // Default do frontend ("Nenhuma") segue permitido sem gerar lista por tag
+    const noTagRes = await request.post('/campaigns').set(auth(freshAdmin)).send({ name: 'Campanha Sem Tag', tagListId: 'Nenhuma' });
+    assert.equal(noTagRes.status, 200, JSON.stringify(noTagRes.body));
+    assert.equal(noTagRes.body.contactListId, null);
+
+    // Criacao com tag da propria empresa aguarda criacao da lista e filtra contatos pelo companyId
+    const ownTagRes = await request.post('/campaigns').set(auth(freshAdmin)).send({ name: 'Campanha Tag A', tagListId: tagA.id });
+    assert.equal(ownTagRes.status, 200, JSON.stringify(ownTagRes.body));
+    assert.ok(ownTagRes.body.contactListId, 'contactListId must be populated before response');
+    const items = await ContactListItem.findAll({ where: { contactListId: ownTagRes.body.contactListId } });
+    assert.deepEqual(items.map(i => i.number), [taggedContactA.number]);
+    assert.ok(!items.some(i => i.number === contact2.number));
+
+    // 2. WhatsApp: transferQueueId de outra empresa e rejeitado em POST e PUT
+    const conn = await Whatsapp.create({ name: 'Conexao Transfer', companyId: c1.id });
+    assert.equal((await request.post('/whatsapp').set(auth(freshAdmin)).send({ name: 'Nova Wpp', transferQueueId: q2.id })).status, 403);
+    assert.equal((await request.put(`/whatsapp/${conn.id}`).set(auth(freshAdmin)).send({ name: 'Edit Wpp', transferQueueId: q2.id })).status, 403);
+    assert.equal((await request.put(`/whatsapp/${conn.id}`).set(auth(freshAdmin)).send({ name: 'Edit Wpp', transferQueueId: 'invalida' })).status, 403);
+    for (const transferQueueId of [q1.id, null, '', 0]) {
+      assert.equal((await request.post('/whatsapp').set(auth(freshAdmin)).send({ name: 'Nova Wpp', transferQueueId })).status, 200);
+      assert.equal((await request.put(`/whatsapp/${conn.id}`).set(auth(freshAdmin)).send({ name: 'Edit Wpp', transferQueueId })).status, 200);
+    }
+
+    // 3. Contatos: extraInfo.id de outra empresa ou de outro contato nao pode ser sequestrado via upsert
+    const contactAOther = await Contact.create({ name: 'Outro Contato A', number: '5511999900002', companyId: c1.id });
+    const fieldA = await ContactCustomField.create({ name: 'Plano', value: 'Basico', contactId: contact.id });
+    const fieldAOther = await ContactCustomField.create({ name: 'Origem', value: 'Site', contactId: contactAOther.id });
+    const fieldB = await ContactCustomField.create({ name: 'Segredo B', value: 'Privado', contactId: contact2.id });
+
+    for (const badExtraInfo of [
+      [{ name: 'Novo Parcial', value: 'Nao Inserir' }, { id: fieldB.id, name: 'Sequestrado', value: 'Hack' }],
+      [{ id: String(fieldB.id), name: 'Sequestrado Str', value: 'Hack' }],
+      [{ id: fieldAOther.id, name: 'Outro Contato', value: 'Hack' }],
+      [{ id: 0, name: 'Zero', value: 'Hack' }],
+      [{ id: 'abc', name: 'Invalido', value: 'Hack' }]
+    ]) {
+      const res = await request.put(`/contacts/${contact.id}/security-check`).set(auth(freshAdmin)).send({
+        name: contact.name,
+        number: contact.number,
+        extraInfo: badExtraInfo
+      });
+      assert.equal(res.status, 403, JSON.stringify(badExtraInfo));
+    }
+
+    const reloadedFieldB = await ContactCustomField.findByPk(fieldB.id);
+    assert.equal(reloadedFieldB.contactId, contact2.id);
+    assert.equal(reloadedFieldB.name, 'Segredo B');
+    assert.equal(reloadedFieldB.value, 'Privado');
+    assert.equal(await ContactCustomField.count({ where: { name: 'Novo Parcial' } }), 0);
+    assert.ok(await ContactCustomField.findByPk(fieldA.id));
+    assert.equal((await ContactCustomField.findByPk(fieldAOther.id)).contactId, contactAOther.id);
+
+    // Edicao legitima atualiza campo proprio, cria novo campo e remove ausente sem afetar terceiros
+    const okRes = await request.put(`/contacts/${contact.id}/security-check`).set(auth(freshAdmin)).send({
+      name: contact.name,
+      number: contact.number,
+      extraInfo: [
+        { id: fieldA.id, name: 'Plano', value: 'Pro' },
+        { name: 'Cidade', value: 'Campo Grande' }
+      ]
+    });
+    assert.equal(okRes.status, 200, JSON.stringify(okRes.body));
+    assert.equal((await ContactCustomField.findByPk(fieldA.id)).value, 'Pro');
+    assert.equal(await ContactCustomField.count({ where: { contactId: contact.id } }), 2);
+
+    const removeFieldARes = await request.put(`/contacts/${contact.id}/security-check`).set(auth(freshAdmin)).send({
+      name: contact.name,
+      number: contact.number,
+      extraInfo: [{ id: okRes.body.extraInfo.find(f => f.name === 'Cidade').id, name: 'Cidade', value: 'Campo Grande' }]
+    });
+    assert.equal(removeFieldARes.status, 200);
+    assert.equal(await ContactCustomField.findByPk(fieldA.id), null);
+    assert.ok(await ContactCustomField.findByPk(fieldB.id));
   });
   let failed=0;
   for(const {name,fn} of tests) {

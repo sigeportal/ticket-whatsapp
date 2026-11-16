@@ -20,6 +20,7 @@ import AppError from "../errors/AppError";
 import Contact from "../models/Contact";
 import ContactList from "../models/ContactList";
 import ContactListItem from "../models/ContactListItem";
+import Tag from "../models/Tag";
 import Ticket from "../models/Ticket";
 import TicketTag from "../models/TicketTag";
 import { CancelService } from "../services/CampaignService/CancelService";
@@ -59,10 +60,55 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   return res.json({ records, count, hasMore });
 };
 
+/** Builds a tenant-scoped contact list from tickets tagged with `tagId`. */
+async function createContactListFromTag(
+  tagId: number,
+  campanhaNome: string,
+  companyId: number
+): Promise<number> {
+  const tag = await Tag.findOne({ where: { id: tagId, companyId } });
+  if (!tag) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
+  const formattedDate = new Date().toISOString();
+  const ticketTags = await TicketTag.findAll({ where: { tagId } });
+  const ticketIds = ticketTags.map(ticketTag => ticketTag.ticketId);
+
+  const tickets = await Ticket.findAll({
+    where: { id: ticketIds, companyId }
+  });
+  const contactIds = tickets.map(ticket => ticket.contactId);
+
+  const contacts = await Contact.findAll({
+    where: { id: contactIds, companyId }
+  });
+
+  const randomName = `${campanhaNome} | TAG: ${tagId} - ${formattedDate}`;
+  const contactList = await ContactList.create({
+    name: randomName,
+    companyId
+  });
+
+  const { id: contactListId } = contactList;
+
+  const contactListItems = contacts.map(contact => ({
+    name: contact.name,
+    number: contact.number,
+    email: contact.email,
+    contactListId,
+    companyId,
+    isWhatsappValid: true
+  }));
+
+  await ContactListItem.bulkCreate(contactListItems);
+
+  return contactListId;
+}
+
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const { companyId } = req.user;
   const data = req.body as StoreData;
-  console.log('data------- store:', data);
 
   const schema = Yup.object().shape({
     name: Yup.string().required()
@@ -74,86 +120,29 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     throw new AppError(err.message);
   }
 
-  if (typeof data.tagListId === 'number') {
+  let contactListId = data.contactListId;
 
-    const tagId = data.tagListId;
-    const campanhaNome = data.name;
-
-    async function createContactListFromTag(tagId) {
-
-      const currentDate = new Date();
-      const formattedDate = currentDate.toISOString();
-
-      try {
-        const ticketTags = await TicketTag.findAll({ where: { tagId } });
-        const ticketIds = ticketTags.map((ticketTag) => ticketTag.ticketId);
-
-        const tickets = await Ticket.findAll({ where: { id: ticketIds } });
-        const contactIds = tickets.map((ticket) => ticket.contactId);
-
-        const contacts = await Contact.findAll({ where: { id: contactIds } });
-
-        const randomName = `${campanhaNome} | TAG: ${tagId} - ${formattedDate}` // Implement your own function to generate a random name
-        const contactList = await ContactList.create({ name: randomName, companyId: companyId });
-
-        const { id: contactListId } = contactList;
-
-        const contactListItems = contacts.map((contact) => ({
-          name: contact.name,
-          number: contact.number,
-          email: contact.email,
-          contactListId,
-          companyId,
-          isWhatsappValid: true,
-
-        }));
-
-        await ContactListItem.bulkCreate(contactListItems);
-
-        // Return the ContactList ID
-        return contactListId;
-      } catch (error) {
-        console.error('Error creating contact list:', error);
-        throw error;
-      }
-    }
-
-
-    createContactListFromTag(tagId)
-      .then(async (contactListId) => {
-        const record = await CreateService({
-          ...data,
-          companyId,
-          contactListId: contactListId,
-        });
-        const io = getIO();
-        io.to(`company-${companyId}-admin`).emit(`company-${companyId}-campaign`, {
-          action: "create",
-          record
-        });
-        return res.status(200).json(record);
-      })
-      .catch((error) => {
-        console.error('Error:', error);
-        return res.status(500).json({ error: 'Error creating contact list' });
-      });
-
-  } else { // SAI DO CHECK DE TAG
-
-
-    const record = await CreateService({
-      ...data,
+  if (typeof data.tagListId === "number") {
+    contactListId = await createContactListFromTag(
+      data.tagListId,
+      data.name,
       companyId
-    });
-
-    const io = getIO();
-    io.to(`company-${companyId}-admin`).emit(`company-${companyId}-campaign`, {
-      action: "create",
-      record
-    });
-
-    return res.status(200).json(record);
+    );
   }
+
+  const record = await CreateService({
+    ...data,
+    companyId,
+    contactListId
+  });
+
+  const io = getIO();
+  io.to(`company-${companyId}-admin`).emit(`company-${companyId}-campaign`, {
+    action: "create",
+    record
+  });
+
+  return res.status(200).json(record);
 };
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
