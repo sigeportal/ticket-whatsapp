@@ -62,10 +62,10 @@ export const checkAndTriggerQueueWaitAlerts = async (
     }
 
     // Ancorar o momento inicial da espera:
-    // Começa na entrada na fila humana ou na primeira mensagem pendente do cliente
+    // Começa na última mensagem sem resposta do cliente ou, se ausente, na atualização mais recente da fila
     const waitingSince = ticket.lastClientMessageAt
       ? new Date(ticket.lastClientMessageAt)
-      : new Date(ticket.createdAt || now);
+      : new Date(ticket.updatedAt || ticket.createdAt || now);
 
     const businessMinutes = calculateBusinessMinutesBetween(waitingSince, now, holidays);
 
