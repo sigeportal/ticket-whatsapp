@@ -377,10 +377,11 @@ let pg, server, io;
     assert.equal(response.status, 200, JSON.stringify(response.body));
     const fresh = await User.findByPk(agent.id, { include:[Queue,Company] });
     assert.deepEqual(fresh.queues.map(q=>q.id), [q1.id]);
-    await assert.rejects(loadSession(old));
-    actors[`user${c1.id}`] = fresh; Object.assign(agent, { tokenVersion:fresh.tokenVersion });
+    assert.equal(fresh.tokenVersion, agent.tokenVersion);
+    assert.equal((await loadSession(old)).id, agent.id);
+    actors[`user${c1.id}`] = fresh; Object.assign(agent, { name: fresh.name, tokenVersion:fresh.tokenVersion });
   });
-  test('Admin protegido: edita as proprias filas sem manutencao global e revoga sessoes antigas', async () => {
+  test('Admin protegido: edita as proprias filas sem manutencao global e preserva sessao quando campos sensiveis nao mudam', async () => {
     const account = await User.create({ name: 'Administrador protegido', email: 'protected-self@example.invalid', password: 'InitialPass123', profile: 'admin', super: true, blocked: false, companyId: c1.id, tokenVersion: 0 });
     const actor = await User.findByPk(account.id, { include: [Queue, Company] });
     const oldToken = token(actor);
@@ -389,7 +390,8 @@ let pg, server, io;
     const updated = await User.findByPk(actor.id, { include: [Queue, Company] });
     assert.deepEqual(updated.queues.map(q => q.id), [qOther.id]);
     assert.equal(updated.super, true); assert.equal(updated.profile, 'admin'); assert.equal(updated.blocked, false);
-    await assert.rejects(loadSession(oldToken));
+    assert.equal(updated.tokenVersion, 0);
+    assert.equal((await loadSession(oldToken)).id, actor.id);
   });
   test('Admin protegido: perfil, bloqueio, flags internas e contas alheias continuam protegidos', async () => {
     const account = await User.create({ name: 'Protegido', email: 'protected-guard@example.invalid', password: 'InitialPass123', profile: 'admin', super: true, blocked: false, companyId: c1.id, tokenVersion: 0 });
@@ -716,6 +718,96 @@ let pg, server, io;
     await t1.update({queueId:qOther.id});
     assert.ok(!serverSocket.rooms.has(String(t1.id)));
     socket.disconnect();await t1.update({queueId:q1.id});
+  });
+  test('Sockets e orcamento IA: atualizacoes nao sensiveis preservam WebSocket e recordAIUsage soma atomicamente',async()=>{
+    const {checkCompanyAIBudget,recordAIUsage}=load('services/AIServices/AIBudgetService.ts');
+    const comp=await Company.create({name:'Empresa Socket Estavel',status:true,planId:plan.id,aiMonthlyBudgetLimit:50,aiMonthlySpent:0,aiBudgetPeriod:'2025-01',aiRequestsCount:0});
+    const compOther=await Company.create({name:'Empresa Outra Socket',status:true,planId:plan.id});
+    const u1=await User.create({name:'Atendente Socket',email:'ws-keep-1@example.invalid',password:'ValidPass123',profile:'user',companyId:comp.id,online:true});
+    const u2=await User.create({name:'Atendente Outro',email:'ws-keep-2@example.invalid',password:'ValidPass123',profile:'user',companyId:compOther.id,online:true});
+    const actor1=await User.findByPk(u1.id,{include:[Queue,Company]});
+    const actor2=await User.findByPk(u2.id,{include:[Queue,Company]});
+    const sock1=await connect(actor1);
+    const sock2=await connect(actor2);
+    let dropped1=false, dropped2=false;
+    sock1.once('disconnect',()=>{dropped1=true;});
+    sock2.once('disconnect',()=>{dropped2=true;});
+    try {
+      await u1.update({online:false});
+      assert.equal((await request.post('/forgetpassword').send({email:u1.email})).status,202);
+      const selfEdit=await request.put(`/users/${u1.id}`).set(auth(actor1)).send({name:'Atendente Renomeado'});
+      assert.equal(selfEdit.status,200,JSON.stringify(selfEdit.body));
+      assert.equal((await loadSession(token(actor1))).id,u1.id);
+      await comp.update({name:'Empresa Socket Renomeada',status:true});
+      const budgetBefore=await checkCompanyAIBudget(comp.id);
+      assert.equal(budgetBefore.allowed,true);
+      assert.equal(budgetBefore.currentSpent,0);
+      await Promise.all(Array.from({length:10},()=>recordAIUsage(comp.id,0.05)));
+      await new Promise(resolve=>setTimeout(resolve,120));
+      assert.equal(dropped1,false);
+      assert.equal(dropped2,false);
+      assert.equal(sock1.connected,true);
+      assert.equal(sock2.connected,true);
+      const reloaded=await Company.findByPk(comp.id);
+      assert.equal(reloaded.aiRequestsCount,10);
+      assert.ok(Math.abs(Number(reloaded.aiMonthlySpent)-0.5)<1e-6);
+      // Rollover atomico concorrente quando periodo no banco esta defasado
+      await Company.update({aiBudgetPeriod:'2025-01',aiMonthlySpent:40,aiRequestsCount:99},{where:{id:comp.id}});
+      await Promise.all([recordAIUsage(comp.id,0.05),recordAIUsage(comp.id,0.05)]);
+      const afterRollover=await Company.findByPk(comp.id);
+      assert.equal(afterRollover.aiRequestsCount,2);
+      assert.ok(Math.abs(Number(afterRollover.aiMonthlySpent)-0.1)<1e-6);
+    } finally {
+      sock1.disconnect(); sock2.disconnect();
+    }
+  });
+  test('Sockets: alteracao de senha, perfil, desativacao e exclusao de empresa revogam apenas sockets afetados',async()=>{
+    const compA=await Company.create({name:'Empresa Revoga A',status:true,planId:plan.id});
+    const compB=await Company.create({name:'Empresa Revoga B',status:true,planId:plan.id});
+    const adminA=await User.create({name:'Admin A',email:'ws-admin-a@example.invalid',password:'ValidPass123',profile:'admin',companyId:compA.id});
+    const userA=await User.create({name:'User A',email:'ws-user-a@example.invalid',password:'ValidPass123',profile:'user',companyId:compA.id});
+    const userB=await User.create({name:'User B',email:'ws-user-b@example.invalid',password:'ValidPass123',profile:'user',companyId:compB.id});
+    const actorAdminA=await User.findByPk(adminA.id,{include:[Queue,Company]});
+    const waitDisconnect=sock=>new Promise((resolve,reject)=>{
+      if(!sock.connected) return resolve();
+      const timer=setTimeout(()=>reject(new Error('Socket disconnect timeout')),1500);
+      sock.once('disconnect',()=>{clearTimeout(timer);resolve();});
+    });
+    // 1. Alteracao de senha via UpdateUserService desconecta socket e invalida token
+    let actorUserA=await User.findByPk(userA.id,{include:[Queue,Company]});
+    let sockA=await connect(actorUserA);
+    const oldTokenPass=token(actorUserA);
+    let discPromise=waitDisconnect(sockA);
+    assert.equal((await request.put(`/users/${userA.id}`).set(auth(actorUserA)).send({password:'NewValidPass123'})).status,200);
+    await discPromise;
+    await assert.rejects(loadSession(oldTokenPass));
+    // 2. Alteracao de profile via UpdateUserService desconecta socket e invalida token
+    actorUserA=await User.findByPk(userA.id,{include:[Queue,Company]});
+    sockA=await connect(actorUserA);
+    const oldTokenProfile=token(actorUserA);
+    discPromise=waitDisconnect(sockA);
+    assert.equal((await request.put(`/users/${userA.id}`).set(auth(actorAdminA)).send({profile:'supervisor'})).status,200);
+    await discPromise;
+    await assert.rejects(loadSession(oldTokenProfile));
+    // 3. Desativacao da empresa desconecta todos os usuarios da empresa sem afetar outra empresa
+    actorUserA=await User.findByPk(userA.id,{include:[Queue,Company]});
+    const actorUserB=await User.findByPk(userB.id,{include:[Queue,Company]});
+    sockA=await connect(actorUserA);
+    const sockB=await connect(actorUserB);
+    let droppedB=false; sockB.once('disconnect',()=>{droppedB=true;});
+    discPromise=waitDisconnect(sockA);
+    await compA.update({status:false});
+    await discPromise;
+    await new Promise(resolve=>setTimeout(resolve,80));
+    assert.equal(droppedB,false);
+    assert.equal(sockB.connected,true);
+    // 4. Exclusao de empresa desconecta usuarios mesmo com status true
+    await compA.update({status:true});
+    sockA=await connect(actorUserA);
+    discPromise=waitDisconnect(sockA);
+    await compA.destroy();
+    await discPromise;
+    sockB.disconnect();
   });
   let failed=0;
   for(const {name,fn} of tests) {

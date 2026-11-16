@@ -27,6 +27,12 @@ import QueueWaitAlert from "./QueueWaitAlert";
 @Table
 class Company extends Model<Company> {
   @AfterUpdate
+  static async revokeCompanySocketsOnDeactivate(company: Company): Promise<void> {
+    if (company.changed("status") && company.status === false) {
+      await Company.revokeCompanySockets(company);
+    }
+  }
+
   @BeforeDestroy
   static async revokeCompanySockets(company: Company): Promise<void> {
     const { disconnectUser } = await import("../libs/socket");
