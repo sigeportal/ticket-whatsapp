@@ -651,13 +651,32 @@ const MessageInputCustom = (props) => {
     }
   };
 
-  const handleUploadQuickMessageMedia = async (blob, message) => {
+  const handleUploadQuickMessageMedia = async (blob, message, mediaPath) => {
     setLoading(true);
     try {
-      const extension = blob.type.split("/")[1];
+      const cleanPath = String(mediaPath || "").split(/[?#]/)[0];
+      const pathBasename = cleanPath.split(/[\\/]/).pop() || "";
+      const pathExtMatch = pathBasename.match(/\.([a-z0-9]+)$/i);
+      const mimeType = (blob?.type || "").split(";")[0].trim().toLowerCase();
+      const mimeMap = {
+        "audio/mpeg": "mp3",
+        "audio/mp3": "mp3",
+        "text/plain": "txt",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+        "image/jpeg": "jpg",
+        "image/x-icon": "ico",
+        "image/vnd.microsoft.icon": "ico",
+      };
+      const mimeSubtype = mimeType.split("/")[1] || "";
+      const extension = (
+        pathExtMatch ? pathExtMatch[1] : (mimeMap[mimeType] || mimeSubtype)
+      ).toLowerCase();
 
       const formData = new FormData();
-      const filename = `${new Date().getTime()}.${extension}`;
+      const filename = extension
+        ? `${new Date().getTime()}.${extension}`
+        : `${new Date().getTime()}`;
       formData.append("medias", blob, filename);
       formData.append("body", message);
       formData.append("fromMe", true);
@@ -679,7 +698,7 @@ const MessageInputCustom = (props) => {
           responseType: "blob",
         });
 
-        if (await handleUploadQuickMessageMedia(data, value.value)) setInputMessage("");
+        if (await handleUploadQuickMessageMedia(data, value.value, value.mediaPath)) setInputMessage("");
         return;
       } catch (err) {
         toastError(err);
@@ -705,8 +724,14 @@ const MessageInputCustom = (props) => {
           : media
       ));
       prepared.forEach(media => {
-        formData.append("medias", media);
-        formData.append("body", media.name);
+        const mimeType = (media?.type || "").split(";")[0].trim().toLowerCase();
+        const rawSubtype = mimeType.startsWith("image/") ? mimeType.slice(6) : "";
+        const fallbackExt = rawSubtype === "jpeg" ? "jpg" : (/^[a-z0-9]+$/.test(rawSubtype) ? rawSubtype : "jpg");
+        const filename = media?.name && /\.[a-z0-9]+$/i.test(media.name)
+          ? media.name
+          : `${media?.name || "image"}.${fallbackExt}`;
+        formData.append("medias", media, filename);
+        formData.append("body", filename);
       });
       await api.post(`/messages/${ticketId}`, formData, {
         onUploadProgress: (event) => {
