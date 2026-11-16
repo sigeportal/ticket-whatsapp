@@ -64,6 +64,7 @@ import ShowQueueIntegrationService from "../QueueIntegrationServices/ShowQueueIn
 import FindOrCreateATicketTrakingService from "../TicketServices/FindOrCreateATicketTrakingService";
 import FindOrCreateTicketService from "../TicketServices/FindOrCreateTicketService";
 import UpdateTicketService from "../TicketServices/UpdateTicketService";
+import { resolveQueueWaitAlert } from "../TicketServices/QueueWaitAlertService";
 import typebotListener from "../TypebotServices/typebotListener";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
 import { randomUUID } from "crypto";
@@ -930,7 +931,11 @@ const verifyMediaMessage = async (
 
 
   if (!msg.key.fromMe && ticket.status === "closed") {
-    await ticket.update({ status: "pending" });
+    await ticket.update({
+      status: "pending",
+      lastClientMessageAt: new Date(),
+      currentWaitEpisodeId: null
+    });
     await ticket.reload({
       include: [
         { model: Queue, as: "queue" },
@@ -1013,7 +1018,11 @@ export const verifyMessage = async (
   await CreateMessageService({ messageData, companyId: ticket.companyId });
 
   if (!msg.key.fromMe && ticket.status === "closed") {
-    await ticket.update({ status: "pending" });
+    await ticket.update({
+      status: "pending",
+      lastClientMessageAt: new Date(),
+      currentWaitEpisodeId: null
+    });
     await ticket.reload({
       include: [
         { model: Queue, as: "queue" },
@@ -1462,7 +1471,14 @@ export const handleRating = async (
     userId: null,
     status: "closed",
     closedAt: new Date(),
+    currentWaitEpisodeId: null,
   });
+
+  try {
+    await resolveQueueWaitAlert(ticket.id, ticketTraking.userId || undefined);
+  } catch (err) {
+    logger.warn(`[wbotMessageListener] Falha ao resolver alerta de espera na avaliação: ${err}`);
+  }
 
   try {
     const io = getIO();
@@ -2035,9 +2051,13 @@ const handleMessage = async (
 
     // Atualiza o ticket se a ultima mensagem foi enviada por mim, para que possa ser finalizado. 
     try {
-      await ticket.update({
+      const ticketUpdateData: { fromMe: boolean; lastClientMessageAt?: Date } = {
         fromMe: msg.key.fromMe,
-      });
+      };
+      if (!msg.key.fromMe) {
+        ticketUpdateData.lastClientMessageAt = new Date();
+      }
+      await ticket.update(ticketUpdateData);
     } catch (e) {
       Sentry.captureException(e);
       console.log(e);

@@ -306,6 +306,8 @@ const UpdateTicketService = async ({
       } catch (e) {}
     } else if (oldStatus === "closed" && status !== undefined && status !== "closed") {
       updatePayload.closedAt = null;
+      updatePayload.lastClientMessageAt = null;
+      updatePayload.currentWaitEpisodeId = null;
     }
 
     await ticket.update(updatePayload);

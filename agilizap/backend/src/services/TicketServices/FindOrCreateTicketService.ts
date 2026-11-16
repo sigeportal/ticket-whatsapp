@@ -78,7 +78,9 @@ const FindOrCreateTicketService = async (
       userId: null,
       unreadMessages,
       queueId: null,
-      companyId
+      companyId,
+      lastClientMessageAt: null,
+      currentWaitEpisodeId: null
     });
 
     await FindOrCreateATicketTrakingService({
