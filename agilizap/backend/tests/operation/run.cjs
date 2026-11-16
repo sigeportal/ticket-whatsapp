@@ -386,7 +386,7 @@ let pg;
   test('OPS-02: Metricas operacionais - GET /health/metrics retorna memoria, filas e estatisticas', async () => {
     let statusCode = null;
     let payload = null;
-    const req = {};
+    const req = { user: { companyId: 1 } };
     const res = {
       status: (code) => { statusCode = code; return res; },
       json: (data) => { payload = data; return res; }

@@ -417,7 +417,7 @@ let pg;
       status(s) { metricsStatus = s; return resMetrics; },
       json(j) { metricsPayload = j; return resMetrics; }
     };
-    await HealthController.metrics({}, resMetrics);
+    await HealthController.metrics({ user: { companyId: 1 } }, resMetrics);
     assert.equal(metricsStatus, 200);
     assert.equal(typeof metricsPayload.uptimeSeconds, 'number');
   });

@@ -7,7 +7,11 @@ import Company from "../models/Company";
 import { messageQueue, sendScheduledMessages, campaignQueue } from "../queues";
 import { OperationalAlertService } from "../services/OperationServices/OperationalAlertService";
 import { logger } from "../utils/logger";
-import { Op } from "sequelize";
+
+const resolveAuthenticatedCompanyId = (req: Request): number | null => {
+  const companyId = Number(req.user?.companyId);
+  return Number.isInteger(companyId) && companyId > 0 ? companyId : null;
+};
 
 export class HealthController {
   /**
@@ -83,9 +87,13 @@ export class HealthController {
    */
   static async whatsapp(req: Request, res: Response): Promise<Response> {
     try {
-      const whereCompany = req.user?.companyId ? { companyId: req.user.companyId } : {};
+      const companyId = resolveAuthenticatedCompanyId(req);
+      if (!companyId) {
+        return res.status(401).json({ error: "ERR_SESSION_EXPIRED" });
+      }
+
       const connections = await Whatsapp.findAll({
-        where: whereCompany,
+        where: { companyId },
         attributes: ["id", "name", "status", "companyId", "updatedAt", "isDefault"]
       });
 
@@ -111,8 +119,13 @@ export class HealthController {
   /**
    * Comprehensive operational metrics endpoint.
    */
-  static async metrics(_req: Request, res: Response): Promise<Response> {
+  static async metrics(req: Request, res: Response): Promise<Response> {
     try {
+      const companyId = resolveAuthenticatedCompanyId(req);
+      if (!companyId) {
+        return res.status(401).json({ error: "ERR_SESSION_EXPIRED" });
+      }
+
       // 1. Memory metrics
       const mem = process.memoryUsage();
       const memory = {
@@ -134,25 +147,26 @@ export class HealthController {
         // Mocks or in-memory
       }
 
-      // 3. Messages reliability counts
+      // 3. Messages reliability counts scoped by company
       const messageStats = {
-        failed: await Message.count({ where: { status: "failed" } }).catch(() => 0),
-        uncertain: await Message.count({ where: { status: "uncertain" } }).catch(() => 0),
-        pending: await Message.count({ where: { status: "pending" } }).catch(() => 0)
+        failed: await Message.count({ where: { companyId, status: "failed" } }).catch(() => 0),
+        uncertain: await Message.count({ where: { companyId, status: "uncertain" } }).catch(() => 0),
+        pending: await Message.count({ where: { companyId, status: "pending" } }).catch(() => 0)
       };
 
-      // 4. Active Queue Wait Alerts
+      // 4. Active Queue Wait Alerts scoped by company
       const unresolvedAlerts = await QueueWaitAlert.count({
-        where: { resolvedAt: null }
+        where: { companyId, resolvedAt: null }
       }).catch(() => 0);
 
-      // 5. AI Monthly Spend summary
+      // 5. AI Monthly Spend summary scoped by company
       const aiCompanies = await Company.findAll({
+        where: { id: companyId },
         attributes: ["id", "name", "aiMonthlyBudgetLimit", "aiMonthlySpent", "aiBudgetPeriod"]
       }).catch(() => []);
 
-      // 6. Operational alerts check
-      const alertsEval = await OperationalAlertService.evaluateOperationalAlerts().catch(() => ({
+      // 6. Operational alerts check scoped by company
+      const alertsEval = await OperationalAlertService.evaluateOperationalAlerts(companyId).catch(() => ({
         timestamp: new Date().toISOString(),
         alerts: [],
         systemHealthy: true
