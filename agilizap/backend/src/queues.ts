@@ -1,7 +1,7 @@
 import { confinedPath } from "./security/media";
 import * as Sentry from "@sentry/node";
 import BullQueue from "bull";
-import { addSeconds, differenceInSeconds } from "date-fns";
+import { addSeconds, differenceInMilliseconds } from "date-fns";
 import { isArray, isEmpty, isNil } from "lodash";
 import moment from "moment";
 import path from "path";
@@ -219,7 +219,7 @@ async function handleCloseTicketsAutomatic() {
   job.start();
 }
 
-async function handleVerifySchedules(job) {
+export async function handleVerifySchedules(job) {
   try {
     // 1. Reconcile any schedules that became overdue during downtime / interruption
     await reconcileOverdueSchedules({ gracePeriodSeconds: 60 });
@@ -252,7 +252,8 @@ async function handleVerifySchedules(job) {
           {
             jobId: `schedule-${schedule.id}`,
             delay,
-            removeOnComplete: true
+            removeOnComplete: true,
+            removeOnFail: true
           }
         );
         logger.info(`Disparo agendado para: ${schedule.contact?.name || schedule.id} com delay ${delay}ms`);
@@ -265,7 +266,7 @@ async function handleVerifySchedules(job) {
   }
 }
 
-async function handleSendScheduledMessage(job) {
+export async function handleSendScheduledMessage(job) {
   const { schedule } = job.data;
   const scheduleId = schedule?.id;
   if (!scheduleId) return;
@@ -351,7 +352,7 @@ async function handleSendScheduledMessage(job) {
   }
 }
 
-async function handleVerifyCampaigns(job) {
+export async function handleVerifyCampaigns(job) {
   /**
    * @todo
    * Implementar filtro de campanhas
@@ -365,23 +366,26 @@ async function handleVerifyCampaigns(job) {
 
   if (campaigns.length > 0)
     logger.info(`Campanhas encontradas: ${campaigns.length}`);
-  
+
   for (let campaign of campaigns) {
     try {
       const now = moment();
       const scheduledAt = moment(campaign.scheduledAt);
-      const delay = scheduledAt.diff(now, "milliseconds");
+      const delay = Math.max(0, scheduledAt.diff(now, "milliseconds"));
       logger.info(
         `Campanha enviada para a fila de processamento: Campanha=${campaign.id}, Delay Inicial=${delay}`
       );
-      campaignQueue.add(
+      await campaignQueue.add(
         "ProcessCampaign",
         {
           id: campaign.id,
           delay
         },
         {
-          removeOnComplete: true
+          jobId: `campaign-${campaign.id}`,
+          delay,
+          removeOnComplete: true,
+          removeOnFail: true
         }
       );
     } catch (err: any) {
@@ -390,7 +394,7 @@ async function handleVerifyCampaigns(job) {
   }
 }
 
-async function getCampaign(id) {
+export async function getCampaign(id) {
   const campaign = await Campaign.findByPk(id, {
     include: [
       {
@@ -401,8 +405,19 @@ async function getCampaign(id) {
           {
             model: ContactListItem,
             as: "contacts",
-            attributes: ["id", "name", "number", "email", "isWhatsappValid"],
-            where: { isWhatsappValid: true }
+            attributes: [
+              "id",
+              "name",
+              "number",
+              "email",
+              "isWhatsappValid",
+              "optOutCampaign"
+            ],
+            where: {
+              isWhatsappValid: true,
+              optOutCampaign: false
+            },
+            required: false
           }
         ]
       },
@@ -418,15 +433,48 @@ async function getCampaign(id) {
       }
     ]
   });
-  if (!campaign || campaign.contactList && campaign.contactList.companyId !== campaign.companyId ||
-      campaign.whatsapp && campaign.whatsapp.companyId !== campaign.companyId) throw new Error("ERR_NO_PERMISSION");
+  if (
+    !campaign ||
+    (campaign.contactList &&
+      campaign.contactList.companyId !== campaign.companyId) ||
+    (campaign.whatsapp && campaign.whatsapp.companyId !== campaign.companyId)
+  ) {
+    throw new Error("ERR_NO_PERMISSION");
+  }
   return campaign;
 }
 
 async function getContact(id) {
   return await ContactListItem.findByPk(id, {
-    attributes: ["id", "name", "number", "email", "companyId", "contactListId"]
+    attributes: [
+      "id",
+      "name",
+      "number",
+      "email",
+      "companyId",
+      "contactListId",
+      "optOutCampaign"
+    ]
   });
+}
+
+async function isContactOptedOut(
+  companyId: number,
+  number: string,
+  contactListItem?: { optOutCampaign?: boolean } | null
+): Promise<boolean> {
+  if (contactListItem?.optOutCampaign) {
+    return true;
+  }
+  const optedOutContact = await Contact.findOne({
+    where: {
+      companyId,
+      number,
+      optOutCampaign: true
+    },
+    attributes: ["id"]
+  });
+  return Boolean(optedOutContact);
 }
 
 async function getSettings(campaign) {
@@ -603,67 +651,101 @@ async function verifyAndFinalizeCampaign(campaign) {
   });
 }
 
-function calculateDelay(index, baseDelay, longerIntervalAfter, greaterInterval, messageInterval) {
-  const diffSeconds = differenceInSeconds(baseDelay, new Date());
-  if (index > longerIntervalAfter) {
-    return diffSeconds * 1000 + greaterInterval
-  } else {
-    return diffSeconds * 1000 + messageInterval
-  }
+export function calculateDelay(baseDelay: Date): number {
+  return Math.max(0, differenceInMilliseconds(baseDelay, new Date()));
 }
 
-async function handleProcessCampaign(job) {
+export async function handleProcessCampaign(job) {
   try {
     const { id }: ProcessCampaignData = job.data;
     const campaign = await getCampaign(id);
+    if (!campaign) return;
+    if (!["PROGRAMADA", "EM_ANDAMENTO"].includes(campaign.status)) {
+      return;
+    }
+    if (
+      campaign.status === "PROGRAMADA" &&
+      moment(campaign.scheduledAt).isAfter(moment().add(30, "seconds"))
+    ) {
+      logger.info(
+        `Campanha #${campaign.id} foi reagendada para o futuro. Aguardando novo horário.`
+      );
+      return;
+    }
+
     const settings = await getSettings(campaign);
-    if (campaign) {
-      const { contacts } = campaign.contactList;
-      if (isArray(contacts)) {
-        const contactData = contacts.map(contact => ({
-          contactId: contact.id,
-          campaignId: campaign.id,
-          variables: settings.variables,
-        }));
+    const contacts = campaign.contactList?.contacts;
+    if (isArray(contacts)) {
+      const contactData = contacts.map(contact => ({
+        contactId: contact.id,
+        campaignId: campaign.id,
+        variables: settings.variables
+      }));
 
-        // const baseDelay = job.data.delay || 0;
-        const longerIntervalAfter = parseToMilliseconds(settings.longerIntervalAfter);
-        const greaterInterval = parseToMilliseconds(settings.greaterInterval);
-        const messageInterval = settings.messageInterval;
+      const longerIntervalAfter = Number(settings.longerIntervalAfter) || 0;
+      const greaterInterval = Number(settings.greaterInterval) || 0;
+      const messageInterval = Number(settings.messageInterval) || 0;
 
-        let baseDelay = campaign.scheduledAt;
+      const now = new Date();
+      let baseDelay =
+        campaign.scheduledAt && new Date(campaign.scheduledAt) > now
+          ? new Date(campaign.scheduledAt)
+          : now;
 
-        const queuePromises = [];
-        for (let i = 0; i < contactData.length; i++) {
-          baseDelay = addSeconds(baseDelay, i > longerIntervalAfter ? greaterInterval : messageInterval);
+      const queuePromises = [];
+      for (let i = 0; i < contactData.length; i++) {
+        const useGreaterInterval =
+          longerIntervalAfter > 0 && i > longerIntervalAfter;
+        baseDelay = addSeconds(
+          baseDelay,
+          useGreaterInterval ? greaterInterval : messageInterval
+        );
 
-          const { contactId, campaignId, variables } = contactData[i];
-          const delay = calculateDelay(i, baseDelay, longerIntervalAfter, greaterInterval, messageInterval);
-          const queuePromise = campaignQueue.add(
-            "PrepareContact",
-            { contactId, campaignId, variables, delay },
-            { removeOnComplete: true }
-          );
-          queuePromises.push(queuePromise);
-          logger.info(`Registro enviado pra fila de disparo: Campanha=${campaign.id};Contato=${contacts[i].name};delay=${delay}`);
-        }
-        await Promise.all(queuePromises);
-        await campaign.update({ status: "EM_ANDAMENTO" });
+        const { contactId, campaignId, variables } = contactData[i];
+        const delay = calculateDelay(baseDelay);
+        const queuePromise = campaignQueue.add(
+          "PrepareContact",
+          { contactId, campaignId, variables, delay },
+          { removeOnComplete: true, removeOnFail: true }
+        );
+        queuePromises.push(queuePromise);
+        logger.info(
+          `Registro enviado pra fila de disparo: Campanha=${campaign.id};Contato=${contacts[i].name};delay=${delay}`
+        );
+      }
+      await Promise.all(queuePromises);
+      await campaign.update({ status: "EM_ANDAMENTO" });
+      if (contactData.length === 0) {
+        await verifyAndFinalizeCampaign(campaign);
       }
     }
   } catch (err: any) {
     Sentry.captureException(err);
+    logger.error(`campaignQueue -> ProcessCampaign -> error: ${err.message}`);
   }
 }
 
 let ultima_msg = 0;
-async function handlePrepareContact(job) {
+export async function handlePrepareContact(job) {
   try {
     const { contactId, campaignId, delay, variables }: PrepareContactData =
       job.data;
     const campaign = await getCampaign(campaignId);
     const contact = await getContact(contactId);
-    if (!contact || contact.companyId !== campaign.companyId || contact.contactListId !== campaign.contactListId) throw new Error("ERR_NO_PERMISSION");
+    if (
+      !contact ||
+      contact.companyId !== campaign.companyId ||
+      contact.contactListId !== campaign.contactListId
+    ) {
+      throw new Error("ERR_NO_PERMISSION");
+    }
+    if (await isContactOptedOut(campaign.companyId, contact.number, contact)) {
+      logger.info(
+        `Contato #${contactId} com optOutCampaign ativo. Ignorando preparo de campanha #${campaignId}.`
+      );
+      await verifyAndFinalizeCampaign(campaign);
+      return;
+    }
 
     const campaignShipping: any = {};
     campaignShipping.number = contact.number;
@@ -743,7 +825,7 @@ async function handlePrepareContact(job) {
   }
 }
 
-async function handleDispatchCampaign(job) {
+export async function handleDispatchCampaign(job) {
   try {
     const { data } = job;
     const { campaignShippingId, campaignId }: DispatchCampaignData = data;
@@ -776,8 +858,27 @@ async function handleDispatchCampaign(job) {
       }
     );
 
-    if (!campaignShipping || campaignShipping.campaignId !== campaign.id ||
-        campaignShipping.contact?.companyId !== campaign.companyId) throw new Error("ERR_NO_PERMISSION");
+    if (
+      !campaignShipping ||
+      campaignShipping.campaignId !== campaign.id ||
+      campaignShipping.contact?.companyId !== campaign.companyId
+    ) {
+      throw new Error("ERR_NO_PERMISSION");
+    }
+
+    if (
+      await isContactOptedOut(
+        campaign.companyId,
+        campaignShipping.number,
+        campaignShipping.contact
+      )
+    ) {
+      logger.info(
+        `Disparo de campanha bloqueado por opt-out (LGPD): Campanha=${campaignId};Contato=${campaignShipping.contact?.id}`
+      );
+      await verifyAndFinalizeCampaign(campaign);
+      return;
+    }
     const chatId = `${campaignShipping.number}@s.whatsapp.net`;
 
     let body = campaignShipping.message;
