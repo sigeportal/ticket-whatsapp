@@ -57,6 +57,8 @@ PUBLIC_ARCHIVE="${STAGING_DIR}/backend_public.tar.gz"
 
 export PGPASSWORD="${DB_PASS:-}"
 pg_dump \
+    --clean \
+    --if-exists \
     -h "${DB_HOST_VAL}" \
     -U "${DB_USER_VAL}" \
     -d "${DB_NAME_VAL}" \

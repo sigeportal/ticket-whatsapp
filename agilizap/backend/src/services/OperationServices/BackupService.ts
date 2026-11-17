@@ -99,7 +99,11 @@ export class BackupService {
           logger.warn({ event: "backup_table_skipped", table: table.name, reason: e.message });
         }
 
-        const serialized = JSON.stringify(rows.map(r => r.toJSON ? r.toJSON() : r), null, 2);
+        const serialized = JSON.stringify(
+          rows.map(r => (r.get ? r.get({ plain: true, raw: true }) : r)),
+          null,
+          2
+        );
         const tableSha = calculateSha256(serialized);
         fs.writeFileSync(path.join(backupFolder, `${table.name}.json`), serialized, "utf8");
 
