@@ -17,10 +17,13 @@ interface Request {
   media: Express.Multer.File;
   ticket: Ticket;
   body?: string;
-  isForwarded?: boolean;  
+  isForwarded?: boolean;
+  deleteSource?: boolean;
 }
 
-const publicFolder = path.resolve(__dirname, "..", "..", "..", "public");
+const publicFolder =
+  (process.env.NODE_ENV === "test" && process.env.TEST_MEDIA_ROOT) ||
+  path.resolve(__dirname, "..", "..", "..", "public");
 
 const getFfmpegPath = (): string => {
   try {
@@ -33,40 +36,57 @@ const getFfmpegPath = (): string => {
   return "ffmpeg";
 };
 
-const processAudio = async (audio: string): Promise<string> => {
-  const outputAudio = `${publicFolder}/${randomBytes(24).toString("hex")}.mp3`;
+const runFfmpegAudio = async (
+  audio: string,
+  buildArgs: (outputAudio: string) => string[],
+  deleteSource = false
+): Promise<string> => {
+  fs.mkdirSync(publicFolder, { recursive: true });
+  const outputAudio = path.join(publicFolder, `${randomBytes(24).toString("hex")}.mp3`);
   const ffmpegCmd = getFfmpegPath();
+
   return new Promise((resolve, reject) => {
     execFile(
-      ffmpegCmd, ["-nostdin", "-threads", "1", "-i", audio, "-vn", "-ab", "128k", "-ar", "44100", "-f", "ipod", outputAudio],
+      ffmpegCmd,
+      buildArgs(outputAudio),
       { timeout: 60000, maxBuffer: 1024 * 1024 },
       (error, _stdout, _stderr) => {
-        if (error) { fs.rmSync(outputAudio, { force: true }); reject(error); return; }
-        try {
-          fs.unlinkSync(audio);
-        } catch (e) {}
+        if (error) {
+          fs.rmSync(outputAudio, { force: true });
+          reject(error);
+          return;
+        }
+        if (deleteSource) {
+          try {
+            fs.unlinkSync(audio);
+          } catch (e) {}
+        }
         resolve(outputAudio);
       }
     );
   });
 };
 
-const processAudioFile = async (audio: string): Promise<string> => {
-  const outputAudio = `${publicFolder}/${randomBytes(24).toString("hex")}.mp3`;
-  const ffmpegCmd = getFfmpegPath();
-  return new Promise((resolve, reject) => {
-    execFile(
-      ffmpegCmd, ["-nostdin", "-threads", "1", "-i", audio, "-vn", "-ar", "44100", "-ac", "2", "-b:a", "192k", outputAudio],
-      { timeout: 60000, maxBuffer: 1024 * 1024 },
-      (error, _stdout, _stderr) => {
-        if (error) { fs.rmSync(outputAudio, { force: true }); reject(error); return; }
-        try {
-          fs.unlinkSync(audio);
-        } catch (e) {}
-        resolve(outputAudio);
-      }
-    );
-  });
+const processAudio = (audio: string, deleteSource = false): Promise<string> =>
+  runFfmpegAudio(
+    audio,
+    outputAudio => ["-nostdin", "-threads", "1", "-i", audio, "-vn", "-ab", "128k", "-ar", "44100", "-f", "ipod", outputAudio],
+    deleteSource
+  );
+
+const processAudioFile = (audio: string, deleteSource = false): Promise<string> =>
+  runFfmpegAudio(
+    audio,
+    outputAudio => ["-nostdin", "-threads", "1", "-i", audio, "-vn", "-ar", "44100", "-ac", "2", "-b:a", "192k", outputAudio],
+    deleteSource
+  );
+
+const readAndRemoveTempFile = (filePath: string): Buffer => {
+  try {
+    return fs.readFileSync(filePath);
+  } finally {
+    fs.rmSync(filePath, { force: true });
+  }
 };
 
 export const getMessageOptions = async (
@@ -74,13 +94,12 @@ export const getMessageOptions = async (
   pathMedia: string,
   body?: string
 ): Promise<any> => {
-  const mimeType = mime.lookup(pathMedia);
-  const typeMessage = mimeType.split("/")[0];
-
   try {
+    const mimeType = mime.lookup(pathMedia);
     if (!mimeType) {
       throw new Error("Invalid mimetype");
     }
+    const typeMessage = mimeType.split("/")[0];
     let options: AnyMessageContent;
 
     if (typeMessage === "video") {
@@ -91,23 +110,13 @@ export const getMessageOptions = async (
         // gifPlayback: true
       };
     } else if (typeMessage === "audio") {
-      const typeAudio = true; //fileName.includes("audio-record-site");
-      const convert = await processAudio(pathMedia);
-      if (typeAudio) {
-        options = {
-          audio: fs.readFileSync(convert),
-          mimetype: typeAudio ? "audio/mp4" : mimeType,
-          caption: body ? body : null,
-          ptt: true
-        };
-      } else {
-        options = {
-          audio: fs.readFileSync(convert),
-          mimetype: typeAudio ? "audio/mp4" : mimeType,
-          caption: body ? body : null,
-          ptt: true
-        };
-      }
+      const convert = await processAudio(pathMedia, false);
+      options = {
+        audio: readAndRemoveTempFile(convert),
+        mimetype: "audio/mp4",
+        caption: body ? body : null,
+        ptt: true
+      };
     } else if (typeMessage === "document") {
       options = {
         document: fs.readFileSync(pathMedia),
@@ -141,7 +150,8 @@ const SendWhatsAppMedia = async ({
   media,
   ticket,
   body,
-  isForwarded = false
+  isForwarded = false,
+  deleteSource = true
 }: Request): Promise<WAMessage> => {
   try {
     const wbot = await GetTicketWbot(ticket);
@@ -161,22 +171,22 @@ const SendWhatsAppMedia = async ({
       };
     } else if (typeMessage === "audio") {
       const typeAudio = media.originalname.includes("audio-record-site");
-      if (typeAudio) {
-        const convert = await processAudio(media.path);
-        options = {
-          audio: fs.readFileSync(convert),
-          mimetype: typeAudio ? "audio/mp4" : media.mimetype,
-          ptt: true,
-          contextInfo: { forwardingScore: isForwarded ? 2 : 0, isForwarded: isForwarded }
-        };
-      } else {
-        const convert = await processAudioFile(media.path);
-        options = {
-          audio: fs.readFileSync(convert),
-          mimetype: typeAudio ? "audio/mp4" : media.mimetype,
-          contextInfo: { forwardingScore: isForwarded ? 2 : 0, isForwarded: isForwarded }
-        };
-      }
+      const convert = typeAudio
+        ? await processAudio(media.path, deleteSource)
+        : await processAudioFile(media.path, deleteSource);
+      const audioBuffer = readAndRemoveTempFile(convert);
+      options = typeAudio
+        ? {
+            audio: audioBuffer,
+            mimetype: "audio/mp4",
+            ptt: true,
+            contextInfo: { forwardingScore: isForwarded ? 2 : 0, isForwarded: isForwarded }
+          }
+        : {
+            audio: audioBuffer,
+            mimetype: media.mimetype,
+            contextInfo: { forwardingScore: isForwarded ? 2 : 0, isForwarded: isForwarded }
+          };
     } else if (typeMessage === "document" || typeMessage === "text") {
       options = {
         document: fs.readFileSync(pathMedia),

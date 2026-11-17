@@ -328,7 +328,13 @@ export const forwardMessage = async (
       path: filePath
     } as Express.Multer.File
 
-    await SendWhatsAppMedia({ media: mediaSrc, ticket: createTicket, body, isForwarded: message.fromMe ? false : true });
+    await SendWhatsAppMedia({
+      media: mediaSrc,
+      ticket: createTicket,
+      body,
+      isForwarded: message.fromMe ? false : true,
+      deleteSource: false
+    });
   }
 
   return res.send();
