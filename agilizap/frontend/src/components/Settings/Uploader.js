@@ -53,17 +53,16 @@ const useStyles = makeStyles((theme) => ({
     height: 240,
   },
   tab: {
-    background: "#f2f5f3",
-    borderRadius: 4,
+    background: "var(--bg-subtle)",
+    borderRadius: 10,
     width: "100%",
     "& .MuiTab-wrapper": {
-      color: "#128c7e"
+      color: "var(--action)",
+      fontWeight: 600,
     },
     "& .MuiTabs-flexContainer": {
       justifyContent: "center"
     }
-
-
   },
   paper: {
     padding: theme.spacing(2),
@@ -74,17 +73,17 @@ const useStyles = makeStyles((theme) => ({
   },
   cardAvatar: {
     fontSize: "55px",
-    color: grey[500],
-    backgroundColor: "#ffffff",
+    color: "var(--ink-muted)",
+    backgroundColor: "var(--bg-surface)",
     width: theme.spacing(7),
     height: theme.spacing(7),
   },
   cardTitle: {
     fontSize: "18px",
-    color: blue[700],
+    color: "var(--ink-primary)",
   },
   cardSubtitle: {
-    color: grey[600],
+    color: "var(--ink-secondary)",
     fontSize: "14px",
   },
   alignRight: {
@@ -102,15 +101,26 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(1),
   },
   fileInput: {
-  	background: "red",
+    display: "none",
   },
   fileInputLabel: {
-    display: "inline-block",
-    backgroundColor: "#7c7c7c",
-    color: "#fff",
-    padding: "8px 16px",
-    borderRadius: "4px",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    backgroundColor: "var(--field-bg)",
+    border: "1px dashed var(--border-strong)",
+    color: "var(--ink-primary)",
+    padding: "12px 16px",
+    borderRadius: "10px",
+    fontWeight: 600,
+    fontSize: "0.875rem",
     cursor: "pointer",
+    transition: "all var(--t-in) var(--ease-ui)",
+    "&:hover": {
+      backgroundColor: "var(--action-soft)",
+      borderColor: "var(--action)",
+    },
     "& input": {
       display: "none",
     },

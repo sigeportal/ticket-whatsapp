@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 
 import "react-toastify/dist/ReactToastify.css";
 import "./styles/toast.css";
 import { QueryClient, QueryClientProvider } from "react-query";
-import lightBackground from '../src/assets/wa-background-light.png';
-import darkBackground from '../src/assets/wa-background-dark.jpg';
 import { ptBR } from "@material-ui/core/locale";
 import { createTheme, ThemeProvider } from "@material-ui/core/styles";
 import { useMediaQuery } from "@material-ui/core";
+import {
+    createTheme as createMui5Theme,
+    ThemeProvider as Mui5ThemeProvider,
+} from "@mui/material/styles";
 import ColorModeContext from "./layout/themeContext";
-import { SocketContext, SocketManager } from './context/Socket/SocketContext';
+import { SocketManager, SocketContext } from "./context/Socket/SocketContext";
+import { FONT_DISPLAY, FONT_SANS, getDesignTokens } from "./theme/tokens";
 
 import Routes from "./routes";
 
@@ -31,250 +34,371 @@ const App = () => {
         []
     );
 
-    const theme = createTheme(
-        {
-            typography: {
-                fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif",
-                allVariants: {
-                    fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif",
-                },
-            },
-            scrollbarStyles: {
-                "&::-webkit-scrollbar": {
-                    width: '6px',
-                    height: '6px',
-                },
-                "&::-webkit-scrollbar-thumb": {
-                    backgroundColor: mode === "light" ? "rgba(0, 0, 0, 0.16)" : "rgba(16, 185, 129, 0.25)",
-                    borderRadius: "9999px",
-                },
-                "&::-webkit-scrollbar-thumb:hover": {
-                    backgroundColor: mode === "light" ? "rgba(0, 0, 0, 0.3)" : "rgba(16, 185, 129, 0.45)",
-                },
-                "&::-webkit-scrollbar-track": {
-                    background: "transparent",
-                },
-            },
-            scrollbarStylesSoft: {
-                "&::-webkit-scrollbar": {
-                    width: "5px",
-                    height: "5px",
-                },
-                "&::-webkit-scrollbar-thumb": {
-                    backgroundColor: mode === "light" ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.12)",
-                    borderRadius: "9999px",
-                },
-                "&::-webkit-scrollbar-thumb:hover": {
-                    backgroundColor: mode === "light" ? "rgba(0, 0, 0, 0.22)" : "rgba(255, 255, 255, 0.22)",
-                },
-                "&::-webkit-scrollbar-track": {
-                    background: "transparent",
-                },
-            },
-            palette: {
-                type: mode,
-                primary: {
-                    main: mode === "light" ? "#10b981" : "#25D366",
-                    light: mode === "light" ? "#34d399" : "#4ade80",
-                    dark: mode === "light" ? "#059669" : "#0d9488",
-                    contrastText: mode === "light" ? "#ffffff" : "#07130e",
-                },
-                background: {
-                    default: mode === "light" ? "#f8fafc" : "#07130e",
-                    paper: mode === "light" ? "#ffffff" : "#0b1e16",
-                },
-                text: {
-                    primary: mode === "light" ? "#0f172a" : "#f0fdf4",
-                    secondary: mode === "light" ? "#475569" : "#94a3b8",
-                },
-                sair: { main: mode === "light" ? "#ef4444" : "#f87171" },
-                vcard: { main: mode === "light" ? "#10b981" : "#25D366" },
-                textPrimary: mode === "light" ? "#064e3b" : "#25D366",
-                borderPrimary: mode === "light" ? "rgba(16, 185, 129, 0.25)" : "rgba(37, 211, 102, 0.25)",
-                dark: { main: mode === "light" ? "#1e293b" : "#f8fafc" },
-                light: { main: mode === "light" ? "#f8fafc" : "#0b1e16" },
-                tabHeaderBackground: mode === "light" ? "#f1f5f9" : "#0d2219",
-                optionsBackground: mode === "light" ? "#f8fafc" : "#0d2219",
-                options: mode === "light" ? "#ffffff" : "#0b1e16",
-                fontecor: mode === "light" ? "#065f46" : "#25D366",
-                fancyBackground: mode === "light" ? "#f8fafc" : "#07130e",
-                bordabox: mode === "light" ? "rgba(226, 232, 240, 0.9)" : "rgba(16, 185, 129, 0.18)",
-                newmessagebox: mode === "light" ? "#ffffff" : "#0d2219",
-                inputdigita: mode === "light" ? "#ffffff" : "#0d2219",
-                contactdrawer: mode === "light" ? "#ffffff" : "#0b1e16",
-                announcements: mode === "light" ? "#f1f5f9" : "#0d2219",
-                login: mode === "light" ? "#ffffff" : "#0b1e16",
-                announcementspopover: mode === "light" ? "#ffffff" : "#0b1e16",
-                chatlist: mode === "light" ? "#f8fafc" : "#07130e",
-                boxlist: mode === "light" ? "#ffffff" : "#0d2219",
-                boxchatlist: mode === "light" ? "#f8fafc" : "#07130e",
-                total: mode === "light" ? "#ffffff" : "#0b1e16",
-                messageIcons: mode === "light" ? "#64748b" : "#94a3b8",
-                inputBackground: mode === "light" ? "#ffffff" : "#0d2219",
-                barraSuperior: mode === "light" ? "#ffffff" : "#0b1e16",
-                boxticket: mode === "light" ? "#f8fafc" : "#0d2219",
-                campaigntab: mode === "light" ? "#f1f5f9" : "#0d2219",
-                mediainput: mode === "light" ? "#f8fafc" : "#07130e",
-            },
-            overrides: {
-                MuiButton: {
-                    root: {
-                        borderRadius: 10,
-                        textTransform: "none",
-                        fontWeight: 700,
-                        letterSpacing: "0.01em",
-                        fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
-                    },
-                    containedPrimary: {
-                        background: "linear-gradient(135deg, #10b981 0%, #0d9488 100%)",
-                        color: "#ffffff",
-                        boxShadow: "none",
-                        "&:hover": {
-                            background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
-                            boxShadow: "none",
+    const tokens = useMemo(() => getDesignTokens(mode), [mode]);
+
+    const theme = useMemo(
+        () =>
+            createTheme(
+                {
+                    typography: {
+                        fontFamily: FONT_SANS,
+                        h1: { fontFamily: FONT_DISPLAY, fontWeight: 700, letterSpacing: "-0.025em" },
+                        h2: { fontFamily: FONT_DISPLAY, fontWeight: 700, letterSpacing: "-0.025em" },
+                        h3: { fontFamily: FONT_DISPLAY, fontWeight: 700, letterSpacing: "-0.02em" },
+                        h4: { fontFamily: FONT_DISPLAY, fontWeight: 700, letterSpacing: "-0.02em" },
+                        h5: { fontFamily: FONT_DISPLAY, fontWeight: 700, letterSpacing: "-0.015em" },
+                        h6: { fontFamily: FONT_DISPLAY, fontWeight: 700, letterSpacing: "-0.015em" },
+                        allVariants: {
+                            fontFamily: FONT_SANS,
                         },
                     },
-                    containedSecondary: {
-                        backgroundColor: "#ef4444",
-                        color: "#ffffff",
-                        boxShadow: "none",
-                        "&:hover": {
-                            backgroundColor: "#dc2626",
-                            boxShadow: "none",
+                    scrollbarStyles: {
+                        "&::-webkit-scrollbar": {
+                            width: "6px",
+                            height: "6px",
+                        },
+                        "&::-webkit-scrollbar-thumb": {
+                            backgroundColor:
+                                mode === "light" ? "rgba(10, 21, 16, 0.16)" : "rgba(37, 211, 102, 0.24)",
+                            borderRadius: "9999px",
+                        },
+                        "&::-webkit-scrollbar-thumb:hover": {
+                            backgroundColor:
+                                mode === "light" ? "rgba(10, 21, 16, 0.32)" : "rgba(37, 211, 102, 0.45)",
+                        },
+                        "&::-webkit-scrollbar-track": {
+                            background: "transparent",
                         },
                     },
-                    outlinedPrimary: {
-                        borderColor: "rgba(16, 185, 129, 0.4)",
-                        color: mode === "light" ? "#065f46" : "#34d399",
-                        "&:hover": {
-                            borderColor: "#10b981",
-                            backgroundColor: "rgba(16, 185, 129, 0.08)",
+                    scrollbarStylesSoft: {
+                        "&::-webkit-scrollbar": {
+                            width: "5px",
+                            height: "5px",
+                        },
+                        "&::-webkit-scrollbar-thumb": {
+                            backgroundColor:
+                                mode === "light" ? "rgba(10, 21, 16, 0.12)" : "rgba(237, 245, 240, 0.12)",
+                            borderRadius: "9999px",
+                        },
+                        "&::-webkit-scrollbar-thumb:hover": {
+                            backgroundColor:
+                                mode === "light" ? "rgba(10, 21, 16, 0.24)" : "rgba(237, 245, 240, 0.24)",
+                        },
+                        "&::-webkit-scrollbar-track": {
+                            background: "transparent",
                         },
                     },
-                    outlinedSecondary: {
-                        borderColor: mode === "light" ? "rgba(226, 232, 240, 0.9)" : "rgba(255, 255, 255, 0.15)",
-                        color: mode === "light" ? "#64748b" : "#94a3b8",
-                        "&:hover": {
-                            backgroundColor: mode === "light" ? "#f1f5f9" : "rgba(255, 255, 255, 0.06)",
-                            borderColor: mode === "light" ? "#cbd5e1" : "rgba(255, 255, 255, 0.25)",
+                    palette: {
+                        type: mode,
+                        primary: {
+                            main: tokens.action.main,
+                            light: tokens.brand.mint,
+                            dark: tokens.action.hover,
+                            contrastText: tokens.action.ink,
                         },
-                    },
-                },
-                MuiDialog: {
-                    paper: {
-                        borderRadius: 16,
-                        border: mode === "light" ? "1px solid rgba(226, 232, 240, 0.9)" : "1px solid rgba(16, 185, 129, 0.2)",
-                        boxShadow: mode === "light" ? "0 4px 16px rgba(0, 0, 0, 0.08)" : "0 4px 20px rgba(0, 0, 0, 0.45)",
-                    },
-                },
-                MuiDialogTitle: {
-                    root: {
-                        padding: "18px 24px 14px",
-                        borderBottom: mode === "light" ? "1px solid #f1f5f9" : "1px solid rgba(16, 185, 129, 0.15)",
-                        "& .MuiTypography-root": {
-                            fontSize: "1.125rem",
-                            fontWeight: 800,
-                            letterSpacing: "-0.01em",
-                            color: mode === "light" ? "#0f172a" : "#f0fdf4",
-                            fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+                        secondary: {
+                            main: tokens.status.danger,
+                            contrastText: "#FFFFFF",
                         },
-                    },
-                },
-                MuiDialogActions: {
-                    root: {
-                        padding: "14px 24px 18px",
-                        borderTop: mode === "light" ? "1px solid #f1f5f9" : "1px solid rgba(16, 185, 129, 0.15)",
-                        gap: 8,
-                    },
-                },
-                MuiPaper: {
-                    rounded: {
-                        borderRadius: 14,
-                    },
-                },
-                MuiOutlinedInput: {
-                    root: {
-                        borderRadius: 10,
-                        backgroundColor: mode === "light" ? "#ffffff" : "#07130e",
-                        transition: "all 0.2s ease-in-out",
-                        "&:hover $notchedOutline": {
-                            borderColor: "#10b981",
+                        background: {
+                            default: tokens.canvas,
+                            paper: tokens.surface,
                         },
-                        "&$focused $notchedOutline": {
-                            borderColor: "#10b981",
-                            borderWidth: "1.5px",
+                        text: {
+                            primary: tokens.ink.primary,
+                            secondary: tokens.ink.secondary,
                         },
+                        sair: { main: tokens.status.danger },
+                        vcard: { main: tokens.action.main },
+                        textPrimary: mode === "light" ? "#047857" : "#25D366",
+                        borderPrimary: tokens.border.strong,
+                        dark: { main: mode === "light" ? "#0A1510" : "#ECF5F0" },
+                        light: { main: mode === "light" ? "#F5F7F5" : "#0C1511" },
+                        tabHeaderBackground: tokens.subtle,
+                        optionsBackground: tokens.subtle,
+                        options: tokens.surface,
+                        fontecor: mode === "light" ? "#047857" : "#34D399",
+                        fancyBackground: tokens.canvas,
+                        bordabox: tokens.border.hairline,
+                        newmessagebox: tokens.surface,
+                        inputdigita: tokens.surface,
+                        contactdrawer: tokens.surface,
+                        announcements: tokens.subtle,
+                        login: tokens.surface,
+                        announcementspopover: tokens.elevated,
+                        chatlist: tokens.canvas,
+                        boxlist: tokens.elevated,
+                        boxchatlist: tokens.canvas,
+                        total: tokens.surface,
+                        messageIcons: tokens.ink.muted,
+                        inputBackground: tokens.fieldBg,
+                        barraSuperior: tokens.surface,
+                        boxticket: tokens.canvas,
+                        campaigntab: tokens.subtle,
+                        mediainput: tokens.subtle,
                     },
-                    notchedOutline: {
-                        borderColor: mode === "light" ? "rgba(226, 232, 240, 0.9)" : "rgba(16, 185, 129, 0.2)",
-                    },
-                },
-                MuiTableHead: {
-                    root: {
-                        backgroundColor: mode === "light" ? "#f8fafc" : "#0b1e16",
-                    },
-                },
-                MuiTableCell: {
-                    head: {
-                        fontSize: "0.75rem",
-                        fontWeight: 800,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
-                        color: mode === "light" ? "#475569" : "#6ee7b7",
-                        borderBottom: mode === "light" ? "1px solid #e2e8f0" : "1px solid rgba(16, 185, 129, 0.15)",
-                        padding: "12px 16px",
-                    },
-                    body: {
-                        fontSize: "0.84rem",
-                        color: mode === "light" ? "#1e293b" : "#f1f5f9",
-                        borderBottom: mode === "light" ? "1px solid #f1f5f9" : "1px solid rgba(255, 255, 255, 0.04)",
-                        padding: "12px 16px",
-                    },
-                },
-                MuiTableRow: {
-                    root: {
-                        transition: "background-color 0.15s ease",
-                        "&:hover": {
-                            backgroundColor: mode === "light" ? "rgba(16, 185, 129, 0.04)" : "rgba(16, 185, 129, 0.06)",
+                    overrides: {
+                        MuiCssBaseline: {
+                            "@global": {
+                                body: {
+                                    backgroundColor: tokens.canvas,
+                                    color: tokens.ink.primary,
+                                    fontFamily: FONT_SANS,
+                                },
+                            },
                         },
-                    },
-                },
-                MuiSwitch: {
-                    root: {
-                        width: 42,
-                        height: 24,
-                        padding: 0,
-                        margin: 8,
-                    },
-                    switchBase: {
-                        padding: 2,
-                        "&$checked": {
-                            transform: "translateX(18px)",
-                            color: "#ffffff",
-                            "& + $track": {
-                                backgroundColor: "#10b981",
+                        MuiButton: {
+                            root: {
+                                borderRadius: 10,
+                                textTransform: "none",
+                                fontWeight: 600,
+                                letterSpacing: "-0.005em",
+                                fontFamily: FONT_SANS,
+                                minHeight: 38,
+                                boxShadow: "none",
+                            },
+                            containedPrimary: {
+                                backgroundColor: tokens.action.main,
+                                color: tokens.action.ink,
+                                boxShadow: "none",
+                                "&:hover": {
+                                    backgroundColor: tokens.action.hover,
+                                    boxShadow: "none",
+                                },
+                            },
+                            containedSecondary: {
+                                backgroundColor: tokens.status.danger,
+                                color: "#ffffff",
+                                boxShadow: "none",
+                                "&:hover": {
+                                    backgroundColor: mode === "light" ? "#BE123C" : "#F43F5E",
+                                    boxShadow: "none",
+                                },
+                            },
+                            outlinedPrimary: {
+                                borderColor: tokens.border.strong,
+                                color: mode === "light" ? "#047857" : "#25D366",
+                                "&:hover": {
+                                    borderColor: tokens.action.main,
+                                    backgroundColor: tokens.action.soft,
+                                },
+                            },
+                            outlinedSecondary: {
+                                borderColor: tokens.border.hairline,
+                                color: tokens.ink.secondary,
+                                "&:hover": {
+                                    backgroundColor: tokens.subtle,
+                                    borderColor: tokens.border.strong,
+                                },
+                            },
+                        },
+                        MuiDialog: {
+                            paper: {
+                                borderRadius: 18,
+                                backgroundColor: tokens.surface,
+                                border: `1px solid ${tokens.border.hairline}`,
+                                boxShadow:
+                                    mode === "light"
+                                        ? "0 24px 48px -12px rgba(7, 19, 14, 0.18)"
+                                        : "0 24px 56px -12px rgba(0, 0, 0, 0.75)",
+                            },
+                        },
+                        MuiDialogTitle: {
+                            root: {
+                                padding: "20px 24px 16px",
+                                borderBottom: `1px solid ${tokens.border.hairline}`,
+                                "& .MuiTypography-root": {
+                                    fontSize: "1.125rem",
+                                    fontWeight: 700,
+                                    letterSpacing: "-0.02em",
+                                    color: tokens.ink.primary,
+                                    fontFamily: FONT_DISPLAY,
+                                },
+                            },
+                        },
+                        MuiDialogContent: {
+                            root: {
+                                padding: "20px 24px",
+                            },
+                        },
+                        MuiDialogActions: {
+                            root: {
+                                padding: "14px 24px 18px",
+                                borderTop: `1px solid ${tokens.border.hairline}`,
+                                gap: 10,
+                            },
+                        },
+                        MuiPaper: {
+                            root: {
+                                backgroundColor: tokens.surface,
+                                color: tokens.ink.primary,
+                            },
+                            rounded: {
+                                borderRadius: 14,
+                            },
+                            outlined: {
+                                borderColor: tokens.border.hairline,
+                            },
+                        },
+                        MuiOutlinedInput: {
+                            root: {
+                                borderRadius: 10,
+                                backgroundColor: tokens.fieldBg,
+                                transition: "all 0.15s cubic-bezier(0.2, 0.8, 0.2, 1)",
+                                "&:hover": {
+                                    backgroundColor: mode === "light" ? "#FFFFFF" : "#0E1A14",
+                                },
+                                "&:hover $notchedOutline": {
+                                    borderColor: mode === "light" ? "rgba(5, 150, 105, 0.45)" : "rgba(37, 211, 102, 0.45)",
+                                },
+                                "&$focused": {
+                                    backgroundColor: mode === "light" ? "#FFFFFF" : "#101E17",
+                                    boxShadow:
+                                        mode === "light"
+                                            ? "0 0 0 3px rgba(5, 150, 105, 0.16)"
+                                            : "0 0 0 3px rgba(37, 211, 102, 0.2)",
+                                },
+                                "&$focused $notchedOutline": {
+                                    borderColor: tokens.action.main,
+                                    borderWidth: "1.5px",
+                                },
+                            },
+                            notchedOutline: {
+                                borderColor: mode === "light" ? "rgba(10, 21, 16, 0.14)" : "rgba(237, 245, 240, 0.12)",
+                            },
+                        },
+                        MuiInputLabel: {
+                            outlined: {
+                                fontSize: "0.875rem",
+                                fontWeight: 500,
+                                color: tokens.ink.secondary,
+                            },
+                        },
+                        MuiTabs: {
+                            indicator: {
+                                backgroundColor: tokens.action.main,
+                                height: 2.5,
+                                borderRadius: "2px 2px 0 0",
+                            },
+                        },
+                        MuiTab: {
+                            root: {
+                                textTransform: "none",
+                                fontFamily: FONT_SANS,
+                                fontWeight: 600,
+                                fontSize: "0.875rem",
+                                color: tokens.ink.secondary,
+                                "&$selected": {
+                                    color: mode === "light" ? "#047857" : "#25D366",
+                                    fontWeight: 700,
+                                },
+                            },
+                        },
+                        MuiTableHead: {
+                            root: {
+                                backgroundColor: tokens.subtle,
+                            },
+                        },
+                        MuiTableCell: {
+                            head: {
+                                fontSize: "0.72rem",
+                                fontWeight: 700,
+                                fontFamily: FONT_DISPLAY,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.06em",
+                                color: tokens.ink.secondary,
+                                borderBottom: `1px solid ${tokens.border.hairline}`,
+                                padding: "12px 16px",
+                            },
+                            body: {
+                                fontSize: "0.86rem",
+                                color: tokens.ink.primary,
+                                borderBottom: `1px solid ${tokens.border.hairline}`,
+                                padding: "12px 16px",
+                            },
+                        },
+                        MuiTableRow: {
+                            root: {
+                                transition: "background-color 0.12s ease",
+                                "&:hover": {
+                                    backgroundColor: tokens.action.soft,
+                                },
+                            },
+                        },
+                        MuiChip: {
+                            root: {
+                                borderRadius: 8,
+                                fontWeight: 600,
+                                fontFamily: FONT_SANS,
+                            },
+                        },
+                        MuiSwitch: {
+                            root: {
+                                width: 42,
+                                height: 24,
+                                padding: 0,
+                                margin: 8,
+                            },
+                            switchBase: {
+                                padding: 2,
+                                "&$checked": {
+                                    transform: "translateX(18px)",
+                                    color: tokens.action.ink,
+                                    "& + $track": {
+                                        backgroundColor: tokens.action.main,
+                                        opacity: 1,
+                                        border: "none",
+                                    },
+                                },
+                            },
+                            thumb: {
+                                width: 20,
+                                height: 20,
+                                boxShadow: "0 1px 3px rgba(0,0,0,0.22)",
+                            },
+                            track: {
+                                borderRadius: 12,
+                                border: `1px solid ${tokens.border.hairline}`,
+                                backgroundColor: mode === "light" ? "#CBD5CF" : "#1F3027",
                                 opacity: 1,
-                                border: "none",
+                                transition: "all 0.18s ease-in-out",
                             },
                         },
                     },
-                    thumb: {
-                        width: 20,
-                        height: 20,
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                    mode,
+                },
+                locale
+            ),
+        [mode, tokens, locale]
+    );
+
+    const mui5Theme = useMemo(
+        () =>
+            createMui5Theme({
+                palette: {
+                    mode,
+                    primary: {
+                        main: tokens.action.main,
+                        dark: tokens.action.hover,
+                        contrastText: tokens.action.ink,
                     },
-                    track: {
-                        borderRadius: 12,
-                        border: "1px solid #cbd5e1",
-                        backgroundColor: "#cbd5e1",
-                        opacity: 1,
-                        transition: "all 0.2s ease-in-out",
+                    background: {
+                        default: tokens.canvas,
+                        paper: tokens.surface,
+                    },
+                    text: {
+                        primary: tokens.ink.primary,
+                        secondary: tokens.ink.secondary,
                     },
                 },
-            },
-            mode,
-        },
-        locale
+                typography: {
+                    fontFamily: FONT_SANS,
+                },
+                shape: {
+                    borderRadius: 10,
+                },
+            }),
+        [mode, tokens]
     );
 
     useEffect(() => {
@@ -295,17 +419,17 @@ const App = () => {
         }
     }, [mode]);
 
-
-
     return (
         <ColorModeContext.Provider value={{ colorMode }}>
-            <ThemeProvider theme={theme}>
-                <QueryClientProvider client={queryClient}>
-                  <SocketContext.Provider value={SocketManager}>
-                      <Routes />
-                  </SocketContext.Provider>
-                </QueryClientProvider>
-            </ThemeProvider>
+            <Mui5ThemeProvider theme={mui5Theme}>
+                <ThemeProvider theme={theme}>
+                    <QueryClientProvider client={queryClient}>
+                        <SocketContext.Provider value={SocketManager}>
+                            <Routes />
+                        </SocketContext.Provider>
+                    </QueryClientProvider>
+                </ThemeProvider>
+            </Mui5ThemeProvider>
         </ColorModeContext.Provider>
     );
 };

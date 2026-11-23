@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from "react";
 import clsx from "clsx";
-import moment from "moment";
+import { Link as RouterLink } from "react-router-dom";
 import {
   makeStyles,
   Drawer,
@@ -14,25 +14,19 @@ import {
   Menu,
   useTheme,
   useMediaQuery,
-  Avatar,
   Tooltip,
 } from "@material-ui/core";
 
-import MenuIcon from "@material-ui/icons/Menu";
-import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
-import CachedIcon from "@material-ui/icons/Cached";
-import PersonIcon from "@material-ui/icons/Person";
+import PersonOutlineIcon from "@material-ui/icons/PersonOutline";
 import ExitToAppIcon from "@material-ui/icons/ExitToApp";
-import Brightness4Icon from "@material-ui/icons/Brightness4";
-import Brightness7Icon from "@material-ui/icons/Brightness7";
 
 import MainListItems from "./MainListItems";
 import NotificationsPopOver from "../components/NotificationsPopOver";
 import NotificationsVolume from "../components/NotificationsVolume";
 import UserModal from "../components/UserModal";
+import PortAiLogo from "../components/PortAiLogo";
 import { AuthContext } from "../context/Auth/AuthContext";
 import BackdropLoading from "../components/BackdropLoading";
-import DarkMode from "../components/DarkMode";
 import { i18n } from "../translate/i18n";
 import toastError from "../errors/toastError";
 import AnnouncementsPopover from "../components/AnnouncementsPopover";
@@ -42,30 +36,24 @@ import { IconSun, IconMoon, IconRefresh, IconMenu } from "../components/Icons/Na
 import { useDate } from "../hooks/useDate";
 import ColorModeContext from "../layout/themeContext";
 
-const drawerWidth = 240;
+const drawerWidth = 248;
 
 const useStyles = makeStyles((theme) => ({
   root: {
     display: "flex",
     height: "100vh",
     overflow: "hidden",
-    backgroundColor: theme.mode === "light" ? "#f8fafc" : "#07130e",
-    "& .MuiButton-outlinedPrimary": {
-      color: theme.mode === "light" ? "#064e3b" : "#f0fdf4",
-      backgroundColor: theme.mode === "light" ? "rgba(16, 185, 129, 0.1)" : "rgba(37, 211, 102, 0.15)",
-      borderColor: theme.mode === "light" ? "#10b981" : "#25D366",
-    },
-    "& .MuiTab-textColorPrimary.Mui-selected": {
-      color: theme.mode === "light" ? "#064e3b" : "#25D366",
-    },
+    backgroundColor: "var(--bg-canvas)",
+    color: "var(--ink-primary)",
   },
   toolbar: {
-    paddingLeft: 24,
-    paddingRight: 24,
+    paddingLeft: 16,
+    paddingRight: 20,
     minHeight: 64,
     height: 64,
     display: "flex",
     alignItems: "center",
+    gap: 12,
   },
   appBar: {
     zIndex: theme.zIndex.drawer + 2,
@@ -76,46 +64,48 @@ const useStyles = makeStyles((theme) => ({
     width: "100%",
     height: 64,
     minHeight: 64,
-    backgroundColor: theme.mode === "light" ? "#ffffff" : "#0b1e16",
-    color: theme.mode === "light" ? "#0f172a" : "#f0fdf4",
-    borderBottom:
-      theme.mode === "light"
-        ? "1px solid rgba(226, 232, 240, 0.9)"
-        : "1px solid rgba(16, 185, 129, 0.15)",
+    backgroundColor: "var(--bg-surface)",
+    color: "var(--ink-primary)",
+    borderBottom: "1px solid var(--border-hairline)",
     boxShadow: "none",
   },
+  brandZone: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    paddingRight: 16,
+    marginRight: 4,
+    borderRight: "1px solid var(--border-hairline)",
+    height: 36,
+    [theme.breakpoints.down("xs")]: {
+      paddingRight: 8,
+      borderRight: "none",
+    },
+  },
+  brandLink: {
+    display: "inline-flex",
+    alignItems: "center",
+    textDecoration: "none",
+    borderRadius: 8,
+    padding: "2px 4px",
+  },
   menuButton: {
-    width: 40,
-    height: 40,
-    minWidth: 40,
-    borderRadius: 12,
-    marginRight: 16,
+    width: 38,
+    height: 38,
+    minWidth: 38,
+    borderRadius: 10,
     padding: 0,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: theme.mode === "light" ? "#475569" : "#cbd5e1",
-    backgroundColor:
-      theme.mode === "light"
-        ? "rgba(248, 250, 252, 0.95)"
-        : "rgba(255, 255, 255, 0.04)",
-    border:
-      theme.mode === "light"
-        ? "1px solid rgba(226, 232, 240, 0.95)"
-        : "1px solid rgba(16, 185, 129, 0.18)",
-    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.02)",
-    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+    color: "var(--ink-secondary)",
+    backgroundColor: "var(--field-bg)",
+    border: "1px solid var(--border-hairline)",
+    transition: "all var(--t-in) var(--ease-ui)",
     "&:hover": {
-      backgroundColor:
-        theme.mode === "light"
-          ? "rgba(16, 185, 129, 0.08)"
-          : "rgba(37, 211, 102, 0.12)",
-      borderColor:
-        theme.mode === "light"
-          ? "rgba(16, 185, 129, 0.35)"
-          : "rgba(37, 211, 102, 0.35)",
-      color: theme.mode === "light" ? "#10b981" : "#34d399",
-      transform: "translateY(-1px)",
+      backgroundColor: "var(--action-soft)",
+      borderColor: "var(--border-strong)",
+      color: "var(--action)",
     },
   },
   titleWrapper: {
@@ -123,40 +113,39 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     flexGrow: 1,
     overflow: "hidden",
-    gap: 12,
+    gap: 10,
   },
   onlinePill: {
     display: "inline-flex",
     alignItems: "center",
-    padding: "4px 12px 4px 9px",
+    padding: "4px 10px 4px 8px",
     borderRadius: 9999,
-    fontSize: "0.8125rem",
-    fontWeight: 700,
-    letterSpacing: "0.01em",
-    backgroundColor:
-      theme.mode === "light"
-        ? "rgba(16, 185, 129, 0.1)"
-        : "rgba(16, 185, 129, 0.18)",
-    border:
-      theme.mode === "light"
-        ? "1px solid rgba(16, 185, 129, 0.25)"
-        : "1px solid rgba(37, 211, 102, 0.3)",
-    color: theme.mode === "light" ? "#065f46" : "#34d399",
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.72rem",
+    fontWeight: 600,
+    letterSpacing: "0.03em",
+    textTransform: "uppercase",
+    backgroundColor: "var(--action-soft)",
+    border: "1px solid var(--border-strong)",
+    color: "var(--action)",
     whiteSpace: "nowrap",
     userSelect: "none",
+    [theme.breakpoints.down("xs")]: {
+      display: "none",
+    },
   },
   onlineDot: {
-    width: 8,
-    height: 8,
+    width: 7,
+    height: 7,
     borderRadius: "50%",
-    backgroundColor: "#10b981",
-    marginRight: 8,
+    backgroundColor: "#25D366",
+    marginRight: 7,
     display: "inline-block",
-    boxShadow: "0 0 0 2px rgba(16, 185, 129, 0.25)",
+    boxShadow: "0 0 0 2px rgba(37, 211, 102, 0.24)",
   },
   title: {
     fontSize: "0.875rem",
-    color: theme.mode === "light" ? "#475569" : "#94a3b8",
+    color: "var(--ink-secondary)",
     fontWeight: 500,
     whiteSpace: "nowrap",
     overflow: "hidden",
@@ -165,42 +154,36 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
   },
   userName: {
-    fontWeight: 700,
-    color: theme.mode === "light" ? "#0f172a" : "#f8fafc",
+    fontFamily: "var(--font-display)",
+    fontWeight: 600,
+    color: "var(--ink-primary)",
     marginLeft: 4,
   },
   bulletSeparator: {
-    color: theme.mode === "light" ? "#cbd5e1" : "#475569",
+    color: "var(--ink-muted)",
     margin: "0 8px",
     fontSize: "0.875rem",
     userSelect: "none",
+    opacity: 0.5,
   },
   companyBadge: {
-    fontSize: "0.8125rem",
-    padding: "3px 10px",
-    borderRadius: 8,
+    fontSize: "0.78rem",
+    padding: "3px 9px",
+    borderRadius: 6,
     fontWeight: 600,
-    letterSpacing: "0.01em",
-    backgroundColor:
-      theme.mode === "light"
-        ? "rgba(16, 185, 129, 0.08)"
-        : "rgba(255, 255, 255, 0.06)",
-    border:
-      theme.mode === "light"
-        ? "1px solid rgba(16, 185, 129, 0.22)"
-        : "1px solid rgba(37, 211, 102, 0.22)",
-    color: theme.mode === "light" ? "#059669" : "#34d399",
+    backgroundColor: "var(--bg-subtle)",
+    border: "1px solid var(--border-hairline)",
+    color: "var(--ink-primary)",
     whiteSpace: "nowrap",
   },
   dueDateBadge: {
-    fontSize: "0.75rem",
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.72rem",
     padding: "3px 8px",
-    borderRadius: 8,
-    backgroundColor:
-      theme.mode === "light"
-        ? "rgba(100, 116, 139, 0.08)"
-        : "rgba(255, 255, 255, 0.05)",
-    color: theme.mode === "light" ? "#64748b" : "#94a3b8",
+    borderRadius: 6,
+    backgroundColor: "var(--bg-subtle)",
+    border: "1px solid var(--border-hairline)",
+    color: "var(--ink-muted)",
     marginLeft: 8,
     whiteSpace: "nowrap",
   },
@@ -210,114 +193,93 @@ const useStyles = makeStyles((theme) => ({
     gap: 8,
   },
   actionIconButton: {
-    width: 40,
-    height: 40,
-    minWidth: 40,
-    borderRadius: 12,
+    width: 38,
+    height: 38,
+    minWidth: 38,
+    borderRadius: 10,
     padding: 0,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: theme.mode === "light" ? "#475569" : "#cbd5e1",
-    backgroundColor:
-      theme.mode === "light"
-        ? "rgba(248, 250, 252, 0.95)"
-        : "rgba(255, 255, 255, 0.04)",
-    border:
-      theme.mode === "light"
-        ? "1px solid rgba(226, 232, 240, 0.95)"
-        : "1px solid rgba(16, 185, 129, 0.18)",
-    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.02)",
-    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+    color: "var(--ink-secondary)",
+    backgroundColor: "var(--field-bg)",
+    border: "1px solid var(--border-hairline)",
+    transition: "all var(--t-in) var(--ease-ui)",
     "&:hover": {
-      backgroundColor:
-        theme.mode === "light"
-          ? "rgba(16, 185, 129, 0.08)"
-          : "rgba(37, 211, 102, 0.12)",
-      borderColor:
-        theme.mode === "light"
-          ? "rgba(16, 185, 129, 0.35)"
-          : "rgba(37, 211, 102, 0.35)",
-      color: theme.mode === "light" ? "#10b981" : "#34d399",
-      transform: "translateY(-1px)",
+      backgroundColor: "var(--action-soft)",
+      borderColor: "var(--border-strong)",
+      color: "var(--action)",
     },
   },
   userAvatarCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: "50%",
-    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-    color: "#ffffff",
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: "var(--action)",
+    color: "var(--action-ink)",
+    fontFamily: "var(--font-display)",
     fontSize: "0.8125rem",
     fontWeight: 700,
-    letterSpacing: "-0.01em",
+    letterSpacing: "-0.02em",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
     marginLeft: 4,
-    border: "2px solid transparent",
-    boxShadow: "0 2px 6px rgba(16, 185, 129, 0.25)",
-    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+    border: "1px solid transparent",
+    transition: "all var(--t-in) var(--ease-ui)",
     userSelect: "none",
     "&:hover": {
-      transform: "scale(1.05)",
-      boxShadow: "0 0 0 3px rgba(16, 185, 129, 0.35)",
+      backgroundColor: "var(--action-hover)",
+      transform: "translateY(-1px)",
     },
   },
   profileMenuPaper: {
-    minWidth: 200,
+    minWidth: 215,
     borderRadius: 12,
     marginTop: 8,
-    boxShadow:
-      theme.mode === "light"
-        ? "0 4px 12px rgba(0, 0, 0, 0.08)"
-        : "0 4px 16px rgba(0, 0, 0, 0.45)",
-    border:
-      theme.mode === "light"
-        ? "1px solid rgba(226, 232, 240, 0.9)"
-        : "1px solid rgba(16, 185, 129, 0.18)",
+    backgroundColor: "var(--bg-elevated)",
+    boxShadow: "var(--shadow-popover)",
+    border: "1px solid var(--border-hairline)",
   },
   menuHeader: {
-    padding: "10px 16px",
+    padding: "12px 16px",
     display: "flex",
     flexDirection: "column",
+    gap: 2,
   },
   menuUserName: {
-    fontWeight: 600,
+    fontFamily: "var(--font-display)",
+    fontWeight: 700,
     fontSize: "0.875rem",
-    color: theme.mode === "light" ? "#1e293b" : "#f8fafc",
+    color: "var(--ink-primary)",
   },
   menuUserEmail: {
-    fontSize: "0.75rem",
-    color: theme.mode === "light" ? "#64748b" : "#94a3b8",
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.72rem",
+    color: "var(--ink-muted)",
   },
   menuItem: {
     fontSize: "0.875rem",
-    padding: "8px 16px",
+    padding: "8px 14px",
     display: "flex",
     alignItems: "center",
     gap: 10,
+    color: "var(--ink-primary)",
     "&:hover": {
-      backgroundColor:
-        theme.mode === "light"
-          ? "rgba(16, 185, 129, 0.08)"
-          : "rgba(255, 255, 255, 0.08)",
-      color: "#10b981",
+      backgroundColor: "var(--action-soft)",
+      color: "var(--action)",
     },
   },
   menuItemDanger: {
     fontSize: "0.875rem",
-    padding: "8px 16px",
+    padding: "8px 14px",
     display: "flex",
     alignItems: "center",
     gap: 10,
-    color: theme.mode === "light" ? "#dc2626" : "#f87171",
+    color: "var(--status-danger)",
     "&:hover": {
-      backgroundColor:
-        theme.mode === "light"
-          ? "rgba(239, 68, 68, 0.08)"
-          : "rgba(239, 68, 68, 0.15)",
+      backgroundColor: "var(--status-danger-bg)",
     },
   },
   drawer: {
@@ -345,11 +307,8 @@ const useStyles = makeStyles((theme) => ({
     left: 0,
     width: drawerWidth,
     height: "calc(100vh - 64px)",
-    backgroundColor: theme.mode === "light" ? "#ffffff" : "#0b1e16",
-    borderRight:
-      theme.mode === "light"
-        ? "1px solid rgba(226, 232, 240, 0.9)"
-        : "1px solid rgba(16, 185, 129, 0.18)",
+    backgroundColor: "var(--bg-surface)",
+    borderRight: "1px solid var(--border-hairline)",
     boxShadow: "none",
     overflowX: "hidden",
     transition: theme.transitions.create("width", {
@@ -373,11 +332,8 @@ const useStyles = makeStyles((theme) => ({
     left: 0,
     width: 68,
     height: "calc(100vh - 64px)",
-    backgroundColor: theme.mode === "light" ? "#ffffff" : "#0b1e16",
-    borderRight:
-      theme.mode === "light"
-        ? "1px solid rgba(226, 232, 240, 0.9)"
-        : "1px solid rgba(16, 185, 129, 0.18)",
+    backgroundColor: "var(--bg-surface)",
+    borderRight: "1px solid var(--border-hairline)",
     overflowX: "hidden",
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
@@ -414,11 +370,13 @@ const useStyles = makeStyles((theme) => ({
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
-    backgroundColor: theme.mode === "light" ? "#f8fafc" : "#0f172a",
+    backgroundColor: "var(--bg-canvas)",
   },
   containerWithScroll: {
     flex: 1,
-    padding: "6px 0",
+    padding: "10px 0 8px",
+    display: "flex",
+    flexDirection: "column",
     overflowY: "auto",
     overflowX: "hidden",
     scrollbarWidth: "none",
@@ -429,7 +387,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const LoggedInLayout = ({ children, themeToggle }) => {
+const LoggedInLayout = ({ children }) => {
   const classes = useStyles();
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -549,20 +507,26 @@ const LoggedInLayout = ({ children, themeToggle }) => {
         userId={user?.id}
       />
 
-      <AppBar
-        position="fixed"
-        className={classes.appBar}
-        elevation={0}
-      >
+      <AppBar position="fixed" className={classes.appBar} elevation={0}>
         <Toolbar className={classes.toolbar}>
-          <IconButton
-            edge="start"
-            aria-label="alternar menu"
-            onClick={() => setDrawerOpen(!drawerOpen)}
-            className={classes.menuButton}
-          >
-            <IconMenu size={20} />
-          </IconButton>
+          <div className={classes.brandZone}>
+            <IconButton
+              edge="start"
+              aria-label="alternar menu"
+              onClick={() => setDrawerOpen(!drawerOpen)}
+              className={classes.menuButton}
+            >
+              <IconMenu size={19} />
+            </IconButton>
+
+            <RouterLink to="/" className={classes.brandLink} aria-label="PortAI Início">
+              {greaterThenSm ? (
+                <PortAiLogo variant="compact" size={30} />
+              ) : (
+                <PortAiLogo variant="icon" size={30} />
+              )}
+            </RouterLink>
+          </div>
 
           <div className={classes.titleWrapper}>
             <div className={classes.onlinePill}>
@@ -588,7 +552,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
               )}
               {greaterThenSm && user?.profile === "admin" && user?.company?.dueDate && (
                 <span className={classes.dueDateBadge}>
-                  Ativo até {dateToClient(user?.company?.dueDate)}
+                  Vence {dateToClient(user?.company?.dueDate)}
                 </span>
               )}
             </Typography>
@@ -605,9 +569,9 @@ const LoggedInLayout = ({ children, themeToggle }) => {
                 aria-label="Alternar tema"
               >
                 {theme.mode === "dark" ? (
-                  <IconSun size={19} />
+                  <IconSun size={18} />
                 ) : (
-                  <IconMoon size={19} />
+                  <IconMoon size={18} />
                 )}
               </IconButton>
             </Tooltip>
@@ -620,7 +584,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
                 aria-label={i18n.t("mainDrawer.appBar.refresh")}
                 className={classes.actionIconButton}
               >
-                <IconRefresh size={19} />
+                <IconRefresh size={18} />
               </IconButton>
             </Tooltip>
 
@@ -671,12 +635,12 @@ const LoggedInLayout = ({ children, themeToggle }) => {
                     {user?.email || user?.company?.name}
                   </Typography>
                 </div>
-                <Divider />
+                <Divider style={{ backgroundColor: "var(--border-hairline)" }} />
                 <MenuItem
                   onClick={handleOpenUserModal}
                   className={classes.menuItem}
                 >
-                  <PersonIcon style={{ fontSize: 18 }} />
+                  <PersonOutlineIcon style={{ fontSize: 18 }} />
                   {i18n.t("mainDrawer.appBar.user.profile")}
                 </MenuItem>
                 <MenuItem

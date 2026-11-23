@@ -31,99 +31,76 @@ const useStyles = makeStyles((theme) => ({
   },
 
   actionButton: {
-    borderRadius: 8,
-    padding: "5px 14px",
+    borderRadius: 9,
+    padding: "6px 14px",
     textTransform: "none",
     fontWeight: 600,
-    fontSize: "0.80rem",
-    fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+    fontSize: "0.8125rem",
+    fontFamily: "var(--font-sans)",
     lineHeight: 1.4,
     boxShadow: "none",
-    transition: "all 0.2s ease-in-out",
+    transition: "all var(--t-in) var(--ease-ui)",
   },
 
   acceptButton: {
-    background: "linear-gradient(135deg, #10b981 0%, #0d9488 100%)",
-    color: "#ffffff",
+    backgroundColor: "var(--action)",
+    color: "var(--action-ink)",
     fontWeight: 700,
     border: "none",
-    boxShadow: "0 2px 6px rgba(16, 185, 129, 0.25)",
     "&:hover": {
-      background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
-      boxShadow: "0 4px 10px rgba(16, 185, 129, 0.35)",
-      transform: "translateY(-1px)",
+      backgroundColor: "var(--action-hover)",
     },
   },
 
   resolveButton: {
-    background: "linear-gradient(135deg, #10b981 0%, #0d9488 100%)",
-    color: "#ffffff",
+    backgroundColor: "var(--action)",
+    color: "var(--action-ink)",
     fontWeight: 700,
     border: "none",
-    boxShadow: "0 2px 6px rgba(16, 185, 129, 0.25)",
     "&:hover": {
-      background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
-      boxShadow: "0 4px 10px rgba(16, 185, 129, 0.35)",
-      transform: "translateY(-1px)",
+      backgroundColor: "var(--action-hover)",
     },
   },
 
   returnButton: {
-    backgroundColor:
-      theme.palette.type === "dark" ? "rgba(245, 158, 11, 0.12)" : "#fffbeb",
-    color: theme.palette.type === "dark" ? "#fbbf24" : "#b45309",
-    border: `1px solid ${
-      theme.palette.type === "dark" ? "rgba(245, 158, 11, 0.3)" : "#fde68a"
-    }`,
+    backgroundColor: "var(--status-warning-bg)",
+    color: "var(--status-warning)",
+    border: "1px solid rgba(245, 158, 11, 0.3)",
     "&:hover": {
-      backgroundColor:
-        theme.palette.type === "dark" ? "rgba(245, 158, 11, 0.22)" : "#fef3c7",
-      transform: "translateY(-1px)",
+      backgroundColor: "rgba(245, 158, 11, 0.2)",
     },
   },
 
   transferButton: {
-    backgroundColor:
-      theme.palette.type === "dark" ? "rgba(59, 130, 246, 0.12)" : "#eff6ff",
-    color: theme.palette.type === "dark" ? "#60a5fa" : "#2563eb",
-    border: `1px solid ${
-      theme.palette.type === "dark" ? "rgba(59, 130, 246, 0.3)" : "#bfdbfe"
-    }`,
+    backgroundColor: "var(--status-info-bg)",
+    color: "var(--status-info)",
+    border: "1px solid rgba(2, 132, 199, 0.28)",
     "&:hover": {
-      backgroundColor:
-        theme.palette.type === "dark" ? "rgba(59, 130, 246, 0.22)" : "#dbeafe",
-      transform: "translateY(-1px)",
+      backgroundColor: "rgba(2, 132, 199, 0.18)",
     },
   },
 
   reopenButton: {
-    background: "linear-gradient(135deg, #10b981 0%, #0d9488 100%)",
-    color: "#ffffff",
+    backgroundColor: "var(--action)",
+    color: "var(--action-ink)",
     fontWeight: 700,
     border: "none",
-    boxShadow: "0 2px 6px rgba(16, 185, 129, 0.25)",
     "&:hover": {
-      background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
-      transform: "translateY(-1px)",
+      backgroundColor: "var(--action-hover)",
     },
   },
 
   iconButtonMore: {
-    padding: 6,
-    borderRadius: 8,
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(255, 255, 255, 0.12)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
-    backgroundColor:
-      theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.04)" : "#ffffff",
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
-    transition: "all 0.2s ease",
+    padding: 7,
+    borderRadius: 9,
+    border: "1px solid var(--border-hairline)",
+    backgroundColor: "var(--field-bg)",
+    color: "var(--ink-secondary)",
+    transition: "all var(--t-in) var(--ease-ui)",
     "&:hover": {
-      backgroundColor:
-        theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.08)" : "#f8fafc",
-      color: theme.palette.type === "dark" ? "#f1f5f9" : "#0f172a",
+      backgroundColor: "var(--action-soft)",
+      borderColor: "var(--border-strong)",
+      color: "var(--action)",
     },
   },
 }));

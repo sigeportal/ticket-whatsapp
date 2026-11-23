@@ -29,128 +29,116 @@ import { FiMessageSquare as ForumIcon } from "react-icons/fi";
 import { FiPlus as AddIcon } from "react-icons/fi";
 import toastError from "../../errors/toastError";
 
-const useStyles = makeStyles((theme) => ({
-  mainContainer: {
-    display: "flex",
-    flexDirection: "column",
-    position: "relative",
-    flex: 1,
-    padding: theme.spacing(1.5),
-    height: `calc(100% - 64px)`,
-    minHeight: 0,
-    minWidth: 0,
-    overflowY: "hidden",
-    borderRadius: 14,
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.18)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
-    backgroundColor: theme.palette.type === "dark" ? "#162032" : "#ffffff",
-    boxShadow: "none",
-  },
-  gridContainer: {
-    flex: 1,
-    height: "100%",
-    borderRadius: 12,
-    overflow: "hidden",
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.12)"
-        : "rgba(226, 232, 240, 0.8)"
-    }`,
-  },
-  gridSidebar: {
-    height: "100%",
-    display: "flex",
-    flexDirection: "column",
-    backgroundColor: theme.palette.type === "dark" ? "#0f172a" : "#f8fafc",
-    borderRight: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.12)"
-        : "rgba(226, 232, 240, 0.8)"
-    }`,
-  },
-  gridContent: {
-    height: "100%",
-    backgroundColor: theme.palette.type === "dark" ? "#162032" : "#ffffff",
-  },
-  sidebarHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "12px 16px",
-    backgroundColor: theme.palette.type === "dark" ? "#162032" : "#ffffff",
-    borderBottom: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.12)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
-  },
-  sidebarTitle: {
-    fontWeight: 700,
-    fontSize: "0.95rem",
-    color: theme.palette.type === "dark" ? "#f1f5f9" : "#0f172a",
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-  },
-  addButton: {
-    borderRadius: 10,
-    fontWeight: 700,
-    fontSize: "0.8rem",
-    padding: "6px 14px",
-    background: "linear-gradient(135deg, #047857 0%, #0f766e 100%)",
-    color: "#ffffff",
-    boxShadow: "none",
-    transition: "background-color 0.2s ease, color 0.2s ease",
-    "&:hover": {
-      background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+const useStyles = makeStyles((theme) => {
+  const isDark = theme.palette.type === "dark";
+  return {
+    mainContainer: {
+      display: "flex",
+      flexDirection: "column",
+      position: "relative",
+      flex: 1,
+      padding: theme.spacing(1.5),
+      height: "calc(100% - 64px)",
+      minHeight: 0,
+      minWidth: 0,
+      overflowY: "hidden",
+      borderRadius: 14,
+      border: "1px solid var(--border-hairline)",
+      backgroundColor: "var(--bg-surface)",
       boxShadow: "none",
     },
-  },
-  emptyState: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    height: "100%",
-    padding: theme.spacing(4),
-    textAlign: "center",
-    backgroundColor: theme.palette.type === "dark" ? "#0f172a" : "#f8fafc",
-  },
-  emptyIconBox: {
-    width: 68,
-    height: 68,
-    borderRadius: 18,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: theme.spacing(2),
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.14)"
-        : "rgba(16, 185, 129, 0.1)",
-    color: theme.palette.type === "dark" ? "#34d399" : "#10b981",
-    boxShadow: "0 2px 10px rgba(16, 185, 129, 0.15)",
-  },
-  emptyTitle: {
-    fontWeight: 700,
-    fontSize: "1.1rem",
-    color: theme.palette.type === "dark" ? "#f1f5f9" : "#0f172a",
-    marginBottom: 6,
-  },
-  emptyText: {
-    fontSize: "0.85rem",
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
-    maxWidth: 380,
-    marginBottom: theme.spacing(2.5),
-  },
-  gridItemTab: {
-    height: "calc(100% - 48px)",
-    width: "100%",
-  },
-}));
+    gridContainer: {
+      flex: 1,
+      height: "100%",
+      borderRadius: 12,
+      overflow: "hidden",
+      border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "#d1d7db"}`,
+    },
+    gridSidebar: {
+      height: "100%",
+      display: "flex",
+      flexDirection: "column",
+      backgroundColor: isDark ? "#111b21" : "#ffffff",
+      borderRight: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "#d1d7db"}`,
+    },
+    gridContent: {
+      height: "100%",
+      backgroundColor: isDark ? "#222e35" : "#f0f2f5",
+    },
+    sidebarHeader: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: "12px 16px",
+      backgroundColor: isDark ? "#202c33" : "#f0f2f5",
+      borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "#d1d7db"}`,
+    },
+    sidebarTitle: {
+      fontFamily: "var(--font-display)",
+      fontWeight: 700,
+      fontSize: "0.95rem",
+      color: isDark ? "#e9edef" : "#111b21",
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+    },
+    addButton: {
+      borderRadius: 20,
+      fontWeight: 600,
+      fontSize: "0.8rem",
+      padding: "6px 14px",
+      backgroundColor: "#00a884",
+      color: "#ffffff",
+      boxShadow: "none",
+      transition: "background-color 0.15s ease",
+      "&:hover": {
+        backgroundColor: "#008f72",
+        boxShadow: "none",
+      },
+    },
+    emptyState: {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "100%",
+      padding: theme.spacing(4),
+      textAlign: "center",
+      backgroundColor: isDark ? "#222e35" : "#f0f2f5",
+      borderBottom: "6px solid #00a884",
+    },
+    emptyIconBox: {
+      width: 72,
+      height: 72,
+      borderRadius: "50%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: theme.spacing(2),
+      backgroundColor: isDark ? "rgba(0, 168, 132, 0.14)" : "rgba(0, 168, 132, 0.12)",
+      border: `1px solid ${isDark ? "rgba(0, 168, 132, 0.35)" : "rgba(0, 168, 132, 0.25)"}`,
+      color: "#00a884",
+    },
+    emptyTitle: {
+      fontFamily: "var(--font-display)",
+      fontWeight: 700,
+      fontSize: "1.2rem",
+      color: isDark ? "#e9edef" : "#41525d",
+      marginBottom: 8,
+    },
+    emptyText: {
+      fontSize: "0.875rem",
+      color: isDark ? "#8696a0" : "#667781",
+      maxWidth: 390,
+      lineHeight: 1.5,
+      marginBottom: theme.spacing(2.5),
+    },
+    gridItemTab: {
+      height: "calc(100% - 48px)",
+      width: "100%",
+    },
+  };
+});
 
 export function ChatModal({
   open,
@@ -259,8 +247,9 @@ export function ChatModal({
           variant="contained"
           style={{
             borderRadius: 10,
-            background: "linear-gradient(135deg, #047857 0%, #0f766e 100%)",
-            color: "#ffffff",
+            backgroundColor: "var(--action)",
+            color: "var(--action-ink)",
+            boxShadow: "none",
             fontWeight: 700,
           }}
         >

@@ -44,10 +44,9 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     padding: theme.spacing(2),
     borderRadius: 14,
-    border: theme.palette.type === "dark" 
-      ? "1px solid rgba(16, 185, 129, 0.2)" 
-      : "1px solid rgba(16, 185, 129, 0.15)",
-    boxShadow: "0 4px 20px -2px rgba(0, 0, 0, 0.05)",
+    border: "1px solid var(--border-hairline)",
+    backgroundColor: "var(--bg-surface)",
+    boxShadow: "none",
     overflowY: "auto",
     ...theme.scrollbarStyles,
   },
@@ -55,80 +54,84 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(2.5),
     borderRadius: 14,
     marginBottom: theme.spacing(2),
-    background: theme.palette.type === "dark"
-      ? "linear-gradient(135deg, rgba(7, 19, 14, 0.95) 0%, rgba(13, 34, 25, 0.95) 100%)"
-      : "linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 100%)",
-    border: "1px solid rgba(16, 185, 129, 0.3)",
+    backgroundColor: "var(--bg-surface)",
+    border: "1px solid var(--border-strong)",
     display: "flex",
     alignItems: "flex-start",
     gap: theme.spacing(2),
-    boxShadow: "0 4px 12px rgba(16, 185, 129, 0.08)",
+    boxShadow: "none",
   },
   heroIcon: {
     padding: 10,
-    borderRadius: 12,
-    background: "linear-gradient(135deg, #10B981 0%, #0D9488 100%)",
-    color: "#FFFFFF",
+    borderRadius: 10,
+    backgroundColor: "var(--action)",
+    color: "var(--action-ink)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0 4px 10px rgba(16, 185, 129, 0.3)",
+    flexShrink: 0,
   },
   btnAdd: {
-    background: "linear-gradient(135deg, #10B981 0%, #0D9488 100%) !important",
-    color: "#FFFFFF !important",
+    backgroundColor: "var(--action) !important",
+    color: "var(--action-ink) !important",
     borderRadius: 10,
     fontWeight: 600,
     textTransform: "none",
     padding: "8px 18px",
-    boxShadow: "0 4px 12px rgba(16, 185, 129, 0.25)",
+    boxShadow: "none",
     "&:hover": {
-      background: "linear-gradient(135deg, #059669 0%, #0F766E 100%) !important",
+      backgroundColor: "var(--action-hover) !important",
     },
   },
   actionBtn: {
     borderRadius: 8,
     padding: 6,
     margin: "0 2px",
-    transition: "all 0.2s ease",
+    color: "var(--action)",
+    backgroundColor: "var(--action-soft)",
+    transition: "all var(--t-in) var(--ease-ui)",
     "&:hover": {
-      backgroundColor: "rgba(16, 185, 129, 0.12)",
-      color: "#10B981",
+      backgroundColor: "var(--action)",
+      color: "var(--action-ink)",
     },
   },
   deleteBtn: {
     borderRadius: 8,
     padding: 6,
     margin: "0 2px",
-    transition: "all 0.2s ease",
+    color: "var(--status-danger)",
+    backgroundColor: "var(--status-danger-bg)",
+    transition: "all var(--t-in) var(--ease-ui)",
     "&:hover": {
-      backgroundColor: "rgba(239, 68, 68, 0.12)",
-      color: "#EF4444",
+      backgroundColor: "var(--status-danger)",
+      color: "#FFFFFF",
     },
   },
   badgeGemini: {
-    background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
-    color: "#FFFFFF",
+    backgroundColor: "var(--action-soft)",
+    color: "var(--action)",
+    border: "1px solid var(--border-strong)",
     fontWeight: 600,
     fontSize: "0.75rem",
     borderRadius: 8,
     padding: "2px 4px",
   },
   badgeOpenAi: {
-    background: theme.palette.type === "dark" ? "rgba(99, 102, 241, 0.2)" : "#EEF2FF",
-    color: "#6366F1",
-    border: "1px solid rgba(99, 102, 241, 0.3)",
+    backgroundColor: "var(--status-info-bg)",
+    color: "var(--status-info)",
+    border: "1px solid rgba(2, 132, 199, 0.28)",
     fontWeight: 600,
     fontSize: "0.75rem",
     borderRadius: 8,
     padding: "2px 4px",
   },
   modelChip: {
+    fontFamily: "var(--font-mono)",
     fontSize: "0.72rem",
     fontWeight: 500,
     borderRadius: 6,
-    backgroundColor: theme.palette.type === "dark" ? "rgba(255,255,255,0.06)" : "#F1F5F9",
-    color: theme.palette.type === "dark" ? "#E2E8F0" : "#475569",
+    backgroundColor: "var(--bg-subtle)",
+    color: "var(--ink-secondary)",
   },
 }));
 
@@ -282,10 +285,19 @@ const Prompts = () => {
           <AiBrainIcon />
         </div>
         <div style={{ flex: 1 }}>
-          <Typography variant="subtitle1" style={{ fontWeight: 700, color: "#10B981", marginBottom: 2 }}>
+          <Typography
+            variant="subtitle1"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 700,
+              letterSpacing: "-0.015em",
+              color: "var(--action)",
+              marginBottom: 2,
+            }}
+          >
             PortAI Smart CX — Central de Inteligência Artificial
           </Typography>
-          <Typography variant="body2" style={{ color: "#64748B", lineHeight: 1.4 }}>
+          <Typography variant="body2" style={{ color: "var(--ink-secondary)", lineHeight: 1.45 }}>
             Configure assistentes virtuais para atendimento automático em suas conexões e filas. Suporte nativo para <strong>Google Gemini 1.5 Flash</strong> (respostas ultra-rápidas e compreensão nativa de áudio do WhatsApp) e <strong>OpenAI</strong> com fallback automático para variáveis de ambiente.
           </Typography>
         </div>

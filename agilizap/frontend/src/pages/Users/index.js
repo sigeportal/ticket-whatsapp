@@ -80,24 +80,19 @@ const reducer = (state, action) => {
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
-    borderRadius: 16,
+    borderRadius: 14,
     overflowY: "auto",
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.18)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
-    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
-    boxShadow:
-      theme.palette.type === "dark"
-        ? "0 4px 20px -2px rgba(0, 0, 0, 0.5)"
-        : "0 4px 20px -2px rgba(0, 0, 0, 0.04)",
+    border: "1px solid var(--border-subtle)",
+    backgroundColor: "var(--bg-surface)",
+    boxShadow: "none",
     ...theme.scrollbarStyles,
   },
   searchInput: {
     minWidth: 260,
+    backgroundColor: "var(--field-bg)",
+    borderRadius: 10,
     "& .MuiOutlinedInput-root": {
-      borderRadius: 12,
+      borderRadius: 10,
       paddingLeft: 4,
     },
     "& .MuiOutlinedInput-input": {
@@ -108,44 +103,37 @@ const useStyles = makeStyles((theme) => ({
   actionEdit: {
     padding: 7,
     borderRadius: 8,
-    color: "#10b981",
-    backgroundColor: "rgba(16, 185, 129, 0.1)",
+    color: "var(--action)",
+    backgroundColor: "var(--action-soft)",
     marginRight: 6,
-    transition: "all 0.2s ease",
+    transition: "background-color 150ms ease, color 150ms ease",
     "&:hover": {
-      backgroundColor: "#10b981",
-      color: "#ffffff",
-      transform: "scale(1.05)",
+      backgroundColor: "var(--action)",
+      color: "var(--action-ink)",
     },
   },
   actionDelete: {
     padding: 7,
     borderRadius: 8,
-    color: "#ef4444",
+    color: theme.palette.type === "dark" ? "#FCA5A5" : "#DC2626",
     backgroundColor: "rgba(239, 68, 68, 0.1)",
-    transition: "all 0.2s ease",
+    transition: "background-color 150ms ease, color 150ms ease",
     "&:hover": {
-      backgroundColor: "#ef4444",
-      color: "#ffffff",
-      transform: "scale(1.05)",
+      backgroundColor: "#EF4444",
+      color: "#FFFFFF",
     },
   },
   roleBadge: {
     padding: "3px 10px",
-    borderRadius: 12,
-    fontSize: "0.75rem",
+    borderRadius: 999,
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.72rem",
     fontWeight: 700,
+    letterSpacing: "0.04em",
     textTransform: "uppercase",
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.15)"
-        : "rgba(16, 185, 129, 0.1)",
-    color: theme.palette.type === "dark" ? "#34d399" : "#059669",
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.25)"
-        : "rgba(16, 185, 129, 0.2)"
-    }`,
+    backgroundColor: "var(--action-soft)",
+    color: "var(--action)",
+    border: "1px solid var(--action-ring)",
   },
 }));
 

@@ -187,90 +187,88 @@ const useStyles = makeStyles((theme) => ({
     position: "relative !important",
     height: 24,
     lineHeight: "24px",
-    paddingLeft: 16,
+    paddingLeft: 18,
     paddingRight: 16,
     marginTop: 2,
     marginBottom: 4,
-    color: theme.mode === "light" ? "#64748b" : "#6ee7b7",
-    fontSize: "0.6875rem",
-    fontWeight: 800,
+    color: "var(--ink-muted)",
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.66rem",
+    fontWeight: 600,
     textTransform: "uppercase",
-    letterSpacing: "0.1em",
-    opacity: 0.8,
+    letterSpacing: "0.09em",
     backgroundColor: "transparent",
   },
   listSubheader: {
     position: "relative !important",
     height: 28,
     lineHeight: "28px",
-    paddingLeft: 16,
+    paddingLeft: 18,
     paddingRight: 16,
     marginTop: 14,
     marginBottom: 4,
-    color: theme.mode === "light" ? "#64748b" : "#6ee7b7",
-    fontSize: "0.6875rem",
-    fontWeight: 800,
+    color: "var(--ink-muted)",
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.66rem",
+    fontWeight: 600,
     textTransform: "uppercase",
-    letterSpacing: "0.1em",
-    opacity: 0.8,
+    letterSpacing: "0.09em",
     backgroundColor: "transparent",
   },
   listItem: {
-    borderRadius: 12,
+    position: "relative",
+    borderRadius: 10,
     margin: "2px 10px",
-    padding: "8px 12px",
+    padding: "7px 12px",
     width: "auto",
-    color: theme.mode === "light" ? "#334155" : "#94a3b8",
-    transition: "all 0.18s ease-in-out",
+    color: "var(--ink-secondary)",
+    transition: "background-color var(--t-in) var(--ease-ui), color var(--t-in) var(--ease-ui)",
     "&:hover": {
-      backgroundColor:
-        theme.mode === "light"
-          ? "rgba(16, 185, 129, 0.08)"
-          : "rgba(255, 255, 255, 0.05)",
-      color: theme.mode === "light" ? "#065f46" : "#34d399",
+      backgroundColor: "var(--action-soft)",
+      color: "var(--ink-primary)",
       "& $listItemIcon": {
-        color: theme.mode === "light" ? "#065f46" : "#34d399",
+        color: "var(--action)",
       },
     },
   },
   activeListItem: {
-    backgroundColor:
-      theme.mode === "light"
-        ? "rgba(16, 185, 129, 0.12)"
-        : "rgba(37, 211, 102, 0.14)",
-    color: theme.mode === "light" ? "#065f46" : "#25d366",
-    fontWeight: 700,
-    border:
-      theme.mode === "light"
-        ? "1px solid rgba(16, 185, 129, 0.28)"
-        : "1px solid rgba(37, 211, 102, 0.28)",
-    boxShadow: "none",
+    backgroundColor: "var(--action-soft)",
+    color: "var(--action)",
+    fontWeight: 600,
+    "&::before": {
+      content: '""',
+      position: "absolute",
+      left: -10,
+      top: 7,
+      bottom: 7,
+      width: 3,
+      borderRadius: "0 3px 3px 0",
+      backgroundColor: "var(--action)",
+    },
     "&:hover": {
-      backgroundColor:
-        theme.mode === "light"
-          ? "rgba(16, 185, 129, 0.18)"
-          : "rgba(37, 211, 102, 0.22)",
+      backgroundColor: "var(--action-soft-hover)",
     },
   },
   listItemIcon: {
     minWidth: 32,
-    color: theme.mode === "light" ? "#64748b" : "#94a3b8",
+    color: "var(--ink-muted)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    transition: "color 0.18s ease-in-out",
+    transition: "color var(--t-in) var(--ease-ui)",
   },
   activeListItemIcon: {
-    color: theme.mode === "light" ? "#065f46" : "#25d366",
+    color: "var(--action)",
   },
   listItemText: {
-    fontSize: "0.8125rem",
-    fontWeight: 600,
+    fontFamily: "var(--font-sans)",
+    fontSize: "0.84rem",
+    fontWeight: 500,
     letterSpacing: "-0.01em",
   },
   activeListItemText: {
     fontWeight: 700,
-    color: theme.mode === "light" ? "#065f46" : "#25d366",
+    color: "var(--ink-primary)",
   },
   ticketBadgesWrapper: {
     display: "flex",
@@ -279,24 +277,26 @@ const useStyles = makeStyles((theme) => ({
     gap: 4,
   },
   badgeOpen: {
-    backgroundColor: "#10b981",
-    color: "#07130e",
-    borderRadius: "9999px",
-    padding: "2px 7px",
-    fontSize: "0.6875rem",
-    fontWeight: 800,
+    backgroundColor: "var(--action)",
+    color: "var(--action-ink)",
+    fontFamily: "var(--font-mono)",
+    borderRadius: 6,
+    padding: "2px 6px",
+    fontSize: "0.68rem",
+    fontWeight: 600,
     lineHeight: 1.2,
     minWidth: 18,
     textAlign: "center",
     display: "inline-block",
   },
   badgePending: {
-    backgroundColor: "#f59e0b",
-    color: "#07130e",
-    borderRadius: "9999px",
-    padding: "2px 7px",
-    fontSize: "0.6875rem",
-    fontWeight: 800,
+    backgroundColor: "var(--status-warning)",
+    color: "#0A1510",
+    fontFamily: "var(--font-mono)",
+    borderRadius: 6,
+    padding: "2px 6px",
+    fontSize: "0.68rem",
+    fontWeight: 700,
     lineHeight: 1.2,
     minWidth: 18,
     textAlign: "center",
@@ -304,20 +304,21 @@ const useStyles = makeStyles((theme) => ({
   },
   badgeCollapsed: {
     "& .MuiBadge-badge": {
+      fontFamily: "var(--font-mono)",
       fontSize: "0.625rem",
       height: 16,
       minWidth: 16,
-      borderRadius: 8,
+      borderRadius: 6,
       padding: "0 4px",
     },
   },
   badgePendingColor: {
-    backgroundColor: "#f59e0b",
-    color: "#ffffff",
+    backgroundColor: "var(--status-warning)",
+    color: "#0A1510",
   },
   badgeOpenColor: {
-    backgroundColor: "#10b981",
-    color: "#ffffff",
+    backgroundColor: "var(--action)",
+    color: "var(--action-ink)",
   },
   logoutSection: {
     marginTop: "auto",
@@ -325,43 +326,32 @@ const useStyles = makeStyles((theme) => ({
     paddingBottom: 8,
   },
   logoutButton: {
-    borderRadius: 12,
-    margin: "6px 10px",
+    borderRadius: 10,
+    margin: "4px 10px",
     padding: "8px 12px",
     width: "auto",
-    color: theme.mode === "light" ? "#dc2626" : "#f87171",
-    backgroundColor:
-      theme.mode === "light"
-        ? "rgba(239, 68, 68, 0.05)"
-        : "rgba(239, 68, 68, 0.1)",
-    border:
-      theme.mode === "light"
-        ? "1px solid rgba(239, 68, 68, 0.15)"
-        : "1px solid rgba(239, 68, 68, 0.25)",
-    transition: "all 0.18s ease-in-out",
+    color: "var(--status-danger)",
+    backgroundColor: "var(--status-danger-bg)",
+    border: "1px solid transparent",
+    transition: "all var(--t-in) var(--ease-ui)",
     "&:hover": {
-      backgroundColor:
-        theme.mode === "light"
-          ? "rgba(239, 68, 68, 0.12)"
-          : "rgba(239, 68, 68, 0.22)",
-      color: theme.mode === "light" ? "#b91c1c" : "#fca5a5",
+      borderColor: "rgba(225, 29, 72, 0.3)",
       "& $logoutIcon": {
-        color: theme.mode === "light" ? "#b91c1c" : "#fca5a5",
         transform: "translateX(2px)",
       },
     },
   },
   logoutIcon: {
     minWidth: 32,
-    color: theme.mode === "light" ? "#dc2626" : "#f87171",
+    color: "var(--status-danger)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    transition: "all 0.18s ease-in-out",
+    transition: "transform var(--t-in) var(--ease-ui)",
   },
   logoutText: {
-    fontSize: "0.8125rem",
-    fontWeight: 700,
+    fontSize: "0.84rem",
+    fontWeight: 600,
     color: "inherit",
   },
   versionContainer: {
@@ -370,17 +360,15 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: "flex-end",
   },
   versionText: {
-    fontSize: "0.6875rem",
-    fontWeight: 600,
-    color: theme.mode === "light" ? "#94a3b8" : "#64748b",
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.68rem",
+    fontWeight: 500,
+    color: "var(--ink-muted)",
     letterSpacing: "0.02em",
   },
   divider: {
     margin: "8px 12px",
-    backgroundColor:
-      theme.mode === "light"
-        ? "rgba(229, 231, 235, 0.8)"
-        : "rgba(255, 255, 255, 0.08)",
+    backgroundColor: "var(--border-hairline)",
   },
   collapsedListItem: {
     justifyContent: "center !important",
@@ -389,6 +377,9 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: "10px !important",
     width: "auto !important",
     minWidth: "0 !important",
+    "&::before": {
+      left: "-8px !important",
+    },
   },
   collapsedListItemIcon: {
     minWidth: "0 !important",
@@ -399,10 +390,7 @@ const useStyles = makeStyles((theme) => ({
   },
   collapsedDivider: {
     margin: "8px 12px",
-    backgroundColor:
-      theme.mode === "light"
-        ? "rgba(229, 231, 235, 0.7)"
-        : "rgba(255, 255, 255, 0.08)",
+    backgroundColor: "var(--border-hairline)",
   },
 }));
 

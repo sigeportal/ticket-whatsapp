@@ -78,9 +78,40 @@ const reducer = (state, action) => {
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(1),
+    padding: theme.spacing(1.5),
     overflowY: "scroll",
+    borderRadius: 14,
+    border: "1px solid var(--border-hairline)",
+    backgroundColor: "var(--bg-surface)",
+    boxShadow: "none",
     ...theme.scrollbarStyles,
+  },
+  overdueRow: {
+    backgroundColor: "var(--status-danger-bg)",
+  },
+  monoCell: {
+    fontFamily: "var(--font-mono)",
+    fontWeight: 600,
+  },
+  statusBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "3px 10px",
+    borderRadius: 6,
+    fontSize: "0.75rem",
+    fontWeight: 600,
+  },
+  statusPaid: {
+    backgroundColor: "var(--status-success-bg)",
+    color: "var(--status-success)",
+  },
+  statusOverdue: {
+    backgroundColor: "var(--status-danger-bg)",
+    color: "var(--status-danger)",
+  },
+  statusOpen: {
+    backgroundColor: "var(--status-warning-bg)",
+    color: "var(--status-warning)",
   },
 }));
 
@@ -203,35 +234,56 @@ const Invoices = () => {
           </TableHead>
           <TableBody>
             <>
-              {invoices.map((invoices) => (
-                <TableRow style={rowStyle(invoices)} key={invoices.id}>
-                  <TableCell align="center">{invoices.id}</TableCell>
-                  <TableCell align="center">{invoices.detail}</TableCell>
-                  <TableCell style={{ fontWeight: 'bold' }} align="center">{invoices.value.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}</TableCell>
-                  <TableCell align="center">{moment(invoices.dueDate).format("DD/MM/YYYY")}</TableCell>
-                  <TableCell style={{ fontWeight: 'bold' }} align="center">{rowStatus(invoices)}</TableCell>
-                  <TableCell align="center">
-                    {rowStatus(invoices) !== "Pago" ?
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        color="secondary"
-                        onClick={() => handleOpenContactModal(invoices)}
-                      >
-                        PAGAR
-                      </Button> :
-                      <Button
-                        size="small"
-                        variant="outlined" 
-                        /* color="secondary"
-                        disabled */
-                      >
-                        PAGO 
-                      </Button>}
-
-                  </TableCell>
-                </TableRow>
-              ))}
+              {invoices.map((invoiceItem) => {
+                const statusText = rowStatus(invoiceItem);
+                const statusClass =
+                  statusText === "Pago"
+                    ? classes.statusPaid
+                    : statusText === "Vencido"
+                    ? classes.statusOverdue
+                    : classes.statusOpen;
+                return (
+                  <TableRow
+                    className={statusText === "Vencido" ? classes.overdueRow : undefined}
+                    key={invoiceItem.id}
+                  >
+                    <TableCell align="center" className={classes.monoCell}>
+                      #{invoiceItem.id}
+                    </TableCell>
+                    <TableCell align="center">{invoiceItem.detail}</TableCell>
+                    <TableCell align="center" className={classes.monoCell}>
+                      {invoiceItem.value.toLocaleString("pt-br", {
+                        style: "currency",
+                        currency: "BRL",
+                      })}
+                    </TableCell>
+                    <TableCell align="center" className={classes.monoCell}>
+                      {moment(invoiceItem.dueDate).format("DD/MM/YYYY")}
+                    </TableCell>
+                    <TableCell align="center">
+                      <span className={`${classes.statusBadge} ${statusClass}`}>
+                        {statusText}
+                      </span>
+                    </TableCell>
+                    <TableCell align="center">
+                      {statusText !== "Pago" ? (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="primary"
+                          onClick={() => handleOpenContactModal(invoiceItem)}
+                        >
+                          Pagar
+                        </Button>
+                      ) : (
+                        <Button size="small" variant="outlined" disabled>
+                          Pago
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
               {loading && <TableRowSkeleton columns={4} />}
             </>
           </TableBody>

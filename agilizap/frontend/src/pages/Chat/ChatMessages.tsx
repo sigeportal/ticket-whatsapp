@@ -3,7 +3,6 @@ import {
   Avatar,
   Box,
   Button,
-  Chip,
   IconButton,
   InputBase,
   Paper,
@@ -14,8 +13,9 @@ import {
   useTheme,
 } from "@material-ui/core";
 import { FiSend as SendIcon } from "react-icons/fi";
-import { FiCheck as DoneAllIcon } from "react-icons/fi";
-import { FiUsers as GroupIcon } from "react-icons/fi";
+import DoneAllIcon from "@material-ui/icons/DoneAll";
+import whatsBackground from "../../assets/wa-background.png";
+import whatsBackgroundDark from "../../assets/wa-background-dark.png";
 
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { useDate } from "../../hooks/useDate";
@@ -24,170 +24,218 @@ import { getInitials } from "../../helpers/getInitials";
 import type { InternalChat, InternalChatMessage, User } from "../../types";
 import toastError from "../../errors/toastError";
 
-const useStyles = makeStyles((theme) => ({
-  mainContainer: {
-    display: "flex",
-    flexDirection: "column",
-    position: "relative",
-    flex: 1,
-    overflow: "hidden",
-    borderRadius: 0,
-    height: "100%",
-    backgroundColor: theme.palette.type === "dark" ? "#0f172a" : "#f8fafc",
-  },
-  headerArea: {
-    padding: "10px 16px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: theme.palette.type === "dark" ? "#162032" : "#ffffff",
-    borderBottom: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.12)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
-  },
-  headerLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-  },
-  avatarSquircle: {
-    borderRadius: 10,
-    fontWeight: 700,
-    fontSize: "0.9rem",
-    width: 40,
-    height: 40,
-    boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
-  },
-  headerTitle: {
-    fontWeight: 700,
-    fontSize: "0.95rem",
-    color: theme.palette.type === "dark" ? "#f1f5f9" : "#0f172a",
-    lineHeight: 1.2,
-  },
-  headerSubtitle: {
-    fontSize: "0.75rem",
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
-    display: "flex",
-    alignItems: "center",
-    gap: 4,
-  },
-  participants: { display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, maxHeight: 64, overflowY: "auto" },
-  presence: { color: theme.palette.type === "dark" ? "#6ee7b7" : "#047857", backgroundColor: "rgba(16,185,129,0.12)", padding: "2px 8px", borderRadius: 12 },
-  day: { alignSelf: "center", color: theme.palette.text.secondary, fontSize: 12, margin: "8px 0" },
-  messageList: {
-    position: "relative",
-    overflowY: "auto",
-    flex: 1,
-    padding: theme.spacing(2),
-    display: "flex",
-    flexDirection: "column",
-    gap: 10,
-    backgroundColor: theme.palette.type === "dark" ? "#0f172a" : "#f8fafc",
-    ...theme.scrollbarStyles,
-    minHeight: 0,
-    minWidth: 0,
-  },
-  boxLeft: {
-    alignSelf: "flex-start",
-    maxWidth: "min(80%, 560px)",
-    padding: "8px 14px 6px",
-    borderRadius: "18px 18px 18px 4px",
-    backgroundColor: theme.palette.type === "dark" ? "#162032" : "#ffffff",
-    color: theme.palette.type === "dark" ? "#f1f5f9" : "#0f172a",
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.18)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
-    boxShadow: "none",
-  },
-  boxRight: {
-    alignSelf: "flex-end",
-    maxWidth: "min(80%, 560px)",
-    padding: "8px 14px 6px",
-    borderRadius: "18px 18px 4px 18px",
-    background: "linear-gradient(135deg, #047857 0%, #0f766e 100%)",
-    color: "#ffffff",
-    boxShadow: "none",
-  },
-  senderName: {
-    fontWeight: 700,
-    fontSize: "0.75rem",
-    color: theme.palette.type === "dark" ? "#34d399" : "#047857",
-    marginBottom: 2,
-  },
-  messageText: {
-    fontSize: "0.875rem",
-    lineHeight: 1.45,
-    wordBreak: "break-word",
-    whiteSpace: "pre-wrap",
-  },
-  timestampRight: {
-    fontSize: "0.75rem",
-    color: "rgba(255, 255, 255, 0.8)",
-    marginTop: 4,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    gap: 4,
-  },
-  timestampLeft: {
-    fontSize: "0.75rem",
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
-    marginTop: 4,
-    textAlign: "right",
-  },
-  inputArea: {
-    padding: "10px 16px",
-    backgroundColor: theme.palette.type === "dark" ? "#162032" : "#ffffff",
-    borderTop: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.12)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
-  },
-  inputForm: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-  },
-  inputPill: {
-    flex: 1,
-    backgroundColor: theme.palette.type === "dark" ? "#0f172a" : "#f8fafc",
-    borderRadius: 20,
-    padding: "6px 16px",
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.2)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
-    fontSize: "0.85rem",
-    color: theme.palette.type === "dark" ? "#f1f5f9" : "#0f172a",
-    "&:focus-within": {
-      borderColor: "#10b981",
-      boxShadow: "0 0 0 2px rgba(16, 185, 129, 0.15)",
+const useStyles = makeStyles((theme) => {
+  const isDark = theme.palette.type === "dark";
+  return {
+    mainContainer: {
+      display: "flex",
+      flexDirection: "column",
+      position: "relative",
+      flex: 1,
+      overflow: "hidden",
+      borderRadius: 0,
+      height: "100%",
+      backgroundColor: isDark ? "#0b141a" : "#efeae2",
     },
-  },
-  buttonSend: {
-    borderRadius: 12,
-    width: 44,
-    height: 44,
-    background: "linear-gradient(135deg, #047857 0%, #0f766e 100%)",
-    color: "#ffffff",
-    boxShadow: "none",
-    transition: "background-color 0.2s ease, color 0.2s ease",
-    "&:hover": {
-      background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
-      boxShadow: "none",
+    headerArea: {
+      padding: "10px 16px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: isDark ? "#202c33" : "#f0f2f5",
+      borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "#d1d7db"}`,
     },
-    "&:disabled": {
-      opacity: 0.6,
-      color: "rgba(255, 255, 255, 0.5)",
+    headerLeft: {
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      minWidth: 0,
+      flex: 1,
     },
-  },
-}));
+    avatarSquircle: {
+      borderRadius: "50%",
+      fontFamily: "var(--font-display)",
+      fontWeight: 700,
+      fontSize: "0.95rem",
+      width: 42,
+      height: 42,
+      flexShrink: 0,
+    },
+    headerTitle: {
+      fontFamily: "var(--font-display)",
+      fontWeight: 700,
+      fontSize: "0.95rem",
+      color: isDark ? "#e9edef" : "#111b21",
+      lineHeight: 1.25,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+    },
+    headerSubtitle: {
+      fontSize: "0.75rem",
+      color: isDark ? "#8696a0" : "#667781",
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      flexWrap: "wrap",
+      marginTop: 2,
+    },
+    participantsText: {
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+      maxWidth: 360,
+    },
+    presence: {
+      color: isDark ? "#00a884" : "#008069",
+      backgroundColor: isDark ? "rgba(0, 168, 132, 0.16)" : "rgba(0, 168, 132, 0.12)",
+      padding: "1px 8px",
+      borderRadius: 999,
+      fontWeight: 600,
+      fontSize: "0.7rem",
+    },
+    day: {
+      alignSelf: "center",
+      color: isDark ? "#8696a0" : "#54656f",
+      backgroundColor: isDark ? "#182229" : "#ffffff",
+      boxShadow: "0 1px 1px rgba(11, 20, 26, 0.13)",
+      borderRadius: 8,
+      padding: "5px 12px",
+      fontFamily: "var(--font-sans)",
+      fontWeight: 600,
+      fontSize: "0.72rem",
+      margin: "6px 0",
+    },
+    messageList: {
+      position: "relative",
+      overflowY: "auto",
+      flex: 1,
+      padding: "18px 6% 16px",
+      display: "flex",
+      flexDirection: "column",
+      gap: 6,
+      backgroundColor: isDark ? "#0b141a" : "#efeae2",
+      backgroundImage: `url(${isDark ? whatsBackgroundDark : whatsBackground})`,
+      backgroundRepeat: "repeat",
+      backgroundSize: "412px auto",
+      ...theme.scrollbarStyles,
+      minHeight: 0,
+      minWidth: 0,
+      [theme.breakpoints.down("sm")]: {
+        padding: "14px 12px",
+      },
+    },
+    boxLeft: {
+      position: "relative",
+      alignSelf: "flex-start",
+      maxWidth: "min(75%, 560px)",
+      padding: "7px 12px 6px",
+      borderRadius: "0 10px 10px 10px",
+      backgroundColor: isDark ? "#202c33" : "#ffffff",
+      color: isDark ? "#e9edef" : "#111b21",
+      boxShadow: "0 1px 0.5px rgba(11, 20, 26, 0.13)",
+      "&::before": {
+        content: '""',
+        position: "absolute",
+        top: 0,
+        left: -7,
+        width: 0,
+        height: 0,
+        borderTop: `8px solid ${isDark ? "#202c33" : "#ffffff"}`,
+        borderLeft: "8px solid transparent",
+      },
+    },
+    boxRight: {
+      position: "relative",
+      alignSelf: "flex-end",
+      maxWidth: "min(75%, 560px)",
+      padding: "7px 12px 6px",
+      borderRadius: "10px 0 10px 10px",
+      backgroundColor: isDark ? "#005c4b" : "#d9fdd3",
+      color: isDark ? "#e9edef" : "#111b21",
+      boxShadow: "0 1px 0.5px rgba(11, 20, 26, 0.13)",
+      "&::after": {
+        content: '""',
+        position: "absolute",
+        top: 0,
+        right: -7,
+        width: 0,
+        height: 0,
+        borderTop: `8px solid ${isDark ? "#005c4b" : "#d9fdd3"}`,
+        borderRight: "8px solid transparent",
+      },
+    },
+    senderName: {
+      fontWeight: 700,
+      fontSize: "0.75rem",
+      color: isDark ? "#53bdeb" : "#00a884",
+      marginBottom: 2,
+    },
+    messageText: {
+      fontSize: "0.885rem",
+      lineHeight: 1.42,
+      wordBreak: "break-word",
+      whiteSpace: "pre-wrap",
+    },
+    timestampRight: {
+      fontFamily: "var(--font-sans)",
+      fontSize: "0.68rem",
+      color: isDark ? "rgba(233, 237, 239, 0.65)" : "#667781",
+      marginTop: 3,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      gap: 4,
+    },
+    timestampLeft: {
+      fontFamily: "var(--font-sans)",
+      fontSize: "0.68rem",
+      color: isDark ? "rgba(233, 237, 239, 0.65)" : "#667781",
+      marginTop: 3,
+      textAlign: "right",
+    },
+    inputArea: {
+      padding: "10px 16px",
+      backgroundColor: isDark ? "#202c33" : "#f0f2f5",
+      borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "#d1d7db"}`,
+    },
+    inputForm: {
+      display: "flex",
+      alignItems: "flex-end",
+      gap: 10,
+    },
+    inputPill: {
+      flex: 1,
+      backgroundColor: isDark ? "#2a3942" : "#ffffff",
+      borderRadius: 24,
+      padding: "8px 16px",
+      border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "transparent"}`,
+      fontSize: "0.9rem",
+      color: isDark ? "#e9edef" : "#111b21",
+      boxShadow: isDark ? "none" : "0 1px 1px rgba(11, 20, 26, 0.06)",
+      "&:focus-within": {
+        borderColor: "#00a884",
+      },
+    },
+    buttonSend: {
+      borderRadius: "50%",
+      width: 42,
+      height: 42,
+      backgroundColor: "#00a884",
+      color: "#ffffff",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.16)",
+      transition: "background-color 0.15s ease, transform 0.1s ease",
+      "&:hover": {
+        backgroundColor: "#008f72",
+        boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+      },
+      "&:disabled": {
+        backgroundColor: isDark ? "#2a3942" : "#d1d7db",
+        color: isDark ? "#8696a0" : "#ffffff",
+      },
+    },
+  };
+});
 
 interface Props {
   chat: InternalChat;
@@ -257,24 +305,24 @@ export default function ChatMessages({ chat, messages, handleSendMessage, handle
     <Paper elevation={0} className={classes.mainContainer}>
       <header className={classes.headerArea}>
         <div className={classes.headerLeft}>
-          <Avatar className={classes.avatarSquircle} style={{ backgroundColor: "#0d9488", color: "#fff" }}>
+          <Avatar className={classes.avatarSquircle} style={{ backgroundColor: "#00a884", color: "#fff" }}>
             {getInitials(chat.title || "Chat")}
           </Avatar>
-          <div style={{ minWidth: 0 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <Typography component={mobile ? "h1" : "h2"} className={classes.headerTitle}>{chat.title}</Typography>
             <Typography component="div" className={classes.headerSubtitle}>
-              <GroupIcon style={{ fontSize: 16 }} />
-              <span>{participants.length} {participants.length === 1 ? "participante" : "participantes"}</span>
+              <Tooltip
+                title={participants.map(p => `${p.user?.name || `Participante ${p.userId}`}${p.user?.online === true ? " (online)" : p.user?.online === false ? " (offline)" : ""}`).join(", ")}
+                arrow
+              >
+                <span className={classes.participantsText}>
+                  {participants.map(p => p.user?.name || `Participante ${p.userId}`).join(", ") || `${participants.length} participante(s)`}
+                </span>
+              </Tooltip>
               <Tooltip title="Presença informada pelo servidor na última atualização da conversa">
                 <span className={classes.presence}>{online} online</span>
               </Tooltip>
             </Typography>
-            <div className={classes.participants} aria-label="Participantes da conversa">
-              {participants.map(p => (
-                <Chip key={p.userId} size="small" variant="outlined"
-                  label={`${p.user?.name || `Participante ${p.userId}`}${p.user?.online === true ? " · online" : p.user?.online === false ? " · offline" : ""}`} />
-              ))}
-            </div>
           </div>
         </div>
       </header>
@@ -298,7 +346,7 @@ export default function ChatMessages({ chat, messages, handleSendMessage, handle
               <Typography className={classes.messageText}>{item.message}</Typography>
               <div className={isMe ? classes.timestampRight : classes.timestampLeft}>
                 <time dateTime={item.createdAt}>{datetimeToClient(item.createdAt)}</time>
-                {isMe && <Tooltip title="Mensagem salva no chat"><DoneAllIcon aria-label="Mensagem enviada" style={{ fontSize: 16 }} /></Tooltip>}
+                {isMe && <Tooltip title="Mensagem salva no chat"><DoneAllIcon aria-label="Mensagem enviada" style={{ fontSize: 16, color: "#53bdeb" }} /></Tooltip>}
               </div>
             </Box>
           </React.Fragment>;

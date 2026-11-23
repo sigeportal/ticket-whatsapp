@@ -8,37 +8,92 @@ import { Button, CircularProgress, Grid, TextField, Typography } from "@material
 import { Field, Form, Formik } from "formik";
 import toastError from "../../errors/toastError";
 import { toast } from "react-toastify";
-// import api from "../../services/api";
 import axios from "axios";
 import usePlans from "../../hooks/usePlans";
+import MainContainer from "../../components/MainContainer";
+import MainHeader from "../../components/MainHeader";
+import Title from "../../components/Title";
 
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(2),
-    paddingBottom: 100
+    padding: theme.spacing(3),
+    borderRadius: 14,
+    border: "1px solid var(--border-hairline)",
+    backgroundColor: "var(--bg-surface)",
+    overflowY: "auto",
+    boxShadow: "none",
+    ...theme.scrollbarStyles,
   },
-  mainHeader: {
-    marginTop: theme.spacing(1),
+  sectionCard: {
+    padding: theme.spacing(2.5),
+    borderRadius: 12,
+    border: "1px solid var(--border-hairline)",
+    backgroundColor: "var(--bg-canvas)",
+    marginBottom: theme.spacing(3),
   },
-  elementMargin: {
+  sectionHeading: {
+    fontFamily: "var(--font-display)",
+    fontWeight: 700,
+    fontSize: "1.05rem",
+    color: "var(--ink-primary)",
+    marginBottom: theme.spacing(1.5),
+  },
+  codeBlock: {
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.78rem",
+    lineHeight: 1.6,
     padding: theme.spacing(2),
+    borderRadius: 10,
+    backgroundColor: "var(--bg-subtle)",
+    border: "1px solid var(--border-hairline)",
+    color: "var(--ink-primary)",
+    overflowX: "auto",
+  },
+  noteList: {
+    margin: "8px 0 0",
+    paddingLeft: 20,
+    color: "var(--ink-secondary)",
+    fontSize: "0.875rem",
+    lineHeight: 1.6,
   },
   formContainer: {
-    maxWidth: 500,
+    maxWidth: 520,
   },
   textRight: {
-    textAlign: "right"
-  }
+    textAlign: "right",
+  },
+  btnWrapper: {
+    position: "relative",
+    minWidth: 120,
+    height: 40,
+  },
+  buttonProgress: {
+    color: "var(--action-ink)",
+  },
+  fileInputLabel: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "9px 14px",
+    borderRadius: 10,
+    backgroundColor: "var(--field-bg)",
+    border: "1px dashed var(--border-strong)",
+    color: "var(--ink-primary)",
+    fontSize: "0.85rem",
+    fontWeight: 500,
+    cursor: "pointer",
+    width: "100%",
+  },
 }));
 
 const MessagesAPI = () => {
   const classes = useStyles();
   const history = useHistory();
 
-  const [formMessageTextData,] = useState({ token: '', number: '', body: '' })
-  const [formMessageMediaData,] = useState({ token: '', number: '', medias: '' })
-  const [file, setFile] = useState({})
+  const [formMessageTextData] = useState({ token: "", number: "", body: "" });
+  const [formMessageMediaData] = useState({ token: "", number: "", medias: "" });
+  const [file, setFile] = useState({});
 
   const { getPlanCompany } = usePlans();
 
@@ -47,9 +102,11 @@ const MessagesAPI = () => {
       const companyId = localStorage.getItem("companyId");
       const planConfigs = await getPlanCompany(undefined, companyId);
       if (!planConfigs.plan.useExternalApi) {
-        toast.error("Esta empresa não possui permissão para acessar essa página! Estamos lhe redirecionando.");
+        toast.error(
+          "Esta empresa não possui permissão para acessar essa página! Estamos lhe redirecionando."
+        );
         setTimeout(() => {
-          history.push(`/`)
+          history.push("/");
         }, 1000);
       }
     }
@@ -58,8 +115,8 @@ const MessagesAPI = () => {
   }, []);
 
   const getEndpoint = () => {
-    return process.env.REACT_APP_BACKEND_URL + '/api/messages/send'
-  }
+    return process.env.REACT_APP_BACKEND_URL + "/api/messages/send";
+  };
 
   const handleSendTextMessage = async (values) => {
     const { number, body } = values;
@@ -67,40 +124,40 @@ const MessagesAPI = () => {
     try {
       await axios.request({
         url: getEndpoint(),
-        method: 'POST',
+        method: "POST",
         data,
         headers: {
-          'Content-type': 'application/json',
-          'Authorization': `Bearer ${values.token}`
-        }
-      })
-      toast.success('Mensagem enviada com sucesso');
+          "Content-type": "application/json",
+          Authorization: `Bearer ${values.token}`,
+        },
+      });
+      toast.success("Mensagem enviada com sucesso");
     } catch (err) {
       toastError(err);
     }
-  }
+  };
 
   const handleSendMediaMessage = async (values) => {
     try {
       const firstFile = file[0];
       const data = new FormData();
-      data.append('number', values.number);
-      data.append('body', firstFile.name);
-      data.append('medias', firstFile);
+      data.append("number", values.number);
+      data.append("body", firstFile.name);
+      data.append("medias", firstFile);
       await axios.request({
         url: getEndpoint(),
-        method: 'POST',
+        method: "POST",
         data,
         headers: {
-          'Content-type': 'multipart/form-data',
-          'Authorization': `Bearer ${values.token}`
-        }
-      })
-      toast.success('Mensagem enviada com sucesso');
+          "Content-type": "multipart/form-data",
+          Authorization: `Bearer ${values.token}`,
+        },
+      });
+      toast.success("Mensagem enviada com sucesso");
     } catch (err) {
       toastError(err);
     }
-  }
+  };
 
   const renderFormMessageText = () => {
     return (
@@ -111,10 +168,9 @@ const MessagesAPI = () => {
           setTimeout(async () => {
             await handleSendTextMessage(values);
             actions.setSubmitting(false);
-            actions.resetForm()
+            actions.resetForm();
           }, 400);
         }}
-        className={classes.elementMargin}
       >
         {({ isSubmitting }) => (
           <Form className={classes.formContainer}>
@@ -124,11 +180,9 @@ const MessagesAPI = () => {
                   as={TextField}
                   label={i18n.t("messagesAPI.textMessage.token")}
                   name="token"
-                  autoFocus
                   variant="outlined"
                   margin="dense"
                   fullWidth
-                  className={classes.textField}
                   required
                 />
               </Grid>
@@ -137,11 +191,9 @@ const MessagesAPI = () => {
                   as={TextField}
                   label={i18n.t("messagesAPI.textMessage.number")}
                   name="number"
-                  autoFocus
                   variant="outlined"
                   margin="dense"
                   fullWidth
-                  className={classes.textField}
                   required
                 />
               </Grid>
@@ -150,11 +202,11 @@ const MessagesAPI = () => {
                   as={TextField}
                   label={i18n.t("messagesAPI.textMessage.body")}
                   name="body"
-                  autoFocus
                   variant="outlined"
                   margin="dense"
                   fullWidth
-                  className={classes.textField}
+                  multiline
+                  rows={2}
                   required
                 />
               </Grid>
@@ -166,19 +218,18 @@ const MessagesAPI = () => {
                   className={classes.btnWrapper}
                 >
                   {isSubmitting ? (
-                    <CircularProgress
-                      size={24}
-                      className={classes.buttonProgress}
-                    />
-                  ) : 'Enviar'}
+                    <CircularProgress size={20} className={classes.buttonProgress} />
+                  ) : (
+                    "Enviar teste"
+                  )}
                 </Button>
               </Grid>
             </Grid>
           </Form>
         )}
       </Formik>
-    )
-  }
+    );
+  };
 
   const renderFormMessageMedia = () => {
     return (
@@ -189,12 +240,14 @@ const MessagesAPI = () => {
           setTimeout(async () => {
             await handleSendMediaMessage(values);
             actions.setSubmitting(false);
-            actions.resetForm()
-            document.getElementById('medias').files = null
-            document.getElementById('medias').value = null
+            actions.resetForm();
+            const mediaInput = document.getElementById("medias");
+            if (mediaInput) {
+              mediaInput.files = null;
+              mediaInput.value = null;
+            }
           }, 400);
         }}
-        className={classes.elementMargin}
       >
         {({ isSubmitting }) => (
           <Form className={classes.formContainer}>
@@ -204,11 +257,9 @@ const MessagesAPI = () => {
                   as={TextField}
                   label={i18n.t("messagesAPI.mediaMessage.token")}
                   name="token"
-                  autoFocus
                   variant="outlined"
                   margin="dense"
                   fullWidth
-                  className={classes.textField}
                   required
                 />
               </Grid>
@@ -217,16 +268,22 @@ const MessagesAPI = () => {
                   as={TextField}
                   label={i18n.t("messagesAPI.mediaMessage.number")}
                   name="number"
-                  autoFocus
                   variant="outlined"
                   margin="dense"
                   fullWidth
-                  className={classes.textField}
                   required
                 />
               </Grid>
               <Grid item xs={12}>
-                <input type="file" name="medias" id="medias" required onChange={(e) => setFile(e.target.files)} />
+                <label htmlFor="medias" className={classes.fileInputLabel}>
+                  <input
+                    type="file"
+                    name="medias"
+                    id="medias"
+                    required
+                    onChange={(e) => setFile(e.target.files)}
+                  />
+                </label>
               </Grid>
               <Grid item xs={12} className={classes.textRight}>
                 <Button
@@ -236,105 +293,89 @@ const MessagesAPI = () => {
                   className={classes.btnWrapper}
                 >
                   {isSubmitting ? (
-                    <CircularProgress
-                      size={24}
-                      className={classes.buttonProgress}
-                    />
-                  ) : 'Enviar'}
+                    <CircularProgress size={20} className={classes.buttonProgress} />
+                  ) : (
+                    "Enviar mídia"
+                  )}
                 </Button>
               </Grid>
             </Grid>
           </Form>
         )}
       </Formik>
-    )
-  }
+    );
+  };
 
   return (
-    <Paper
-      className={classes.mainPaper}
-      style={{marginLeft: "5px"}}
-      // className={classes.elementMargin}
-      variant="outlined"
-    >
-      <Typography variant="h5">
-        Documentação para envio de mensagens
-      </Typography>
-      <Typography variant="h6" color="primary" className={classes.elementMargin}>
-        Métodos de Envio
-      </Typography>
-      <Typography component="div">
-        <ol>
-          <li>Mensagens de Texto</li>
-          <li>Mensagens de Media</li>
-        </ol>
-      </Typography>
-      <Typography variant="h6" color="primary" className={classes.elementMargin}>
-        Instruções
-      </Typography>
-      <Typography className={classes.elementMargin} component="div">
-        <b>Observações importantes</b><br />
-        <ul>
-          <li>Antes de enviar mensagens, é necessário o cadastro do token vinculado à conexão que enviará as mensagens. <br />Para realizar o cadastro acesse o menu "Conexões", clique no botão editar da conexão e insira o token no devido campo.</li>
-          <li>
-            O número para envio não deve ter mascara ou caracteres especiais e deve ser composto por:
-            <ul>
-              <li>Código do país</li>
-              <li>DDD</li>
-              <li>Número</li>
-            </ul>
-          </li>
-        </ul>
-      </Typography>
-      <Typography variant="h6" color="primary" className={classes.elementMargin}>
-        1. Mensagens de Texto
-      </Typography>
-      <Grid container>
-        <Grid item xs={12} sm={6}>
-          <Typography className={classes.elementMargin} component="div">
-            <p>Seguem abaixo a lista de informações necessárias para envio das mensagens de texto:</p>
-            <b>Endpoint: </b> {getEndpoint()} <br />
-            <b>Método: </b> POST <br />
-            <b>Headers: </b> Authorization (Bearer token) e Content-Type (application/json) <br />
-            <b>Body: </b> {"{ \"number\": \"595985523065\", \"body\": \"Sua mensagem\" }"}
+    <MainContainer>
+      <MainHeader>
+        <Title>API de Mensagens</Title>
+      </MainHeader>
+
+      <Paper className={classes.mainPaper} elevation={0}>
+        <div className={classes.sectionCard}>
+          <Typography className={classes.sectionHeading}>
+            Instruções gerais de integração
           </Typography>
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <Typography className={classes.elementMargin}>
-            <b>Teste de Envio</b>
+          <ul className={classes.noteList}>
+            <li>
+              Antes de enviar mensagens, vincule um token na conexão desejada em{" "}
+              <strong>Conexões WhatsApp</strong>.
+            </li>
+            <li>
+              Envie o número sem máscara ou símbolos: código do país + DDD + número
+              (ex.: <code className="font-mono">5567999999999</code>).
+            </li>
+          </ul>
+        </div>
+
+        <div className={classes.sectionCard}>
+          <Typography className={classes.sectionHeading}>
+            1. Mensagens de Texto
           </Typography>
-          {renderFormMessageText()}
-        </Grid>
-      </Grid>
-      <Typography variant="h6" color="primary" className={classes.elementMargin}>
-        2. Mensagens de Media
-      </Typography>
-      <Grid container>
-        <Grid item xs={12} sm={6}>
-          <Typography className={classes.elementMargin} component="div">
-            <p>Seguem abaixo a lista de informações necessárias para envio das mensagens de texto:</p>
-            <b>Endpoint: </b> {getEndpoint()} <br />
-            <b>Método: </b> POST <br />
-            <b>Headers: </b> Authorization (Bearer token) e Content-Type (multipart/form-data) <br />
-            <b>FormData: </b> <br />
-            <ul>
-              <li>
-                <b>number: </b> 5599999999999
-              </li>
-              <li>
-                <b>medias: </b> arquivo
-              </li>
-            </ul>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <div className={classes.codeBlock}>
+                <div>
+                  <strong>POST</strong> {getEndpoint()}
+                </div>
+                <div>Authorization: Bearer &lt;token&gt;</div>
+                <div>Content-Type: application/json</div>
+                <div style={{ marginTop: 8 }}>
+                  {'{ "number": "5567999999999", "body": "Sua mensagem" }'}
+                </div>
+              </div>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              {renderFormMessageText()}
+            </Grid>
+          </Grid>
+        </div>
+
+        <div className={classes.sectionCard} style={{ marginBottom: 0 }}>
+          <Typography className={classes.sectionHeading}>
+            2. Mensagens de Mídia
           </Typography>
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <Typography className={classes.elementMargin}>
-            <b>Teste de Envio</b>
-          </Typography>
-          {renderFormMessageMedia()}
-        </Grid>
-      </Grid>
-    </Paper>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <div className={classes.codeBlock}>
+                <div>
+                  <strong>POST</strong> {getEndpoint()}
+                </div>
+                <div>Authorization: Bearer &lt;token&gt;</div>
+                <div>Content-Type: multipart/form-data</div>
+                <div style={{ marginTop: 8 }}>
+                  FormData: number (ex. 5567999999999), medias (arquivo)
+                </div>
+              </div>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              {renderFormMessageMedia()}
+            </Grid>
+          </Grid>
+        </div>
+      </Paper>
+    </MainContainer>
   );
 };
 

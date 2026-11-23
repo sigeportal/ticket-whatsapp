@@ -88,9 +88,35 @@ const reducer = (state, action) => {
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(1),
+    padding: theme.spacing(1.5),
     overflowY: "scroll",
+    borderRadius: 14,
+    border: "1px solid var(--border-hairline)",
+    backgroundColor: "var(--bg-surface)",
+    boxShadow: "none",
     ...theme.scrollbarStyles,
+  },
+  actionBtn: {
+    color: "var(--ink-secondary)",
+    backgroundColor: "var(--bg-subtle)",
+    borderRadius: 8,
+    padding: 6,
+    margin: "0 3px",
+    "&:hover": {
+      backgroundColor: "var(--action-soft)",
+      color: "var(--action)",
+    },
+  },
+  deleteBtn: {
+    color: "var(--status-danger)",
+    backgroundColor: "var(--status-danger-bg)",
+    borderRadius: 8,
+    padding: 6,
+    marginLeft: 3,
+    "&:hover": {
+      backgroundColor: "var(--status-danger)",
+      color: "#ffffff",
+    },
   },
 }));
 
@@ -265,41 +291,31 @@ const Campaigns = () => {
         campaignId={selectedCampaign && selectedCampaign.id}
       />
       <MainHeader>
-        <Grid style={{ width: "99.6%" }} container>
-          <Grid xs={12} sm={8} item>
-            <Title>{i18n.t("campaigns.title")}</Title>
-          </Grid>
-          <Grid xs={12} sm={4} item>
-            <Grid spacing={2} container>
-              <Grid xs={6} sm={6} item>
-                <TextField
-                  fullWidth
-                  placeholder={i18n.t("campaigns.searchPlaceholder")}
-                  type="search"
-                  value={searchParam}
-                  onChange={handleSearch}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon style={{ color: "gray" }} />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-              <Grid xs={6} sm={6} item>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  onClick={handleOpenCampaignModal}
-                  color="primary"
-                >
-                  {i18n.t("campaigns.buttons.add")}
-                </Button>
-              </Grid>
-            </Grid>
-          </Grid>
-        </Grid>
+        <Title>{i18n.t("campaigns.title")}</Title>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginLeft: "auto" }}>
+          <TextField
+            variant="outlined"
+            size="small"
+            placeholder={i18n.t("campaigns.searchPlaceholder")}
+            type="search"
+            value={searchParam}
+            onChange={handleSearch}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon style={{ color: "var(--ink-muted)", fontSize: 19 }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <Button
+            variant="contained"
+            onClick={handleOpenCampaignModal}
+            color="primary"
+          >
+            {i18n.t("campaigns.buttons.add")}
+          </Button>
+        </div>
       </MainHeader>
       <Paper
         className={classes.mainPaper}
@@ -369,45 +385,50 @@ const Campaigns = () => {
                   <TableCell align="center">
                     {campaign.status === "EM_ANDAMENTO" && (
                       <IconButton
+                        className={classes.actionBtn}
                         onClick={() => cancelCampaign(campaign)}
                         title="Parar Campanha"
                         size="small"
                       >
-                        <PauseCircleOutlineIcon />
+                        <PauseCircleOutlineIcon fontSize="small" />
                       </IconButton>
                     )}
                     {campaign.status === "CANCELADA" && (
                       <IconButton
+                        className={classes.actionBtn}
                         onClick={() => restartCampaign(campaign)}
-                        title="Parar Campanha"
+                        title="Retomar Campanha"
                         size="small"
                       >
-                        <PlayCircleOutlineIcon />
+                        <PlayCircleOutlineIcon fontSize="small" />
                       </IconButton>
                     )}
                     <IconButton
+                      className={classes.actionBtn}
                       onClick={() =>
                         history.push(`/campaign/${campaign.id}/report`)
                       }
                       size="small"
                     >
-                      <DescriptionIcon />
+                      <DescriptionIcon fontSize="small" />
                     </IconButton>
                     <IconButton
+                      className={classes.actionBtn}
                       size="small"
                       onClick={() => handleEditCampaign(campaign)}
                     >
-                      <EditIcon />
+                      <EditIcon fontSize="small" />
                     </IconButton>
 
                     <IconButton
+                      className={classes.deleteBtn}
                       size="small"
                       onClick={(e) => {
                         setConfirmModalOpen(true);
                         setDeletingCampaign(campaign);
                       }}
                     >
-                      <DeleteOutlineIcon />
+                      <DeleteOutlineIcon fontSize="small" />
                     </IconButton>
                   </TableCell>
                 </TableRow>

@@ -27,9 +27,19 @@ import { SocketContext } from "../../context/Socket/SocketContext";
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(2),
+    padding: theme.spacing(3),
     overflowY: "scroll",
+    borderRadius: 14,
+    border: "1px solid var(--border-hairline)",
+    backgroundColor: "var(--bg-surface)",
+    boxShadow: "none",
     ...theme.scrollbarStyles,
+  },
+  statusHeader: {
+    fontFamily: "var(--font-display)",
+    fontWeight: 700,
+    fontSize: "1.05rem",
+    color: "var(--ink-primary)",
   },
   textRight: {
     textAlign: "right",

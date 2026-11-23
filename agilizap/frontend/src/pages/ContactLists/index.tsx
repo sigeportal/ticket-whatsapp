@@ -72,31 +72,18 @@ const useStyles = makeStyles((theme) => ({
     },
     "& .MuiIconButton-root": { minWidth: 44, minHeight: 44 },
     borderRadius: 14,
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.18)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
-    backgroundColor: theme.palette.type === "dark" ? "#162032" : "#ffffff",
+    border: "1px solid var(--border-subtle)",
+    backgroundColor: "var(--bg-surface)",
     boxShadow: "none",
     ...theme.scrollbarStyles,
     minHeight: 0,
     minWidth: 0,
   },
   searchInput: {
-    backgroundColor: theme.palette.type === "dark" ? "#0f172a" : "#f8fafc",
+    backgroundColor: "var(--field-bg)",
     borderRadius: 10,
     "& .MuiOutlinedInput-root": {
       borderRadius: 10,
-      border: `1px solid ${
-        theme.palette.type === "dark"
-          ? "rgba(16, 185, 129, 0.2)"
-          : "rgba(226, 232, 240, 0.9)"
-      }`,
-      "&.Mui-focused": {
-        borderColor: "#10b981",
-        boxShadow: "0 0 0 3px rgba(16, 185, 129, 0.15)",
-      },
     },
   },
   addButton: {
@@ -105,13 +92,16 @@ const useStyles = makeStyles((theme) => ({
     fontSize: "0.875rem",
     padding: "8px 18px",
     minHeight: 44,
-    background: "linear-gradient(135deg, #047857 0%, #0f766e 100%)",
-    color: "#ffffff",
+    backgroundColor: "var(--action)",
+    color: "var(--action-ink)",
     boxShadow: "none",
-    transition: "background-color 0.2s ease, color 0.2s ease",
+    transition: "background-color 150ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 90ms ease",
     "&:hover": {
-      background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+      backgroundColor: "var(--action-hover)",
       boxShadow: "none",
+    },
+    "&:active": {
+      transform: "scale(0.985)",
     },
   },
   secondaryButton: {
@@ -119,21 +109,18 @@ const useStyles = makeStyles((theme) => ({
     fontWeight: 600,
     fontSize: "0.82rem",
     padding: "8px 14px",
-    color: theme.palette.type === "dark" ? "#cbd5e1" : "#475569",
-    backgroundColor:
-      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.08)" : "#f1f5f9",
-    border: `1px solid ${
-      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.2)" : "#e2e8f0"
-    }`,
+    color: "var(--ink-secondary)",
+    backgroundColor: "var(--bg-subtle)",
+    border: "1px solid var(--border-subtle)",
     textDecoration: "none",
     display: "inline-flex",
     alignItems: "center",
     gap: 6,
-    transition: "background-color 0.2s ease, color 0.2s ease",
+    transition: "background-color 150ms ease, color 150ms ease, border-color 150ms ease",
     "&:hover": {
-      backgroundColor:
-        theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.15)" : "#e2e8f0",
-      color: theme.palette.type === "dark" ? "#34d399" : "#0f172a",
+      backgroundColor: "var(--bg-elevated)",
+      borderColor: "var(--border-strong)",
+      color: "var(--ink-primary)",
     },
   },
   listNameCell: {
@@ -152,73 +139,58 @@ const useStyles = makeStyles((theme) => ({
   listNameText: {
     fontWeight: 600,
     fontSize: "0.88rem",
-    color: theme.palette.type === "dark" ? "#f1f5f9" : "#0f172a",
+    color: "var(--ink-primary)",
   },
   contactsBadge: {
     display: "inline-flex",
     alignItems: "center",
     gap: 5,
     padding: "3px 10px",
-    borderRadius: 12,
+    borderRadius: 999,
+    fontFamily: "var(--font-mono)",
+    fontVariantNumeric: "tabular-nums",
     fontSize: "0.75rem",
     whiteSpace: "nowrap",
     fontWeight: 600,
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.15)"
-        : "rgba(16, 185, 129, 0.1)",
-    color: theme.palette.type === "dark" ? "#34d399" : "#047857",
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.3)"
-        : "rgba(16, 185, 129, 0.2)"
-    }`,
+    backgroundColor: "var(--action-soft)",
+    color: "var(--action)",
+    border: "1px solid var(--action-ring)",
   },
   actionButtonSecondary: {
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#475569",
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(255, 255, 255, 0.06)"
-        : "rgba(0, 0, 0, 0.04)",
+    color: "var(--ink-secondary)",
+    backgroundColor: "var(--bg-subtle)",
+    border: "1px solid var(--border-subtle)",
     borderRadius: 8,
     padding: 6,
     marginRight: 6,
-    transition: "background-color 0.2s ease, color 0.2s ease",
+    transition: "background-color 150ms ease, color 150ms ease, border-color 150ms ease",
     "&:hover": {
-      backgroundColor:
-        theme.palette.type === "dark"
-          ? "rgba(16, 185, 129, 0.2)"
-          : "rgba(16, 185, 129, 0.15)",
-      color: "#10b981",
+      backgroundColor: "var(--action-soft)",
+      borderColor: "var(--action-ring)",
+      color: "var(--action)",
     },
   },
   actionButtonEdit: {
-    color: theme.palette.type === "dark" ? "#34d399" : "#047857",
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.12)"
-        : "rgba(16, 185, 129, 0.08)",
+    color: "var(--action)",
+    backgroundColor: "var(--action-soft)",
     borderRadius: 8,
     padding: 6,
     marginRight: 6,
-    transition: "background-color 0.2s ease, color 0.2s ease",
+    transition: "background-color 150ms ease, color 150ms ease",
     "&:hover": {
-      backgroundColor: "#10b981",
-      color: "#ffffff",
+      backgroundColor: "var(--action)",
+      color: "var(--action-ink)",
     },
   },
   actionButtonDelete: {
-    color: theme.palette.type === "dark" ? "#f87171" : "#dc2626",
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(239, 68, 68, 0.12)"
-        : "rgba(239, 68, 68, 0.08)",
+    color: theme.palette.type === "dark" ? "#FCA5A5" : "#DC2626",
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
     borderRadius: 8,
     padding: 6,
-    transition: "background-color 0.2s ease, color 0.2s ease",
+    transition: "background-color 150ms ease, color 150ms ease",
     "&:hover": {
-      backgroundColor: "#ef4444",
-      color: "#ffffff",
+      backgroundColor: "#EF4444",
+      color: "#FFFFFF",
     },
   },
 }));

@@ -26,29 +26,20 @@ import OnlyForSuperUser from "../../components/OnlyForSuperUser";
 const useStyles = makeStyles((theme) => ({
   root: {
     flex: 1,
-    backgroundColor: theme.palette.background.paper,
+    backgroundColor: "var(--bg-surface)",
   },
   mainPaper: {
     ...theme.scrollbarStyles,
     overflowY: "scroll",
     flex: 1,
     borderRadius: 14,
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.18)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
-    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
-    boxShadow:
-      theme.palette.type === "dark"
-        ? "0 4px 20px -2px rgba(0, 0, 0, 0.4)"
-        : "0 1px 3px rgba(0, 0, 0, 0.05)",
+    border: "1px solid var(--border-hairline)",
+    backgroundColor: "var(--bg-surface)",
+    boxShadow: "none",
   },
   tab: {
-    backgroundColor: theme.palette.type === "dark" ? "#07130e" : "#f8fafc",
-    borderBottom: `1px solid ${
-      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.15)" : "#e2e8f0"
-    }`,
+    backgroundColor: "var(--bg-subtle)",
+    borderBottom: "1px solid var(--border-hairline)",
     "& .MuiTab-root": {
       fontWeight: 600,
       fontSize: "0.85rem",
@@ -56,9 +47,9 @@ const useStyles = makeStyles((theme) => ({
       minHeight: 48,
     },
     "& .MuiTabs-indicator": {
-      backgroundColor: "#10b981",
-      height: 3,
-      borderRadius: "3px 3px 0 0",
+      backgroundColor: "var(--action)",
+      height: 2.5,
+      borderRadius: "2px 2px 0 0",
     },
   },
   paper: {

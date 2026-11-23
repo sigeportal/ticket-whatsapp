@@ -1,180 +1,113 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext } from "react";
 import { Link as RouterLink } from "react-router-dom";
 
 import Button from "@material-ui/core/Button";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import TextField from "@material-ui/core/TextField";
 import Link from "@material-ui/core/Link";
-import Grid from "@material-ui/core/Grid";
-import Container from "@material-ui/core/Container";
 import Typography from "@material-ui/core/Typography";
-import Box from "@material-ui/core/Box";
+import IconButton from "@material-ui/core/IconButton";
+import InputAdornment from "@material-ui/core/InputAdornment";
 import { makeStyles } from "@material-ui/core/styles";
+import MailOutlineIcon from "@material-ui/icons/MailOutline";
 import LockOutlinedIcon from "@material-ui/icons/LockOutlined";
-import EmailOutlinedIcon from "@material-ui/icons/EmailOutlined";
+import VisibilityOutlinedIcon from "@material-ui/icons/VisibilityOutlined";
+import VisibilityOffOutlinedIcon from "@material-ui/icons/VisibilityOffOutlined";
 
-import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import PortAiLogo from "../../components/PortAiLogo";
+import AuthShell from "../../components/AuthShell";
 
-const useStyles = makeStyles(theme => ({
-  root: {
-    minHeight: "100vh",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "linear-gradient(135deg, #07130e 0%, #0b1e16 45%, #064e3b 100%)",
-    padding: theme.spacing(2),
-    position: "relative",
-    overflow: "hidden",
-    "&::before": {
-      content: '""',
-      position: "absolute",
-      top: "-10%",
-      right: "-10%",
-      width: "500px",
-      height: "500px",
-      borderRadius: "50%",
-      background: "radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, transparent 70%)",
-      pointerEvents: "none",
-    },
-    "&::after": {
-      content: '""',
-      position: "absolute",
-      bottom: "-10%",
-      left: "-10%",
-      width: "500px",
-      height: "500px",
-      borderRadius: "50%",
-      background: "radial-gradient(circle, rgba(52, 211, 153, 0.2) 0%, transparent 70%)",
-      pointerEvents: "none",
-    }
-  },
-  card: {
-    background: "#ffffff",
-    borderRadius: "20px",
-    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-    padding: theme.spacing(5, 4),
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    maxWidth: "420px",
-    width: "100%",
-    position: "relative",
-    zIndex: 1,
-    border: "1px solid rgba(255, 255, 255, 0.2)",
-  },
-  logoContainer: {
+const useStyles = makeStyles((theme) => ({
+  header: {
     marginBottom: theme.spacing(3),
-    textAlign: "center",
   },
-  portalBrandLogin: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    justifyContent: "center",
-  },
-  portalLogoBadgeLogin: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    boxShadow: "0 8px 20px rgba(16, 185, 129, 0.35)",
-  },
-  portalTextWrapperLogin: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-  },
-  portalTitleLogin: {
-    fontFamily: "'Montserrat', sans-serif",
-    fontSize: "1.5rem",
-    fontWeight: 800,
+  eyebrow: {
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.72rem",
+    fontWeight: 600,
     letterSpacing: "0.08em",
-    color: "#0f172a",
-    lineHeight: 1.1,
-  },
-  portalSubtitleLogin: {
-    fontSize: "0.7rem",
-    fontWeight: 700,
-    letterSpacing: "0.18em",
-    color: "#10b981",
-    lineHeight: 1.3,
-    marginTop: 2,
+    textTransform: "uppercase",
+    color: "var(--action)",
+    marginBottom: 6,
+    display: "block",
   },
   title: {
+    fontFamily: "var(--font-display)",
     fontWeight: 700,
-    fontFamily: "Inter, Montserrat, sans-serif",
-    color: "#111827",
-    fontSize: "1.5rem",
-    marginBottom: theme.spacing(0.5),
+    fontSize: "1.6rem",
+    letterSpacing: "-0.025em",
+    color: "var(--ink-primary)",
+    lineHeight: 1.2,
+    marginBottom: 6,
   },
   subtitle: {
-    color: "#6b7280",
-    fontSize: "0.875rem",
-    marginBottom: theme.spacing(3),
+    fontFamily: "var(--font-sans)",
+    color: "var(--ink-secondary)",
+    fontSize: "0.9rem",
+    lineHeight: 1.45,
   },
   form: {
     width: "100%",
     display: "flex",
     flexDirection: "column",
-    gap: theme.spacing(2.5),
+    gap: 18,
   },
-  input: {
-    "& .MuiOutlinedInput-root": {
-      borderRadius: "10px",
-      backgroundColor: "#f9fafb",
-      transition: "all 0.2s ease-in-out",
-      "&:hover": {
-        backgroundColor: "#ffffff",
-      },
-      "&.Mui-focused": {
-        backgroundColor: "#ffffff",
-        boxShadow: "0 0 0 3px rgba(16, 185, 129, 0.15)",
-      },
-    },
-    "& .MuiOutlinedInput-notchedOutline": {
-      borderColor: "#e5e7eb",
-    },
+  fieldGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
   },
-  submitButton: {
-    marginTop: theme.spacing(1),
-    padding: theme.spacing(1.4),
-    borderRadius: "10px",
-    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-    color: "#ffffff",
+  fieldLabel: {
+    fontFamily: "var(--font-sans)",
+    fontSize: "0.82rem",
     fontWeight: 600,
-    fontSize: "0.95rem",
-    textTransform: "none",
-    boxShadow: "0 4px 12px rgba(16, 185, 129, 0.35)",
-    transition: "all 0.2s ease",
-    "&:hover": {
-      background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
-      boxShadow: "0 6px 16px rgba(16, 185, 129, 0.45)",
-    },
+    color: "var(--ink-primary)",
+  },
+  fieldRowHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  inputIcon: {
+    color: "var(--ink-muted)",
+    fontSize: 19,
   },
   forgotLink: {
-    color: "#10b981",
-    fontSize: "0.85rem",
-    fontWeight: 500,
+    color: "var(--action)",
+    fontSize: "0.8125rem",
+    fontWeight: 600,
     textDecoration: "none",
     "&:hover": {
       textDecoration: "underline",
     },
   },
+  submitButton: {
+    marginTop: 6,
+    height: 46,
+    borderRadius: 10,
+    backgroundColor: "var(--action)",
+    color: "var(--action-ink)",
+    fontFamily: "var(--font-sans)",
+    fontWeight: 700,
+    fontSize: "0.9375rem",
+    textTransform: "none",
+    boxShadow: "none",
+    "&:hover": {
+      backgroundColor: "var(--action-hover)",
+      boxShadow: "none",
+    },
+  },
   signupText: {
-    marginTop: theme.spacing(2),
+    marginTop: 8,
     textAlign: "center",
     fontSize: "0.875rem",
-    color: "#6b7280",
+    color: "var(--ink-secondary)",
   },
   signupLink: {
-    color: "#10b981",
+    color: "var(--action)",
     fontWeight: 600,
-    marginLeft: theme.spacing(0.5),
+    marginLeft: 6,
     textDecoration: "none",
     "&:hover": {
       textDecoration: "underline",
@@ -186,66 +119,63 @@ const Login = () => {
   const classes = useStyles();
 
   const [user, setUser] = useState({ email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
   const { handleLogin } = useContext(AuthContext);
-  const [viewregister, setviewregister] = useState("disabled");
+  const [viewregister] = useState("disabled");
 
-  const handleChangeInput = e => {
+  const handleChangeInput = (e) => {
     setUser({ ...user, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = e => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     handleLogin(user);
   };
 
   return (
-    <div className={classes.root}>
+    <AuthShell>
       <CssBaseline />
-      <div className={classes.card}>
-        <div className={classes.logoContainer}>
-          <PortAiLogo variant="full" width={220} height={75} themeMode="light" />
-        </div>
-
+      <div className={classes.header}>
+        <span className={classes.eyebrow}>Acesso ao painel</span>
         <Typography component="h1" className={classes.title}>
-          Bem-vindo de volta
+          Entrar na sua conta
         </Typography>
         <Typography variant="body2" className={classes.subtitle}>
-          Entre com suas credenciais para continuar
+          Informe seu e-mail corporativo e senha para abrir a central de atendimentos.
         </Typography>
+      </div>
 
-        <form className={classes.form} noValidate onSubmit={handleSubmit}>
+      <form className={classes.form} noValidate onSubmit={handleSubmit}>
+        <div className={classes.fieldGroup}>
+          <label htmlFor="email" className={classes.fieldLabel}>
+            {i18n.t("login.form.email") || "E-mail"}
+          </label>
           <TextField
             variant="outlined"
             required
             fullWidth
             id="email"
-            label={i18n.t("login.form.email") || "E-mail"}
+            placeholder="nome@empresa.com.br"
             name="email"
             value={user.email}
             onChange={handleChangeInput}
             autoComplete="email"
             autoFocus
-            className={classes.input}
-            size="small"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <MailOutlineIcon className={classes.inputIcon} />
+                </InputAdornment>
+              ),
+            }}
           />
+        </div>
 
-          <TextField
-            variant="outlined"
-            required
-            fullWidth
-            name="password"
-            label={i18n.t("login.form.password") || "Senha"}
-            type="password"
-            id="password"
-            value={user.password}
-            onChange={handleChangeInput}
-            autoComplete="current-password"
-            className={classes.input}
-            size="small"
-          />
-
-
-          <Box display="flex" justifyContent="flex-end">
+        <div className={classes.fieldGroup}>
+          <div className={classes.fieldRowHeader}>
+            <label htmlFor="password" className={classes.fieldLabel}>
+              {i18n.t("login.form.password") || "Senha"}
+            </label>
             <Link
               component={RouterLink}
               to="/forgetpsw"
@@ -253,32 +183,67 @@ const Login = () => {
             >
               Esqueceu sua senha?
             </Link>
-          </Box>
-
-          <Button
-            type="submit"
+          </div>
+          <TextField
+            variant="outlined"
+            required
             fullWidth
-            variant="contained"
-            className={classes.submitButton}
-          >
-            {i18n.t("login.buttons.submit") || "Entrar na plataforma"}
-          </Button>
+            name="password"
+            placeholder="Digite sua senha"
+            type={showPassword ? "text" : "password"}
+            id="password"
+            value={user.password}
+            onChange={handleChangeInput}
+            autoComplete="current-password"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <LockOutlinedIcon className={classes.inputIcon} />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    edge="end"
+                    size="small"
+                  >
+                    {showPassword ? (
+                      <VisibilityOffOutlinedIcon fontSize="small" />
+                    ) : (
+                      <VisibilityOutlinedIcon fontSize="small" />
+                    )}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+        </div>
 
-          {viewregister === "enabled" && (
-            <Typography className={classes.signupText}>
-              Não tem uma conta?
-              <Link
-                component={RouterLink}
-                to="/signup"
-                className={classes.signupLink}
-              >
-                Cadastre-se
-              </Link>
-            </Typography>
-          )}
-        </form>
-      </div>
-    </div>
+        <Button
+          type="submit"
+          fullWidth
+          variant="contained"
+          className={classes.submitButton}
+        >
+          {i18n.t("login.buttons.submit") || "Entrar na plataforma"}
+        </Button>
+
+        {viewregister === "enabled" && (
+          <Typography className={classes.signupText}>
+            Não tem uma conta?
+            <Link
+              component={RouterLink}
+              to="/signup"
+              className={classes.signupLink}
+            >
+              Cadastre-se
+            </Link>
+          </Typography>
+        )}
+      </form>
+    </AuthShell>
   );
 };
 

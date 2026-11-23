@@ -36,40 +36,35 @@ const useStyles = makeStyles((theme) => ({
   container: {
     paddingTop: theme.spacing(3),
     paddingBottom: theme.spacing(4),
-    paddingLeft: theme.spacing(2),
-    paddingRight: theme.spacing(2),
+    paddingLeft: theme.spacing(2.5),
+    paddingRight: theme.spacing(2.5),
+    overflowY: "auto",
+    height: "calc(100vh - 64px)",
+    ...theme.scrollbarStyles,
   },
   filterCard: {
-    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.18)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
+    backgroundColor: "var(--bg-surface)",
+    border: "1px solid var(--border-hairline)",
     borderRadius: 14,
     padding: theme.spacing(2.5),
     boxShadow: "none",
   },
   pageTitle: {
-    fontSize: "1.375rem",
-    fontWeight: 800,
-    letterSpacing: "-0.02em",
-    color: theme.palette.type === "dark" ? "#f0fdf4" : "#0f172a",
-    fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+    fontSize: "1.45rem",
+    fontWeight: 700,
+    letterSpacing: "-0.025em",
+    color: "var(--ink-primary)",
+    fontFamily: "var(--font-display)",
     lineHeight: 1.2,
   },
   pageSubtitle: {
-    fontSize: "0.8125rem",
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
-    marginTop: 2,
+    fontSize: "0.85rem",
+    color: "var(--ink-secondary)",
+    marginTop: 4,
   },
   kpiCard: {
-    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.18)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
+    backgroundColor: "var(--bg-surface)",
+    border: "1px solid var(--border-hairline)",
     borderRadius: 14,
     padding: theme.spacing(2.5),
     boxShadow: "none",
@@ -77,10 +72,11 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: "column",
     justifyContent: "space-between",
     height: "100%",
-    minHeight: 130,
-    transition: "border-color 0.2s ease",
+    minHeight: 132,
+    transition: "border-color var(--t-in) var(--ease-ui), transform var(--t-in) var(--ease-ui)",
     "&:hover": {
-      borderColor: theme.palette.type === "dark" ? "#10b981" : "#10b981",
+      borderColor: "var(--border-strong)",
+      transform: "translateY(-2px)",
     },
   },
   kpiHeader: {
@@ -90,24 +86,26 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(1.5),
   },
   kpiTitle: {
-    fontSize: "0.75rem",
-    fontWeight: 700,
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.72rem",
+    fontWeight: 600,
     letterSpacing: "0.06em",
     textTransform: "uppercase",
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+    color: "var(--ink-muted)",
   },
   kpiValue: {
-    fontSize: "1.875rem",
-    fontWeight: 800,
-    letterSpacing: "-0.02em",
+    fontSize: "1.95rem",
+    fontWeight: 700,
+    letterSpacing: "-0.03em",
     lineHeight: 1.1,
-    color: theme.palette.type === "dark" ? "#f0fdf4" : "#0f172a",
-    fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+    color: "var(--ink-primary)",
+    fontFamily: "var(--font-display)",
+    fontVariantNumeric: "tabular-nums",
   },
   kpiSubtitle: {
-    fontSize: "0.75rem",
-    color: theme.palette.type === "dark" ? "#64748b" : "#94a3b8",
-    marginTop: 4,
+    fontSize: "0.78rem",
+    color: "var(--ink-secondary)",
+    marginTop: 6,
   },
   kpiIconBadge: {
     width: 38,
@@ -118,62 +116,37 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: "center",
   },
   badgeEmerald: {
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.15)"
-        : "rgba(16, 185, 129, 0.1)",
-    color: "#10b981",
+    backgroundColor: "var(--action-soft)",
+    color: "var(--action)",
   },
   badgeBlue: {
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(56, 189, 248, 0.15)"
-        : "rgba(2, 132, 199, 0.1)",
-    color: theme.palette.type === "dark" ? "#38bdf8" : "#0284c7",
+    backgroundColor: "var(--status-info-bg)",
+    color: "var(--status-info)",
   },
   badgeAmber: {
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(245, 158, 11, 0.15)"
-        : "rgba(217, 119, 6, 0.1)",
-    color: theme.palette.type === "dark" ? "#fbbf24" : "#d97706",
+    backgroundColor: "var(--status-warning-bg)",
+    color: "var(--status-warning)",
   },
   badgeIndigo: {
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(139, 92, 246, 0.15)"
-        : "rgba(124, 58, 237, 0.1)",
-    color: theme.palette.type === "dark" ? "#a78bfa" : "#7c3aed",
+    backgroundColor: "rgba(13, 148, 136, 0.12)",
+    color: theme.palette.type === "dark" ? "#2DD4BF" : "#0D9488",
   },
   badgeTeal: {
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(20, 184, 166, 0.15)"
-        : "rgba(13, 148, 136, 0.1)",
-    color: theme.palette.type === "dark" ? "#2dd4bf" : "#0d9488",
+    backgroundColor: "rgba(13, 148, 136, 0.12)",
+    color: theme.palette.type === "dark" ? "#2DD4BF" : "#0D9488",
   },
   badgeSlate: {
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(148, 163, 184, 0.15)"
-        : "rgba(100, 116, 139, 0.1)",
-    color: theme.palette.type === "dark" ? "#cbd5e1" : "#475569",
+    backgroundColor: "var(--bg-subtle)",
+    color: "var(--ink-secondary)",
   },
   badgeRose: {
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(244, 63, 94, 0.15)"
-        : "rgba(225, 29, 72, 0.1)",
-    color: theme.palette.type === "dark" ? "#fb7185" : "#e11d48",
+    backgroundColor: "var(--status-danger-bg)",
+    color: "var(--status-danger)",
   },
   chartPaper: {
     padding: theme.spacing(3),
-    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.18)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
+    backgroundColor: "var(--bg-surface)",
+    border: "1px solid var(--border-hairline)",
     borderRadius: 14,
     boxShadow: "none",
     display: "flex",
@@ -183,8 +156,7 @@ const useStyles = makeStyles((theme) => ({
   filterButton: {
     borderRadius: 10,
     padding: "8px 18px",
-    fontWeight: 700,
-    letterSpacing: "0.01em",
+    fontWeight: 600,
     boxShadow: "none !important",
     height: 40,
     textTransform: "none",

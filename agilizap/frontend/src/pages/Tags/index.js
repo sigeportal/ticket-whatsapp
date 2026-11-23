@@ -88,32 +88,16 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(1.5),
     overflowY: "scroll",
     borderRadius: 14,
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.18)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
-    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
-    boxShadow:
-      theme.palette.type === "dark"
-        ? "0 4px 20px -2px rgba(0, 0, 0, 0.4)"
-        : "0 1px 3px rgba(0, 0, 0, 0.05)",
+    border: "1px solid var(--border-subtle)",
+    backgroundColor: "var(--bg-surface)",
+    boxShadow: "none",
     ...theme.scrollbarStyles,
   },
   searchInput: {
-    backgroundColor: theme.palette.type === "dark" ? "#07130e" : "#f8fafc",
+    backgroundColor: "var(--field-bg)",
     borderRadius: 10,
     "& .MuiOutlinedInput-root": {
       borderRadius: 10,
-      border: `1px solid ${
-        theme.palette.type === "dark"
-          ? "rgba(16, 185, 129, 0.2)"
-          : "rgba(226, 232, 240, 0.9)"
-      }`,
-      "&.Mui-focused": {
-        borderColor: "#10b981",
-        boxShadow: "0 0 0 3px rgba(16, 185, 129, 0.15)",
-      },
     },
   },
   addButton: {
@@ -121,41 +105,39 @@ const useStyles = makeStyles((theme) => ({
     fontWeight: 700,
     fontSize: "0.84rem",
     padding: "8px 18px",
-    background: "linear-gradient(135deg, #10b981 0%, #0d9488 100%)",
-    color: "#ffffff",
-    boxShadow: "0 2px 8px rgba(16, 185, 129, 0.25)",
+    backgroundColor: "var(--action)",
+    color: "var(--action-ink)",
+    boxShadow: "none",
+    transition: "background-color 150ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 90ms ease",
     "&:hover": {
-      background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
-      boxShadow: "0 4px 12px rgba(16, 185, 129, 0.4)",
+      backgroundColor: "var(--action-hover)",
+      boxShadow: "none",
+    },
+    "&:active": {
+      transform: "scale(0.985)",
     },
   },
   actionButtonEdit: {
-    color: theme.palette.type === "dark" ? "#34d399" : "#059669",
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.12)"
-        : "rgba(16, 185, 129, 0.08)",
+    color: "var(--action)",
+    backgroundColor: "var(--action-soft)",
     borderRadius: 8,
     padding: 6,
     marginRight: 6,
-    transition: "all 0.2s ease",
+    transition: "background-color 150ms ease, color 150ms ease",
     "&:hover": {
-      backgroundColor: "#10b981",
-      color: "#ffffff",
+      backgroundColor: "var(--action)",
+      color: "var(--action-ink)",
     },
   },
   actionButtonDelete: {
-    color: theme.palette.type === "dark" ? "#f87171" : "#dc2626",
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(239, 68, 68, 0.12)"
-        : "rgba(239, 68, 68, 0.08)",
+    color: theme.palette.type === "dark" ? "#FCA5A5" : "#DC2626",
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
     borderRadius: 8,
     padding: 6,
-    transition: "all 0.2s ease",
+    transition: "background-color 150ms ease, color 150ms ease",
     "&:hover": {
-      backgroundColor: "#ef4444",
-      color: "#ffffff",
+      backgroundColor: "#EF4444",
+      color: "#FFFFFF",
     },
   },
 }));

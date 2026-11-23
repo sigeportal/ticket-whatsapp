@@ -84,9 +84,34 @@ const reducer = (state, action) => {
 const useStyles = makeStyles((theme) => ({
     mainPaper: {
         flex: 1,
-        padding: theme.spacing(1),
+        padding: theme.spacing(1.5),
         overflowY: "scroll",
+        borderRadius: 14,
+        border: "1px solid var(--border-hairline)",
+        backgroundColor: "var(--bg-surface)",
+        boxShadow: "none",
         ...theme.scrollbarStyles,
+    },
+    actionEdit: {
+        color: "var(--action)",
+        backgroundColor: "var(--action-soft)",
+        borderRadius: 8,
+        padding: 6,
+        marginRight: 6,
+        "&:hover": {
+            backgroundColor: "var(--action)",
+            color: "var(--action-ink)",
+        },
+    },
+    actionDelete: {
+        color: "var(--status-danger)",
+        backgroundColor: "var(--status-danger-bg)",
+        borderRadius: 8,
+        padding: 6,
+        "&:hover": {
+            backgroundColor: "var(--status-danger)",
+            color: "#ffffff",
+        },
     },
 }));
 
@@ -219,6 +244,8 @@ const FileLists = () => {
                 <Title>{i18n.t("files.title")} ({files.length})</Title>
                 <MainHeaderButtonsWrapper>
                     <TextField
+                        variant="outlined"
+                        size="small"
                         placeholder={i18n.t("contacts.searchPlaceholder")}
                         type="search"
                         value={searchParam}
@@ -226,7 +253,7 @@ const FileLists = () => {
                         InputProps={{
                             startAdornment: (
                                 <InputAdornment position="start">
-                                    <SearchIcon style={{ color: "gray" }} />
+                                    <SearchIcon style={{ color: "var(--ink-muted)", fontSize: 19 }} />
                                 </InputAdornment>
                             ),
                         }}
@@ -248,7 +275,7 @@ const FileLists = () => {
                 <Table size="small">
                     <TableHead>
                         <TableRow>
-                            <TableCell align="center">{i18n.t("files.table.name")}</TableCell>
+                            <TableCell align="left">{i18n.t("files.table.name")}</TableCell>
                             <TableCell align="center">
                                 {i18n.t("files.table.actions")}
                             </TableCell>
@@ -258,27 +285,32 @@ const FileLists = () => {
                         <>
                             {files.map((fileList) => (
                                 <TableRow key={fileList.id}>
-                                    <TableCell align="center">
+                                    <TableCell align="left" style={{ fontWeight: 600 }}>
                                         {fileList.name}
                                     </TableCell>
                                     <TableCell align="center">
-                                        <IconButton size="small" onClick={() => handleEditFileList(fileList)}>
-                                            <EditIcon />
+                                        <IconButton
+                                            size="small"
+                                            className={classes.actionEdit}
+                                            onClick={() => handleEditFileList(fileList)}
+                                        >
+                                            <EditIcon fontSize="small" />
                                         </IconButton>
 
                                         <IconButton
                                             size="small"
+                                            className={classes.actionDelete}
                                             onClick={(e) => {
                                                 setConfirmModalOpen(true);
                                                 setDeletingFileList(fileList);
                                             }}
                                         >
-                                            <DeleteOutlineIcon />
+                                            <DeleteOutlineIcon fontSize="small" />
                                         </IconButton>
                                     </TableCell>
                                 </TableRow>
                             ))}
-                            {loading && <TableRowSkeleton columns={4} />}
+                            {loading && <TableRowSkeleton columns={2} />}
                         </>
                     </TableBody>
                 </Table>
