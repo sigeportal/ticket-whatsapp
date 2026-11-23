@@ -21,6 +21,7 @@ import Chat from "../models/Chat";
 import ChatUser from "../models/ChatUser";
 import Announcement from "../models/Announcement";
 import Invoices from "../models/Invoices";
+import Task from "../models/Task";
 import { canAccessTicket, deny } from "./policy";
 
 export const ticketAccess = async (actor: any, id: any): Promise<Ticket> => {
@@ -39,7 +40,8 @@ const resources: Record<string, [any, string]> = {
   schedules: [Schedule, "scheduleId"], campaigns: [Campaign, "id"],
   "contact-lists": [ContactList, "id"], "contact-list-items": [ContactListItem, "id"],
   files: [Files, "fileId"], prompt: [Prompt, "promptId"], queueIntegration: [QueueIntegrations, "integrationId"],
-  tags: [Tag, "tagId"], "quick-messages": [QuickMessage, "id"], chats: [Chat, "id"], invoices: [Invoices, "Invoiceid"]
+  tags: [Tag, "tagId"], "quick-messages": [QuickMessage, "id"], chats: [Chat, "id"], invoices: [Invoices, "Invoiceid"],
+  tasks: [Task, "taskId"]
 };
 export const authorizeRequest = async (req: Request, actor: any): Promise<void> => {
   const routePath = String(req.route?.path || req.path);
@@ -62,7 +64,7 @@ export const authorizeRequest = async (req: Request, actor: any): Promise<void> 
   }
   if (resource === "queue-options" && actor.profile !== "admin") deny();
   if (resource === "queue-alerts" && actor.profile !== "admin" && actor.profile !== "supervisor") deny();
-  if (req.method === "DELETE" && resource !== "auth" && actor.profile !== "admin") deny();
+  if (req.method === "DELETE" && !["auth", "tasks"].includes(resource) && actor.profile !== "admin") deny();
   const operationalSetting = resource === "settings" && req.method === "GET" && req.params.settingKey === "sendGreetingAccepted";
   if (["settings", "prompt", "queueIntegration", "whatsapp", "whatsappsession", "whatsapp-restart",
        "campaign-settings", "plans", "campaigns", "contact-lists", "contact-list-items", "files", "invoices", "subscription"].includes(resource) && actor.profile !== "admin" && !operationalSetting) deny();
@@ -85,9 +87,11 @@ export const authorizeRequest = async (req: Request, actor: any): Promise<void> 
       const record = await tenantRecord(actor, mapping[0], id);
       if (resource === "schedules" && actor.profile !== "admin" && actor.profile !== "supervisor" && Number(record.userId) !== Number(actor.id)) deny();
       if (resource === "quick-messages" && actor.profile !== "admin" && (write || !record.geral) && Number(record.userId) !== Number(actor.id)) deny();
+      if (resource === "tasks" && actor.profile !== "admin" && Number(record.userId) !== Number(actor.id) && Number(record.assignedUserId) !== Number(actor.id)) deny();
     }
   }
   if (resource === "schedules" && write && body.userId !== undefined && Number(body.userId) !== Number(actor.id) && actor.profile !== "admin" && actor.profile !== "supervisor") deny();
+  if (resource === "tasks" && write && body.assignedUserId !== undefined && body.assignedUserId !== null && Number(body.assignedUserId) !== Number(actor.id) && actor.profile !== "admin" && actor.profile !== "supervisor") deny();
   if (resource === "chats" && req.params.id && actor.profile !== "admin") {
     if (!await ChatUser.findOne({ where: { chatId: req.params.id, userId: actor.id } })) deny();
   }

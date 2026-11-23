@@ -14,7 +14,12 @@ import ListItemText from "@material-ui/core/ListItemText";
 import { makeStyles } from "@material-ui/core/styles";
 import Badge from "@material-ui/core/Badge";
 import ChatIcon from "@material-ui/icons/Chat";
+import AssignmentOutlinedIcon from "@material-ui/icons/AssignmentOutlined";
+import CloseIcon from "@material-ui/icons/Close";
+import ListItemIcon from "@material-ui/core/ListItemIcon";
+import Divider from "@material-ui/core/Divider";
 
+import api from "../../services/api";
 import TicketListItem from "../TicketListItemCustom";
 import useTickets from "../../hooks/useTickets";
 import alertSound from "../../assets/sound.mp3";
@@ -85,6 +90,8 @@ const NotificationsPopOver = (volume) => {
 	const anchorEl = useRef();
 	const [isOpen, setIsOpen] = useState(false);
 	const [notifications, setNotifications] = useState([]);
+	const [taskNotifications, setTaskNotifications] = useState([]);
+	const dismissedTaskIdsRef = useRef(new Set());
 
 	const [showPendingTickets, setShowPendingTickets] = useState(false);
 
@@ -141,6 +148,32 @@ const NotificationsPopOver = (volume) => {
 	useEffect(() => {
 		ticketIdRef.current = ticketIdUrl;
 	}, [ticketIdUrl]);
+
+	useEffect(() => {
+		if (!user?.id) return;
+		const storageKey = `dismissedTaskNotifications_${user.id}`;
+		try {
+			const saved = JSON.parse(localStorage.getItem(storageKey) || "[]");
+			dismissedTaskIdsRef.current = new Set(Array.isArray(saved) ? saved.map(Number) : []);
+		} catch {
+			dismissedTaskIdsRef.current = new Set();
+		}
+
+		api
+			.get("/tasks", { params: { status: "pending", scope: "mine" } })
+			.then(({ data }) => {
+				const list = Array.isArray(data?.tasks) ? data.tasks : [];
+				const assigned = list.filter(
+					t =>
+						!t.completed &&
+						Number(t.assignedUserId) === Number(user.id) &&
+						Number(t.userId) !== Number(user.id) &&
+						!dismissedTaskIdsRef.current.has(Number(t.id))
+				);
+				setTaskNotifications(assigned);
+			})
+			.catch(() => {});
+	}, [user?.id]);
 
 	useEffect(() => {
     const socket = socketManager.getSocket(user.companyId);
@@ -201,6 +234,63 @@ const NotificationsPopOver = (volume) => {
 			}
 		});
 
+		socket.on(`company-${user.companyId}-task`, data => {
+			if (data.action === "delete" && data.taskId) {
+				setTaskNotifications(prev => prev.filter(t => Number(t.id) !== Number(data.taskId)));
+				return;
+			}
+
+			const task = data.task;
+			if (!task) return;
+
+			const isAssignedToMe =
+				!task.completed &&
+				Number(task.assignedUserId) === Number(user?.id) &&
+				Number(task.userId) !== Number(user?.id);
+
+			if (!isAssignedToMe) {
+				setTaskNotifications(prev => prev.filter(t => Number(t.id) !== Number(task.id)));
+				return;
+			}
+
+			let isNewForMe = data.action === "create";
+			setTaskNotifications(prev => {
+				const exists = prev.some(t => Number(t.id) === Number(task.id));
+				if (!exists && data.action === "update") {
+					isNewForMe = true;
+				}
+				if (exists) {
+					return prev.map(t => (Number(t.id) === Number(task.id) ? task : t));
+				}
+				return [task, ...prev];
+			});
+
+			if (isNewForMe) {
+				dismissedTaskIdsRef.current.delete(Number(task.id));
+				try {
+					localStorage.setItem(
+						`dismissedTaskNotifications_${user.id}`,
+						JSON.stringify(Array.from(dismissedTaskIdsRef.current))
+					);
+				} catch {}
+
+				if ("Notification" in window && Notification.permission === "granted") {
+					const n = new Notification("Nova tarefa atribuída a você", {
+						body: `${task.title}${task.user?.name ? ` (por ${task.user.name})` : ""}`,
+						tag: `task-${task.id}`,
+					});
+					n.onclick = e => {
+						e.preventDefault();
+						window.focus();
+						historyRef.current.push("/todolist");
+					};
+				}
+				if (typeof soundAlertRef.current === "function") {
+					soundAlertRef.current();
+				}
+			}
+		});
+
 		return () => {
 			socket.disconnect();
 		};
@@ -254,6 +344,26 @@ const NotificationsPopOver = (volume) => {
 		return <div onClick={handleClickAway}>{children}</div>;
 	};
 
+	const dismissTaskNotification = (taskId) => {
+		const idNum = Number(taskId);
+		dismissedTaskIdsRef.current.add(idNum);
+		try {
+			localStorage.setItem(
+				`dismissedTaskNotifications_${user.id}`,
+				JSON.stringify(Array.from(dismissedTaskIdsRef.current))
+			);
+		} catch {}
+		setTaskNotifications(prev => prev.filter(t => Number(t.id) !== idNum));
+	};
+
+	const handleOpenTaskNotification = (task) => {
+		dismissTaskNotification(task.id);
+		setIsOpen(false);
+		history.push("/todolist");
+	};
+
+	const totalBadgeCount = notifications.length + taskNotifications.length;
+
 	return (
 		<>
 			<IconButton
@@ -262,7 +372,7 @@ const NotificationsPopOver = (volume) => {
 				aria-label="Open Notifications"
 				className={classes.iconButton}
 			>
-				<Badge overlap="rectangular" badgeContent={notifications.length} color="secondary">
+				<Badge color="secondary" variant="dot" invisible={totalBadgeCount === 0}>
 					<ChatIcon />
 				</Badge>
 			</IconButton>
@@ -282,7 +392,44 @@ const NotificationsPopOver = (volume) => {
 				onClose={handleClickAway}
 			>
 				<List dense className={classes.tabContainer}>
-					{notifications.length === 0 ? (
+					{taskNotifications.map(task => (
+						<React.Fragment key={`task-${task.id}`}>
+							<ListItem
+								button
+								onClick={() => handleOpenTaskNotification(task)}
+								style={{ alignItems: "flex-start" }}
+							>
+								<ListItemIcon style={{ minWidth: 32, marginTop: 4 }}>
+									<AssignmentOutlinedIcon fontSize="small" style={{ color: "#10b981" }} />
+								</ListItemIcon>
+								<ListItemText
+									primary={
+										<span style={{ fontWeight: 700, fontSize: "0.82rem" }}>
+											Nova tarefa atribuída a você
+										</span>
+									}
+									secondary={
+										<span style={{ fontSize: "0.78rem", display: "block" }}>
+											{task.title}
+											{task.user?.name ? ` · por ${task.user.name}` : ""}
+										</span>
+									}
+								/>
+								<IconButton
+									size="small"
+									aria-label="Dispensar notificação de tarefa"
+									onClick={e => {
+										e.stopPropagation();
+										dismissTaskNotification(task.id);
+									}}
+								>
+									<CloseIcon style={{ fontSize: 15 }} />
+								</IconButton>
+							</ListItem>
+							<Divider />
+						</React.Fragment>
+					))}
+					{notifications.length === 0 && taskNotifications.length === 0 ? (
 						<ListItem>
 							<ListItemText>{i18n.t("notifications.noTickets")}</ListItemText>
 						</ListItem>

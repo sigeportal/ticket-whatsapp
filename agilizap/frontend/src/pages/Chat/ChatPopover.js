@@ -195,6 +195,23 @@ export default function ChatPopover() {
     };
   }, [socketManager, user.id]);
 
+  const getSeenStorageKey = () =>
+    user?.id ? `chat_popover_seen_at_${user.id}` : "chat_popover_seen_at";
+
+  const getLatestUnreadChatTs = (chatList) => {
+    let maxTs = 0;
+    if (!Array.isArray(chatList)) return 0;
+    for (const chat of chatList) {
+      const hasUnread = Array.isArray(chat.users)
+        ? chat.users.some((u) => Number(u.userId) === Number(user?.id) && u.unreads > 0)
+        : false;
+      if (!hasUnread) continue;
+      const ts = new Date(chat.updatedAt || chat.createdAt || 0).getTime();
+      if (Number.isFinite(ts) && ts > maxTs) maxTs = ts;
+    }
+    return maxTs;
+  };
+
   useEffect(() => {
     let unreadsCount = 0;
     if (chats.length > 0) {
@@ -207,10 +224,13 @@ export default function ChatPopover() {
       }
     }
     if (unreadsCount > 0) {
-      setInvisible(false);
+      const latestUnreadTs = getLatestUnreadChatTs(chats);
+      const seenTs = Number(localStorage.getItem(getSeenStorageKey()) || 0);
+      setInvisible(latestUnreadTs > 0 && seenTs >= latestUnreadTs);
     } else {
       setInvisible(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chats, user.id]);
 
   const fetchChats = async () => {
@@ -241,6 +261,10 @@ export default function ChatPopover() {
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
     setInvisible(true);
+    const latestTs = Math.max(getLatestUnreadChatTs(chats), Date.now());
+    try {
+      localStorage.setItem(getSeenStorageKey(), String(latestTs));
+    } catch {}
   };
 
   const handleClose = () => {

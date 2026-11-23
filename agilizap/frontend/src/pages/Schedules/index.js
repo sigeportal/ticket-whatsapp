@@ -65,7 +65,17 @@ var defaultMessages = {
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_SCHEDULES") {
-    return [...state, ...action.payload];
+    const incoming = Array.isArray(action.payload) ? action.payload : [];
+    const next = [...state];
+    for (const item of incoming) {
+      const idx = next.findIndex((s) => s.id === item.id);
+      if (idx !== -1) {
+        next[idx] = item;
+      } else {
+        next.push(item);
+      }
+    }
+    return next;
   }
 
   if (action.type === "UPDATE_SCHEDULES") {
@@ -326,13 +336,17 @@ const Schedules = () => {
           events={schedules.map((schedule) => ({
             title: (
               <div className="event-container">
-                <div style={eventTitleStyle}>{schedule.contact.name}</div>
+                <div style={eventTitleStyle}>{schedule.contact?.name || "Contato"}</div>
                 <DeleteOutlineIcon
-                  onClick={() => handleDeleteSchedule(schedule.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteSchedule(schedule.id);
+                  }}
                   className="delete-icon"
                 />
                 <EditIcon
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     handleEditSchedule(schedule);
                     setScheduleModalOpen(true);
                   }}

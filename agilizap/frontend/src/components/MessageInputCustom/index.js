@@ -443,44 +443,45 @@ const CustomInput = (props) => {
     async function fetchData() {
       const companyId = localStorage.getItem("companyId");
       const messages = await listQuickMessages({ companyId, userId: user.id });
-      const options = messages.map((m) => {
-        let truncatedMessage = m.message;
-        if (isString(truncatedMessage) && truncatedMessage.length > 35) {
-          truncatedMessage = m.message.substring(0, 35) + "...";
-        }
+      const formatted = (messages || []).map((m) => {
+        const rawText = isString(m.message) ? m.message.trim().replace(/\s+/g, " ") : "";
+        const shortPreview =
+          rawText.length > 26 ? `${rawText.substring(0, 26)}...` : rawText;
         return {
+          shortcode: String(m.shortcode || ""),
           value: m.message,
-          label: `/${m.shortcode} - ${truncatedMessage}`,
+          label: `/${m.shortcode}`,
+          preview: shortPreview,
           mediaPath: m.mediaPath,
         };
       });
-      setQuickMessages(options);
+      setQuickMessages(formatted);
     }
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (
-      isString(inputMessage) &&
-      !isEmpty(inputMessage) &&
-      inputMessage.length > 1
-    ) {
-      const firstWord = inputMessage.charAt(0);
-      setPopupOpen(firstWord.indexOf("/") > -1);
-
-      const filteredOptions = quickMessages.filter(
-        (m) => m.label.indexOf(inputMessage) > -1
+    if (isString(inputMessage) && inputMessage.startsWith("/")) {
+      const typed = inputMessage.slice(1);
+      // Fecha o guia se o usuário já digitou espaço após o comando
+      if (typed.includes(" ") || typed.includes("\n")) {
+        setPopupOpen(false);
+        return;
+      }
+      const query = typed.toLowerCase();
+      const filteredOptions = quickMessages.filter((m) =>
+        m.shortcode.toLowerCase().includes(query)
       );
       setOptions(filteredOptions);
+      setPopupOpen(filteredOptions.length > 0);
     } else {
       setPopupOpen(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputMessage]);
+  }, [inputMessage, quickMessages]);
 
   const onKeyPress = (e) => {
-    if (loading || e.shiftKey) return;
+    if (loading || e.shiftKey || popupOpen) return;
     else if (e.key === "Enter") {
       handleSendMessage();
     }
@@ -515,6 +516,7 @@ const CustomInput = (props) => {
         value={inputMessage}
         options={options}
         closeIcon={null}
+        filterOptions={(opts) => opts}
         getOptionLabel={(option) => {
           if (isObject(option)) {
             return option.label;
@@ -522,6 +524,18 @@ const CustomInput = (props) => {
             return option;
           }
         }}
+        renderOption={(option) => (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, width: "100%" }}>
+            <span style={{ fontWeight: 700, color: "var(--action)", fontSize: "0.86rem" }}>
+              {option.label}
+            </span>
+            {option.preview && (
+              <span style={{ fontSize: "0.76rem", color: "var(--ink-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {option.preview}
+              </span>
+            )}
+          </div>
+        )}
         onChange={(event, opt) => {
           if (isObject(opt) && has(opt, "value") && isNil(opt.mediaPath)) {
             setInputMessage(opt.value);

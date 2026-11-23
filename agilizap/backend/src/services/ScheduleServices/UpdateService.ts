@@ -2,6 +2,8 @@ import * as Yup from "yup";
 import moment from "moment";
 import AppError from "../../errors/AppError";
 import Schedule from "../../models/Schedule";
+import Contact from "../../models/Contact";
+import User from "../../models/User";
 import ShowService from "./ShowService";
 import { sendScheduleNotification } from "./SendScheduleNotificationService";
 
@@ -77,7 +79,12 @@ const UpdateUserService = async ({
 
   await schedule.update(updatePayload);
 
-  await schedule.reload();
+  await schedule.reload({
+    include: [
+      { model: Contact, as: "contact", attributes: ["id", "name"] },
+      { model: User, as: "user", attributes: ["id", "name"] }
+    ]
+  });
 
   if (sendConfirmation) {
     await sendScheduleNotification({
