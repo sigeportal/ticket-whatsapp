@@ -28,15 +28,17 @@ export class OperationalAlertService {
   /**
    * Evaluates system operational conditions and generates deduplicated alerts.
    */
-  static async evaluateOperationalAlerts(): Promise<AlertEvaluationResult> {
+  static async evaluateOperationalAlerts(companyId?: number): Promise<AlertEvaluationResult> {
     const alerts: OperationalAlertItem[] = [];
     const now = Date.now();
+    const companyScope = companyId ? { companyId } : {};
 
     // 1. WhatsApp Disconnections (> 5 minutes in DISCONNECTED status)
     try {
       const fiveMinutesAgo = new Date(now - 5 * 60 * 1000);
       const disconnectedWhatsapps = await Whatsapp.findAll({
         where: {
+          ...companyScope,
           status: "DISCONNECTED",
           updatedAt: { [Op.lte]: fiveMinutesAgo }
         }
@@ -60,6 +62,7 @@ export class OperationalAlertService {
     try {
       const failedMessagesCount = await Message.count({
         where: {
+          ...companyScope,
           status: { [Op.in]: ["failed", "uncertain"] }
         }
       });
@@ -81,7 +84,10 @@ export class OperationalAlertService {
     // 3. Unresolved Queue Wait Alerts (from Etapa 4)
     try {
       const unresolvedWaitAlerts = await QueueWaitAlert.count({
-        where: { resolvedAt: null }
+        where: {
+          ...companyScope,
+          resolvedAt: null
+        }
       });
 
       if (unresolvedWaitAlerts > 0) {
@@ -120,12 +126,14 @@ export class OperationalAlertService {
     const DEDUPLICATION_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 
     for (const alert of alerts) {
-      const existing = activeAlerts.get(alert.id);
+      const cacheKey = companyId ? `company_${companyId}:${alert.id}` : alert.id;
+      const existing = activeAlerts.get(cacheKey);
       if (!existing || now - existing.lastAlertedAt > DEDUPLICATION_INTERVAL_MS) {
-        activeAlerts.set(alert.id, { lastAlertedAt: now, count: (existing?.count || 0) + 1 });
+        activeAlerts.set(cacheKey, { lastAlertedAt: now, count: (existing?.count || 0) + 1 });
         deduplicatedAlerts.push(alert);
         logger.warn({
           event: "operational_alert_triggered",
+          ...(companyId ? { companyId } : {}),
           alertType: alert.type,
           severity: alert.severity,
           message: alert.message

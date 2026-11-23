@@ -639,6 +639,128 @@ Ação: Transferir para a fila [Financeiro]
     assert(queueIds.has(3));
   });
 
+  test('OPS-04: Ticket open gera alerta quando lastClientMessageAt > lastHumanResponseAt e nao gera quando ja respondido', async () => {
+    const { checkAndTriggerQueueWaitAlerts } = load('services/TicketServices/QueueWaitAlertService');
+
+    const humanRespAt = new Date('2026-10-22T13:00:00.000Z'); // 09:00 Campo Grande
+    const clientReplyAt = new Date('2026-10-22T13:05:00.000Z'); // 09:05 Campo Grande
+    const checkTime = new Date('2026-10-22T13:16:00.000Z'); // 09:16 Campo Grande (11 min uteis sem resposta)
+
+    // Ticket open aguardando resposta do atendente
+    await Ticket.create({
+      id: 204,
+      status: 'open',
+      userId: 10,
+      contactId: 1,
+      companyId: 1,
+      queueId: 1,
+      lastHumanResponseAt: humanRespAt,
+      lastClientMessageAt: clientReplyAt
+    });
+
+    // Ticket open ja respondido pelo atendente (humanRespAt > clientMsgAt)
+    await Ticket.create({
+      id: 205,
+      status: 'open',
+      userId: 10,
+      contactId: 1,
+      companyId: 1,
+      queueId: 1,
+      lastClientMessageAt: new Date('2026-10-22T12:55:00.000Z'),
+      lastHumanResponseAt: humanRespAt
+    });
+
+    const alerts = await checkAndTriggerQueueWaitAlerts({
+      companyId: 1,
+      now: checkTime
+    });
+
+    const triggeredIds = alerts.map(a => a.ticketId);
+    assert(triggeredIds.includes(204), 'Ticket open com mensagem do cliente apos resposta humana deve disparar alerta');
+    assert(!triggeredIds.includes(205), 'Ticket open ja respondido nao deve disparar alerta');
+  });
+
+  test('OPS-04: Reabertura no periodo de graca limpa estado antigo e evita falso positivo por createdAt', async () => {
+    const FindOrCreateTicketService = load('services/TicketServices/FindOrCreateTicketService.ts').default;
+    const UpdateTicketService = load('services/TicketServices/UpdateTicketService.ts').default;
+    const { checkAndTriggerQueueWaitAlerts } = load('services/TicketServices/QueueWaitAlertService');
+
+    const oldCreatedAt = new Date('2026-10-20T12:00:00.000Z'); // 2 dias antes
+    const closedAtRecent = new Date(Date.now() - 10 * 60 * 1000); // 10 min atras (dentro da graca de 2h)
+
+    const contactReopen = await Contact.create({
+      id: 99,
+      name: 'Cliente Reabertura',
+      number: '556799990099',
+      companyId: 1
+    });
+
+    const oldTicket = await Ticket.create({
+      id: 206,
+      status: 'closed',
+      contactId: contactReopen.id,
+      companyId: 1,
+      whatsappId: 1,
+      queueId: 1,
+      closedAt: closedAtRecent,
+      lastClientMessageAt: oldCreatedAt,
+      currentWaitEpisodeId: 'ep-old-206',
+      createdAt: oldCreatedAt
+    });
+
+    const reopened = await FindOrCreateTicketService(contactReopen, 1, 1, 1);
+    assert.equal(reopened.id, oldTicket.id);
+    assert.equal(reopened.status, 'pending');
+    assert.equal(reopened.lastClientMessageAt, null);
+    assert.equal(reopened.currentWaitEpisodeId, null);
+
+    // Simula mensagem do cliente recebida agora em wbotMessageListener e entrada na fila
+    const msgNow = new Date('2026-10-22T14:00:00.000Z'); // 10:00 Campo Grande
+    await reopened.update({ queueId: 1, lastClientMessageAt: msgNow });
+
+    // No instante da reabertura (0 min), NAO pode disparar falso positivo usando createdAt antigo
+    const immediateAlerts = await checkAndTriggerQueueWaitAlerts({
+      companyId: 1,
+      now: msgNow
+    });
+    assert(!immediateAlerts.some(a => a.ticketId === 206), 'Nao deve disparar falso positivo imediato ao reabrir');
+
+    // Apos 11 minutos uteis sem resposta humana, deve disparar normalmente
+    const laterAlerts = await checkAndTriggerQueueWaitAlerts({
+      companyId: 1,
+      now: new Date('2026-10-22T14:11:00.000Z')
+    });
+    assert(laterAlerts.some(a => a.ticketId === 206), 'Deve disparar alerta apos 10 min uteis da reabertura');
+
+    // Reabertura manual via UpdateTicketService tambem limpa estado antigo
+    const contactManual = await Contact.create({
+      id: 100,
+      name: 'Cliente Reabertura Manual',
+      number: '556799990100',
+      companyId: 1
+    });
+    const manualClosed = await Ticket.create({
+      id: 207,
+      status: 'closed',
+      contactId: contactManual.id,
+      companyId: 1,
+      whatsappId: 1,
+      queueId: 1,
+      closedAt: closedAtRecent,
+      lastClientMessageAt: oldCreatedAt,
+      currentWaitEpisodeId: 'ep-old-207',
+      createdAt: oldCreatedAt
+    });
+    await UpdateTicketService({
+      ticketData: { status: 'pending', queueId: 1 },
+      ticketId: manualClosed.id,
+      companyId: 1
+    });
+    const reloadedManual = await Ticket.findByPk(207);
+    assert.equal(reloadedManual.lastClientMessageAt, null);
+    assert.equal(reloadedManual.currentWaitEpisodeId, null);
+  });
+
   // Run all registered tests sequentially
   let passed = 0;
   for (const t of tests) {

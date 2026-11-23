@@ -184,6 +184,8 @@ let pg;
     id: 'msg-op-1',
     ticketId: 1,
     body: 'Mensagem para teste de backup',
+    mediaUrl: 'test-doc-1.pdf',
+    mediaType: 'application',
     fromMe: true,
     read: true,
     status: 'sended',
@@ -230,6 +232,11 @@ let pg;
     assert.ok(result.manifest.tables['Companies'].sha256, 'Tabela Companies deve ter hash SHA-256');
     assert.equal(result.manifest.media.count, 1, 'Deve ter feito backup de 1 arquivo de midia');
     assert.ok(result.manifest.manifestSha256, 'Manifesto deve conter hash master');
+
+    const exportedMessages = JSON.parse(fs.readFileSync(path.join(result.backupPath, 'Messages.json'), 'utf8'));
+    const exportedMsg = exportedMessages.find(m => m.id === 'msg-op-1');
+    assert.ok(exportedMsg, 'Mensagem deve constar em Messages.json');
+    assert.equal(exportedMsg.mediaUrl, 'test-doc-1.pdf', 'BackupService deve exportar mediaUrl bruto sem prefixo BACKEND_URL');
   });
 
   test('OPS-01: Backup - rotina de rotacao preserva as N copias mais recentes e remove excedentes', async () => {
@@ -292,6 +299,11 @@ let pg;
     // Verificar se o WhatsApp restaurado foi redefinido para DISCONNECTED para proteger a producao
     const restoredWhatsapp = await Whatsapp.findByPk(1);
     assert.equal(restoredWhatsapp.status, 'DISCONNECTED', 'Sessao restaurada deve estar DISCONNECTED para evitar conflito com producao');
+
+    // Verificar se Message.mediaUrl foi restaurado sem duplicar BACKEND_URL/public/
+    const restoredMsg = await Message.findByPk('msg-op-1');
+    assert.equal(restoredMsg.getDataValue('mediaUrl'), 'test-doc-1.pdf', 'mediaUrl no banco deve permanecer como caminho relativo');
+    assert.equal(restoredMsg.mediaUrl, 'http://localhost:8080/public/test-doc-1.pdf', 'Getter de Message.mediaUrl deve retornar URL unica valida');
   });
 
   // --------------------------------------------------------------------------
@@ -386,7 +398,7 @@ let pg;
   test('OPS-02: Metricas operacionais - GET /health/metrics retorna memoria, filas e estatisticas', async () => {
     let statusCode = null;
     let payload = null;
-    const req = {};
+    const req = { user: { companyId: 1 } };
     const res = {
       status: (code) => { statusCode = code; return res; },
       json: (data) => { payload = data; return res; }

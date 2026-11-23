@@ -1,3 +1,4 @@
+import { Op, literal } from "sequelize";
 import Company from "../../models/Company";
 import { logger } from "../../utils/logger";
 
@@ -34,15 +35,33 @@ export const checkCompanyAIBudget = async (
   let currentSpent = Number(company.aiMonthlySpent || 0);
   let requestsCount = Number(company.aiRequestsCount || 0);
 
-  // Se virou o mês, zera o consumo daquele período
+  // Se virou o mês, zera o consumo daquele período sem disparar hooks de instância
   if (company.aiBudgetPeriod !== currentPeriod) {
-    await company.update({
-      aiBudgetPeriod: currentPeriod,
-      aiMonthlySpent: 0,
-      aiRequestsCount: 0
-    });
-    currentSpent = 0;
-    requestsCount = 0;
+    const [updatedCount] = await Company.update(
+      {
+        aiBudgetPeriod: currentPeriod,
+        aiMonthlySpent: 0,
+        aiRequestsCount: 0
+      },
+      {
+        where: {
+          id: companyId,
+          [Op.or]: [
+            { aiBudgetPeriod: { [Op.ne]: currentPeriod } },
+            { aiBudgetPeriod: null }
+          ]
+        }
+      }
+    );
+
+    if (updatedCount > 0) {
+      currentSpent = 0;
+      requestsCount = 0;
+    } else {
+      const refreshed = await Company.findByPk(companyId);
+      currentSpent = Number(refreshed?.aiMonthlySpent || 0);
+      requestsCount = Number(refreshed?.aiRequestsCount || 0);
+    }
   }
 
   const limit = company.aiMonthlyBudgetLimit !== null && company.aiMonthlyBudgetLimit !== undefined
@@ -79,23 +98,23 @@ export const recordAIUsage = async (
   _tokens?: number
 ): Promise<void> => {
   try {
-    const company = await Company.findByPk(companyId);
-    if (!company) return;
-
     const currentPeriod = getCurrentPeriod();
-    let currentSpent = Number(company.aiMonthlySpent || 0);
-    let requestsCount = Number(company.aiRequestsCount || 0);
+    const safeCost = Number.isFinite(cost) && cost > 0 ? Number(cost) : 0;
 
-    if (company.aiBudgetPeriod !== currentPeriod) {
-      currentSpent = 0;
-      requestsCount = 0;
-    }
-
-    await company.update({
-      aiBudgetPeriod: currentPeriod,
-      aiMonthlySpent: currentSpent + Math.max(cost, 0),
-      aiRequestsCount: requestsCount + 1
-    });
+    await Company.update(
+      {
+        aiMonthlySpent: literal(
+          `CASE WHEN "aiBudgetPeriod" = '${currentPeriod}' THEN COALESCE("aiMonthlySpent", 0) + ${safeCost} ELSE ${safeCost} END`
+        ) as any,
+        aiRequestsCount: literal(
+          `CASE WHEN "aiBudgetPeriod" = '${currentPeriod}' THEN COALESCE("aiRequestsCount", 0) + 1 ELSE 1 END`
+        ) as any,
+        aiBudgetPeriod: currentPeriod
+      },
+      {
+        where: { id: companyId }
+      }
+    );
   } catch (err: any) {
     logger.error(`[AIBudgetService] Erro ao registrar consumo de IA para empresa ${companyId}: ${err?.message || err}`);
   }

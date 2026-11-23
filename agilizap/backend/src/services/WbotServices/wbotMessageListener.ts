@@ -64,6 +64,7 @@ import ShowQueueIntegrationService from "../QueueIntegrationServices/ShowQueueIn
 import FindOrCreateATicketTrakingService from "../TicketServices/FindOrCreateATicketTrakingService";
 import FindOrCreateTicketService from "../TicketServices/FindOrCreateTicketService";
 import UpdateTicketService from "../TicketServices/UpdateTicketService";
+import { resolveQueueWaitAlert } from "../TicketServices/QueueWaitAlertService";
 import typebotListener from "../TypebotServices/typebotListener";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
 import { randomUUID } from "crypto";
@@ -930,7 +931,11 @@ const verifyMediaMessage = async (
 
 
   if (!msg.key.fromMe && ticket.status === "closed") {
-    await ticket.update({ status: "pending" });
+    await ticket.update({
+      status: "pending",
+      lastClientMessageAt: new Date(),
+      currentWaitEpisodeId: null
+    });
     await ticket.reload({
       include: [
         { model: Queue, as: "queue" },
@@ -1013,7 +1018,11 @@ export const verifyMessage = async (
   await CreateMessageService({ messageData, companyId: ticket.companyId });
 
   if (!msg.key.fromMe && ticket.status === "closed") {
-    await ticket.update({ status: "pending" });
+    await ticket.update({
+      status: "pending",
+      lastClientMessageAt: new Date(),
+      currentWaitEpisodeId: null
+    });
     await ticket.reload({
       include: [
         { model: Queue, as: "queue" },
@@ -1406,37 +1415,51 @@ export const handleRating = async (
   ticket: Ticket,
   ticketTraking: TicketTraking
 ) => {
-  const io = getIO();
+  let complationMessage: string | undefined;
 
-  const { complationMessage } = await ShowWhatsAppService(
-    ticket.whatsappId,
-    ticket.companyId
-  );
-
-  let finalRate = rate;
-
-  if (rate < 1) {
-    finalRate = 1;
+  if (ticket.whatsappId) {
+    try {
+      const whatsapp = await ShowWhatsAppService(
+        ticket.whatsappId,
+        ticket.companyId
+      );
+      complationMessage = whatsapp?.complationMessage;
+    } catch (err) {
+      Sentry.captureException(err);
+      logger.warn(`[wbotMessageListener] Erro ao buscar WhatsApp na avaliação: ${err}`);
+    }
   }
-  if (rate > 5) {
-    finalRate = 5;
-  }
 
-  await UserRating.create({
-    ticketId: ticketTraking.ticketId,
-    companyId: ticketTraking.companyId,
-    userId: ticketTraking.userId,
-    rate: finalRate,
-  });
+  const isValidRate = Number.isFinite(rate);
+
+  if (isValidRate) {
+    const finalRate = Math.round(Math.min(5, Math.max(1, rate)));
+
+    await UserRating.create({
+      ticketId: ticketTraking.ticketId,
+      companyId: ticketTraking.companyId,
+      userId: ticketTraking.userId,
+      rate: finalRate,
+    });
+  } else {
+    logger.info(
+      `[wbotMessageListener] Resposta não numérica na avaliação do ticket #${ticket.id}; encerrando sem registrar nota.`
+    );
+  }
 
   if (complationMessage) {
     const body = formatBody(`\u200e${complationMessage}`, ticket.contact);
-    await SendWhatsAppMessage({ body, ticket });
+    try {
+      await SendWhatsAppMessage({ body, ticket });
+    } catch (err) {
+      Sentry.captureException(err);
+      logger.warn(`[wbotMessageListener] Erro ao enviar complationMessage na avaliação: ${err}`);
+    }
   }
 
   await ticketTraking.update({
     finishedAt: moment().toDate(),
-    rated: true,
+    rated: isValidRate,
   });
 
   const oldQueueId = ticket.queueId;
@@ -1447,28 +1470,41 @@ export const handleRating = async (
     queueOptionId: null,
     userId: null,
     status: "closed",
+    closedAt: new Date(),
+    currentWaitEpisodeId: null,
   });
 
-  io.to(`company-${ticket.companyId}-open`)
-    .to(`queue-${oldQueueId}-open`)
-    .to(`company-${ticket.companyId}-notification`)
-    .to(`queue-${oldQueueId}-notification`)
-    .emit(`company-${ticket.companyId}-ticket`, {
-      action: "delete",
-      ticket,
-      ticketId: ticket.id,
-    });
+  try {
+    await resolveQueueWaitAlert(ticket.id, ticketTraking.userId || undefined);
+  } catch (err) {
+    logger.warn(`[wbotMessageListener] Falha ao resolver alerta de espera na avaliação: ${err}`);
+  }
 
-  io.to(`company-${ticket.companyId}-${ticket.status}`)
-    .to(`queue-${ticket.queueId}-${ticket.status}`)
-    .to(`company-${ticket.companyId}-notification`)
-    .to(`queue-${oldQueueId}-notification`)
-    .to(ticket.id.toString())
-    .emit(`company-${ticket.companyId}-ticket`, {
-      action: "update",
-      ticket,
-      ticketId: ticket.id,
-    });
+  try {
+    const io = getIO();
+    io.to(`company-${ticket.companyId}-open`)
+      .to(`queue-${oldQueueId}-open`)
+      .to(`company-${ticket.companyId}-notification`)
+      .to(`queue-${oldQueueId}-notification`)
+      .emit(`company-${ticket.companyId}-ticket`, {
+        action: "delete",
+        ticket,
+        ticketId: ticket.id,
+      });
+
+    io.to(`company-${ticket.companyId}-${ticket.status}`)
+      .to(`queue-${ticket.queueId}-${ticket.status}`)
+      .to(`company-${ticket.companyId}-notification`)
+      .to(`queue-${oldQueueId}-notification`)
+      .to(ticket.id.toString())
+      .emit(`company-${ticket.companyId}-ticket`, {
+        action: "update",
+        ticket,
+        ticketId: ticket.id,
+      });
+  } catch (err) {
+    logger.warn(`[wbotMessageListener] Falha ao emitir evento socket na avaliação: ${err}`);
+  }
 };
 
 const handleChartbot = async (ticket: Ticket, msg: WAMessage, wbot: Session, dontReadTheFirstQuestion: boolean = false) => {
@@ -2003,8 +2039,8 @@ const handleMessage = async (
         //  // dev Ricardo
 
         if (ticketTraking !== null && verifyRating(ticketTraking)) {
-
-          handleRating(parseFloat(bodyMessage), ticket, ticketTraking);
+          const rate = parseFloat(bodyMessage);
+          await handleRating(rate, ticket, ticketTraking);
           return;
         }
       }
@@ -2015,9 +2051,13 @@ const handleMessage = async (
 
     // Atualiza o ticket se a ultima mensagem foi enviada por mim, para que possa ser finalizado. 
     try {
-      await ticket.update({
+      const ticketUpdateData: { fromMe: boolean; lastClientMessageAt?: Date } = {
         fromMe: msg.key.fromMe,
-      });
+      };
+      if (!msg.key.fromMe) {
+        ticketUpdateData.lastClientMessageAt = new Date();
+      }
+      await ticket.update(ticketUpdateData);
     } catch (e) {
       Sentry.captureException(e);
       console.log(e);
@@ -2128,7 +2168,8 @@ const handleMessage = async (
     try {
       if (!msg.key.fromMe) {
         if (ticketTraking !== null && verifyRating(ticketTraking)) {
-          handleRating(parseFloat(bodyMessage), ticket, ticketTraking);
+          const rate = parseFloat(bodyMessage);
+          await handleRating(rate, ticket, ticketTraking);
           return;
         }
       }
@@ -2345,37 +2386,46 @@ const verifyCampaignMessageAndCloseTicket = async (
   message: proto.IWebMessageInfo,
   companyId: number
 ) => {
-  const io = getIO();
-  const body = getBodyMessage(message);
-  const isCampaign = /\u200c/.test(body);
-  if (message.key.fromMe && isCampaign) {
-    const messageRecord = await Message.findOne({
-      where: { id: message.key.id!, companyId },
-    });
-    const ticket = await Ticket.findByPk(messageRecord.ticketId);
-    const oldQueueId = ticket.queueId;
-    await ticket.update({ status: "closed" });
-
-    io.to(`company-${ticket.companyId}-open`)
-      .to(`queue-${oldQueueId}-open`)
-      .to(`company-${ticket.companyId}-notification`)
-      .to(`queue-${oldQueueId}-notification`)
-      .emit(`company-${ticket.companyId}-ticket`, {
-        action: "delete",
-        ticket,
-        ticketId: ticket.id,
+  try {
+    const body = getBodyMessage(message);
+    const isCampaign = body ? /\u200c/.test(body) : false;
+    if (message.key?.fromMe && isCampaign && message.key.id) {
+      const messageRecord = await Message.findOne({
+        where: { id: message.key.id, companyId },
       });
+      if (!messageRecord || !messageRecord.ticketId) return;
 
-    io.to(`company-${ticket.companyId}-${ticket.status}`)
-      .to(`queue-${ticket.queueId}-${ticket.status}`)
-      .to(`company-${ticket.companyId}-notification`)
-      .to(`queue-${oldQueueId}-notification`)
-      .to(ticket.id.toString())
-      .emit(`company-${ticket.companyId}-ticket`, {
-        action: "update",
-        ticket,
-        ticketId: ticket.id,
-      });
+      const ticket = await Ticket.findByPk(messageRecord.ticketId);
+      if (!ticket) return;
+
+      const oldQueueId = ticket.queueId;
+      await ticket.update({ status: "closed", closedAt: new Date() });
+
+      const io = getIO();
+      io.to(`company-${ticket.companyId}-open`)
+        .to(`queue-${oldQueueId}-open`)
+        .to(`company-${ticket.companyId}-notification`)
+        .to(`queue-${oldQueueId}-notification`)
+        .emit(`company-${ticket.companyId}-ticket`, {
+          action: "delete",
+          ticket,
+          ticketId: ticket.id,
+        });
+
+      io.to(`company-${ticket.companyId}-${ticket.status}`)
+        .to(`queue-${ticket.queueId}-${ticket.status}`)
+        .to(`company-${ticket.companyId}-notification`)
+        .to(`queue-${oldQueueId}-notification`)
+        .to(ticket.id.toString())
+        .emit(`company-${ticket.companyId}-ticket`, {
+          action: "update",
+          ticket,
+          ticketId: ticket.id,
+        });
+    }
+  } catch (err) {
+    Sentry.captureException(err);
+    logger.error(`[wbotMessageListener] Erro em verifyCampaignMessageAndCloseTicket: ${err}`);
   }
 };
 
@@ -2398,47 +2448,83 @@ const filterMessages = (msg: WAMessage): boolean => {
 const wbotMessageListener = async (wbot: Session, companyId: number): Promise<void> => {
   try {
     wbot.ev.on("messages.upsert", async (messageUpsert: ImessageUpsert) => {
-      const messages = messageUpsert.messages
-        .filter(filterMessages)
-        .map(msg => msg);
+      try {
+        const messages = (messageUpsert?.messages || [])
+          .filter(filterMessages)
+          .map(msg => msg);
 
-      if (!messages) return;
+        if (!messages.length) return;
 
-      for (const message of messages) {
-        const msgId = message.key.id;
-        if (!msgId) continue;
+        for (const message of messages) {
+          try {
+            const msgId = message.key?.id;
+            if (!msgId) continue;
 
-        // Desduplicação rápida em memória para evitar concorrência e processamento duplicado
-        const dedupeKey = `msg:${companyId}:${msgId}`;
-        if (messageProcessedCache.has(dedupeKey)) {
-          continue;
+            // Desduplicação rápida em memória para evitar concorrência e processamento duplicado
+            const dedupeKey = `msg:${companyId}:${msgId}`;
+            if (messageProcessedCache.has(dedupeKey)) {
+              continue;
+            }
+            messageProcessedCache.set(dedupeKey, true);
+
+            const messageExists = await Message.count({
+              where: { id: msgId, companyId }
+            });
+
+            if (!messageExists) {
+              await handleMessage(message, wbot, companyId);
+              await verifyRecentCampaign(message, companyId);
+              await verifyCampaignMessageAndCloseTicket(message, companyId);
+            }
+          } catch (msgErr) {
+            Sentry.captureException(msgErr);
+            logger.error(`[wbotMessageListener] Erro ao processar mensagem em messages.upsert: ${msgErr}`);
+          }
         }
-        messageProcessedCache.set(dedupeKey, true);
-
-        const messageExists = await Message.count({
-          where: { id: msgId, companyId }
-        });
-
-        if (!messageExists) {
-          await handleMessage(message, wbot, companyId);
-          await verifyRecentCampaign(message, companyId);
-          await verifyCampaignMessageAndCloseTicket(message, companyId);
-        }
+      } catch (err) {
+        Sentry.captureException(err);
+        logger.error(`[wbotMessageListener] Erro em messages.upsert: ${err}`);
       }
     });
 
-    wbot.ev.on("messages.update", (messageUpdate: WAMessageUpdate[]) => {
-      if (messageUpdate.length === 0) return;
-      messageUpdate.forEach(async (message: WAMessageUpdate) => {
-        (wbot as WASocket)!.readMessages([message.key])
-		
-		const msgUp = { ...messageUpdate }
-        if (msgUp['0']?.update.messageStubType === 1 && msgUp['0']?.key.remoteJid !== 'status@broadcast') {
-          MarkDeleteWhatsAppMessage(msgUp['0']?.key.remoteJid, null, msgUp['0']?.key.id, companyId)
-        }
+    wbot.ev.on("messages.update", async (messageUpdate: WAMessageUpdate[]) => {
+      try {
+        if (!Array.isArray(messageUpdate) || messageUpdate.length === 0) return;
 
-        handleMsgAck(message, message.update.status);
-      });
+        for (const message of messageUpdate) {
+          try {
+            if (message?.key) {
+              try {
+                await (wbot as WASocket)!.readMessages([message.key]);
+              } catch (readErr) {
+                logger.warn(`[wbotMessageListener] Falha ao marcar mensagem como lida: ${readErr}`);
+              }
+            }
+
+            if (
+              message?.update?.messageStubType === 1 &&
+              message?.key?.remoteJid &&
+              message.key.remoteJid !== "status@broadcast" &&
+              message.key.id
+            ) {
+              await MarkDeleteWhatsAppMessage(
+                message.key.remoteJid,
+                null,
+                message.key.id,
+                companyId
+              );
+            }
+
+            await handleMsgAck(message, message?.update?.status);
+          } catch (msgErr) {
+            Sentry.captureException(msgErr);
+            logger.error(`[wbotMessageListener] Erro ao processar atualização de mensagem: ${msgErr}`);
+          }
+        }
+      } catch (err) {
+        Sentry.captureException(err);
+        logger.error(`[wbotMessageListener] Erro em messages.update: ${err}`);
+      }
     });
 
     // wbot.ev.on("messages.set", async (messageSet: IMessage) => {

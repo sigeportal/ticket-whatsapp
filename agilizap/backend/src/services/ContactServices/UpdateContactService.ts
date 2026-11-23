@@ -1,6 +1,7 @@
 import AppError from "../../errors/AppError";
 import Contact from "../../models/Contact";
 import ContactCustomField from "../../models/ContactCustomField";
+import { deny } from "../../security/policy";
 
 interface ExtraInfo {
   id?: number;
@@ -43,18 +44,45 @@ const UpdateContactService = async ({
   }
 
   if (extraInfo) {
+    const existingIds = new Set(contact.extraInfo.map(old => Number(old.id)));
+    // Validate all submitted IDs before mutating so foreign custom fields cannot be hijacked via upsert.
+    for (const info of extraInfo) {
+      if (
+        info.id !== undefined &&
+        info.id !== null &&
+        String(info.id) !== "" &&
+        !existingIds.has(Number(info.id))
+      ) {
+        deny();
+      }
+    }
+
     await Promise.all(
       extraInfo.map(async (info: any) => {
-        await ContactCustomField.upsert({ ...info, contactId: contact.id });
+        const payload: { id?: number; name: string; value: string; contactId: number } = {
+          name: info.name,
+          value: info.value,
+          contactId: contact.id
+        };
+        if (info.id !== undefined && info.id !== null && String(info.id) !== "") {
+          payload.id = Number(info.id);
+        }
+        await ContactCustomField.upsert(payload);
       })
     );
 
     await Promise.all(
       contact.extraInfo.map(async oldInfo => {
-        const stillExists = extraInfo.findIndex(info => info.id === oldInfo.id);
+        const stillExists = extraInfo.findIndex(
+          info =>
+            info.id !== undefined &&
+            info.id !== null &&
+            String(info.id) !== "" &&
+            Number(info.id) === Number(oldInfo.id)
+        );
 
         if (stillExists === -1) {
-          await ContactCustomField.destroy({ where: { id: oldInfo.id } });
+          await ContactCustomField.destroy({ where: { id: oldInfo.id, contactId: contact.id } });
         }
       })
     );

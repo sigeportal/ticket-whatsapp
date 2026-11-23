@@ -63,7 +63,17 @@ const UpdateUserService = async ({
 	allTicket: Yup.string()
   });
 
-  const { email, password, profile, name, queueIds, whatsappId, allTicket, blocked } = userData;
+  const {
+    email,
+    password,
+    profile,
+    companyId: targetCompanyId,
+    name,
+    queueIds,
+    whatsappId,
+    allTicket,
+    blocked
+  } = userData;
 
   try {
     await schema.validate({ email, password, profile, name, allTicket });
@@ -71,18 +81,40 @@ const UpdateUserService = async ({
     throw new AppError(err.message);
   }
 
-  await user.update({
-    email, blocked,
+  const hasPasswordChange = Boolean(password);
+  const hasBlockedChange =
+    blocked !== undefined && Boolean(blocked) !== Boolean(user.blocked);
+  const hasProfileChange = profile !== undefined && profile !== user.profile;
+  const hasCompanyChange =
+    targetCompanyId !== undefined &&
+    Number(targetCompanyId) !== Number(user.companyId);
+
+  const shouldRevokeSession =
+    hasPasswordChange ||
+    hasBlockedChange ||
+    hasProfileChange ||
+    hasCompanyChange;
+
+  const updatePayload: Record<string, any> = {
+    email,
+    blocked,
     password: password || undefined,
-    tokenVersion: literal('"tokenVersion" + 1') as any,
     profile,
     name,
     whatsappId: whatsappId === undefined ? user.whatsappId : whatsappId || null,
-	allTicket
-  });
+    allTicket
+  };
+
+  if (shouldRevokeSession) {
+    updatePayload.tokenVersion = literal('"tokenVersion" + 1') as any;
+  }
+
+  await user.update(updatePayload);
 
   if (queueIds !== undefined) await user.$set("queues", queueIds);
-  disconnectUser(user.id);
+  if (shouldRevokeSession) {
+    disconnectUser(user.id);
+  }
   logger.info({ event: "user_access_updated", actorId: requestUserId, companyId, targetId: user.id,
     fields: Object.keys(userData).filter(key => ["profile", "queueIds", "whatsappId", "allTicket", "blocked"].includes(key)) });
 

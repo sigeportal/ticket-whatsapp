@@ -49,7 +49,17 @@ Module._load = function(request, parent, ...rest) {
       } };
     }
   }
-  if (resolved === path.join(source, 'libs/wbot.ts') || /[\\/]services[\\/]WbotServices[\\/]/.test(resolved) || resolved === path.join(source, 'queues.ts')) {
+  if (resolved === path.join(source, 'services/CampaignService/CancelService.ts')) return { CancelService: async () => {} };
+  if (resolved === path.join(source, 'services/CampaignService/RestartService.ts')) return { RestartService: async () => {} };
+  if (resolved === path.join(source, 'queues.ts')) {
+    return {
+      __esModule: true,
+      sendScheduledMessages: { getJobCounts: async () => ({ waiting: 0, active: 0, completed: 0, failed: 0 }) },
+      messageQueue: { client: { ping: async () => 'PONG' }, getJobCounts: async () => ({ waiting: 0, active: 0, completed: 0, failed: 0 }) },
+      campaignQueue: { getJobCounts: async () => ({ waiting: 0, active: 0, completed: 0, failed: 0 }) }
+    };
+  }
+  if (resolved === path.join(source, 'libs/wbot.ts') || /[\\/]services[\\/]WbotServices[\\/]/.test(resolved)) {
     throw new Error('External runtime import forbidden in security harness: ' + request);
   }
   if (resolved === path.join(source, 'helpers/UpdateDeletedUserOpenTicketsStatus.ts')) return { __esModule: true, default: async () => { throw new Error('Real messaging forbidden'); } };
@@ -121,8 +131,22 @@ let pg, server, io;
   app.use(load('routes/chatRoutes.ts').default);
   app.put('/tickets/:ticketId/transfer-check', isAuth, load('controllers/TicketController.ts').update);
   app.use(load('routes/invoicesRoutes.ts').default);
+  app.use(load('routes/filesRoutes.ts').default);
+  app.use(load('routes/campaignRoutes.ts').default);
+  app.use(load('routes/quickMessageRoutes.ts').default);
+  app.use(load('routes/healthRoutes.ts').default);
   app.put('/queue/:queueId', isAuth, load('controllers/QueueController.ts').update);
+  app.post('/whatsapp', isAuth, (req, res) => res.json({ ok: true }));
   app.put('/whatsapp/:whatsappId', isAuth, (req, res) => res.json({ ok: true }));
+  app.put('/contacts/:contactId/security-check', isAuth, async (req, res) => {
+    const UpdateContactService = load('services/ContactServices/UpdateContactService.ts').default;
+    const updated = await UpdateContactService({
+      contactData: req.body,
+      contactId: req.params.contactId,
+      companyId: req.user.companyId
+    });
+    return res.json(updated);
+  });
   app.get('/contacts/export', isAuth, load('controllers/ContactExportController.ts').exportContacts);
   const uploadConfig = load('config/upload.ts').default;
   const upload = load('security/secureUpload.ts').default(uploadConfig);
@@ -377,10 +401,11 @@ let pg, server, io;
     assert.equal(response.status, 200, JSON.stringify(response.body));
     const fresh = await User.findByPk(agent.id, { include:[Queue,Company] });
     assert.deepEqual(fresh.queues.map(q=>q.id), [q1.id]);
-    await assert.rejects(loadSession(old));
-    actors[`user${c1.id}`] = fresh; Object.assign(agent, { tokenVersion:fresh.tokenVersion });
+    assert.equal(fresh.tokenVersion, agent.tokenVersion);
+    assert.equal((await loadSession(old)).id, agent.id);
+    actors[`user${c1.id}`] = fresh; Object.assign(agent, { name: fresh.name, tokenVersion:fresh.tokenVersion });
   });
-  test('Admin protegido: edita as proprias filas sem manutencao global e revoga sessoes antigas', async () => {
+  test('Admin protegido: edita as proprias filas sem manutencao global e preserva sessao quando campos sensiveis nao mudam', async () => {
     const account = await User.create({ name: 'Administrador protegido', email: 'protected-self@example.invalid', password: 'InitialPass123', profile: 'admin', super: true, blocked: false, companyId: c1.id, tokenVersion: 0 });
     const actor = await User.findByPk(account.id, { include: [Queue, Company] });
     const oldToken = token(actor);
@@ -389,7 +414,8 @@ let pg, server, io;
     const updated = await User.findByPk(actor.id, { include: [Queue, Company] });
     assert.deepEqual(updated.queues.map(q => q.id), [qOther.id]);
     assert.equal(updated.super, true); assert.equal(updated.profile, 'admin'); assert.equal(updated.blocked, false);
-    await assert.rejects(loadSession(oldToken));
+    assert.equal(updated.tokenVersion, 0);
+    assert.equal((await loadSession(oldToken)).id, actor.id);
   });
   test('Admin protegido: perfil, bloqueio, flags internas e contas alheias continuam protegidos', async () => {
     const account = await User.create({ name: 'Protegido', email: 'protected-guard@example.invalid', password: 'InitialPass123', profile: 'admin', super: true, blocked: false, companyId: c1.id, tokenVersion: 0 });
@@ -716,6 +742,422 @@ let pg, server, io;
     await t1.update({queueId:qOther.id});
     assert.ok(!serverSocket.rooms.has(String(t1.id)));
     socket.disconnect();await t1.update({queueId:q1.id});
+  });
+  test('Sockets e orcamento IA: atualizacoes nao sensiveis preservam WebSocket e recordAIUsage soma atomicamente',async()=>{
+    const {checkCompanyAIBudget,recordAIUsage}=load('services/AIServices/AIBudgetService.ts');
+    const comp=await Company.create({name:'Empresa Socket Estavel',status:true,planId:plan.id,aiMonthlyBudgetLimit:50,aiMonthlySpent:0,aiBudgetPeriod:'2025-01',aiRequestsCount:0});
+    const compOther=await Company.create({name:'Empresa Outra Socket',status:true,planId:plan.id});
+    const u1=await User.create({name:'Atendente Socket',email:'ws-keep-1@example.invalid',password:'ValidPass123',profile:'user',companyId:comp.id,online:true});
+    const u2=await User.create({name:'Atendente Outro',email:'ws-keep-2@example.invalid',password:'ValidPass123',profile:'user',companyId:compOther.id,online:true});
+    const actor1=await User.findByPk(u1.id,{include:[Queue,Company]});
+    const actor2=await User.findByPk(u2.id,{include:[Queue,Company]});
+    const sock1=await connect(actor1);
+    const sock2=await connect(actor2);
+    let dropped1=false, dropped2=false;
+    sock1.once('disconnect',()=>{dropped1=true;});
+    sock2.once('disconnect',()=>{dropped2=true;});
+    try {
+      await u1.update({online:false});
+      assert.equal((await request.post('/forgetpassword').send({email:u1.email})).status,202);
+      const selfEdit=await request.put(`/users/${u1.id}`).set(auth(actor1)).send({name:'Atendente Renomeado'});
+      assert.equal(selfEdit.status,200,JSON.stringify(selfEdit.body));
+      assert.equal((await loadSession(token(actor1))).id,u1.id);
+      await comp.update({name:'Empresa Socket Renomeada',status:true});
+      const budgetBefore=await checkCompanyAIBudget(comp.id);
+      assert.equal(budgetBefore.allowed,true);
+      assert.equal(budgetBefore.currentSpent,0);
+      await Promise.all(Array.from({length:10},()=>recordAIUsage(comp.id,0.05)));
+      await new Promise(resolve=>setTimeout(resolve,120));
+      assert.equal(dropped1,false);
+      assert.equal(dropped2,false);
+      assert.equal(sock1.connected,true);
+      assert.equal(sock2.connected,true);
+      const reloaded=await Company.findByPk(comp.id);
+      assert.equal(reloaded.aiRequestsCount,10);
+      assert.ok(Math.abs(Number(reloaded.aiMonthlySpent)-0.5)<1e-6);
+      // Rollover atomico concorrente quando periodo no banco esta defasado
+      await Company.update({aiBudgetPeriod:'2025-01',aiMonthlySpent:40,aiRequestsCount:99},{where:{id:comp.id}});
+      await Promise.all([recordAIUsage(comp.id,0.05),recordAIUsage(comp.id,0.05)]);
+      const afterRollover=await Company.findByPk(comp.id);
+      assert.equal(afterRollover.aiRequestsCount,2);
+      assert.ok(Math.abs(Number(afterRollover.aiMonthlySpent)-0.1)<1e-6);
+    } finally {
+      sock1.disconnect(); sock2.disconnect();
+    }
+  });
+  test('Sockets: alteracao de senha, perfil, desativacao e exclusao de empresa revogam apenas sockets afetados',async()=>{
+    const compA=await Company.create({name:'Empresa Revoga A',status:true,planId:plan.id});
+    const compB=await Company.create({name:'Empresa Revoga B',status:true,planId:plan.id});
+    const adminA=await User.create({name:'Admin A',email:'ws-admin-a@example.invalid',password:'ValidPass123',profile:'admin',companyId:compA.id});
+    const userA=await User.create({name:'User A',email:'ws-user-a@example.invalid',password:'ValidPass123',profile:'user',companyId:compA.id});
+    const userB=await User.create({name:'User B',email:'ws-user-b@example.invalid',password:'ValidPass123',profile:'user',companyId:compB.id});
+    const actorAdminA=await User.findByPk(adminA.id,{include:[Queue,Company]});
+    const waitDisconnect=sock=>new Promise((resolve,reject)=>{
+      if(!sock.connected) return resolve();
+      const timer=setTimeout(()=>reject(new Error('Socket disconnect timeout')),1500);
+      sock.once('disconnect',()=>{clearTimeout(timer);resolve();});
+    });
+    // 1. Alteracao de senha via UpdateUserService desconecta socket e invalida token
+    let actorUserA=await User.findByPk(userA.id,{include:[Queue,Company]});
+    let sockA=await connect(actorUserA);
+    const oldTokenPass=token(actorUserA);
+    let discPromise=waitDisconnect(sockA);
+    assert.equal((await request.put(`/users/${userA.id}`).set(auth(actorUserA)).send({password:'NewValidPass123'})).status,200);
+    await discPromise;
+    await assert.rejects(loadSession(oldTokenPass));
+    // 2. Alteracao de profile via UpdateUserService desconecta socket e invalida token
+    actorUserA=await User.findByPk(userA.id,{include:[Queue,Company]});
+    sockA=await connect(actorUserA);
+    const oldTokenProfile=token(actorUserA);
+    discPromise=waitDisconnect(sockA);
+    assert.equal((await request.put(`/users/${userA.id}`).set(auth(actorAdminA)).send({profile:'supervisor'})).status,200);
+    await discPromise;
+    await assert.rejects(loadSession(oldTokenProfile));
+    // 3. Desativacao da empresa desconecta todos os usuarios da empresa sem afetar outra empresa
+    actorUserA=await User.findByPk(userA.id,{include:[Queue,Company]});
+    const actorUserB=await User.findByPk(userB.id,{include:[Queue,Company]});
+    sockA=await connect(actorUserA);
+    const sockB=await connect(actorUserB);
+    let droppedB=false; sockB.once('disconnect',()=>{droppedB=true;});
+    discPromise=waitDisconnect(sockA);
+    await compA.update({status:false});
+    await discPromise;
+    await new Promise(resolve=>setTimeout(resolve,80));
+    assert.equal(droppedB,false);
+    assert.equal(sockB.connected,true);
+    // 4. Exclusao de empresa desconecta usuarios mesmo com status true
+    await compA.update({status:true});
+    sockA=await connect(actorUserA);
+    discPromise=waitDisconnect(sockA);
+    await compA.destroy();
+    await discPromise;
+    sockB.disconnect();
+  });
+  test('Arquivos: DELETE /files e DeleteAllService removem apenas listas da propria empresa',async()=>{
+    const Files=load('models/Files.ts').default;
+    const FilesOptions=load('models/FilesOptions.ts').default;
+    const DeleteAllService=load('services/FileServices/DeleteAllService.ts').default;
+    const freshAgent=await User.findByPk(agent.id,{include:[Queue,Company]});
+    const freshSupervisor=await User.findByPk(supervisor.id,{include:[Queue,Company]});
+    const fileA1=await Files.create({name:'Lista A1',message:'Msg A1',companyId:c1.id});
+    const fileA2=await Files.create({name:'Lista A2',message:'Msg A2',companyId:c1.id});
+    const fileB1=await Files.create({name:'Lista B1',message:'Msg B1',companyId:c2.id});
+    await FilesOptions.create({fileId:fileA1.id,name:'Opt A1',path:'a1.pdf',mediaType:'application'});
+    await FilesOptions.create({fileId:fileB1.id,name:'Opt B1',path:'b1.pdf',mediaType:'application'});
+    assert.equal((await request.delete('/files')).status,401);
+    assert.equal((await request.delete('/files').set(auth(freshAgent))).status,403);
+    assert.equal((await request.delete('/files').set(auth(freshSupervisor))).status,403);
+    assert.equal((await request.delete(`/files?companyId=${c2.id}`).set(auth(admin))).status,403);
+    assert.equal((await request.delete('/files').set(auth(admin)).send({companyId:c2.id})).status,403);
+    assert.equal((await request.delete('/files').set(auth(admin))).status,200);
+    assert.equal(await Files.count({where:{companyId:c1.id}}),0);
+    assert.equal(await Files.count({where:{companyId:c2.id}}),1);
+    assert.equal((await Files.findByPk(fileB1.id)).name,'Lista B1');
+    // Segunda chamada sem registros restantes continua bem-sucedida e isolada
+    assert.equal((await request.delete('/files').set(auth(admin))).status,200);
+    assert.equal(await Files.count({where:{companyId:c2.id}}),1);
+    await assert.rejects(DeleteAllService(0));
+    await assert.rejects(DeleteAllService(null));
+    await assert.rejects(DeleteAllService(undefined));
+    assert.equal(await Files.count({where:{companyId:c2.id}}),1);
+    await FilesOptions.destroy({where:{fileId:[fileA1.id,fileA2.id,fileB1.id]}});
+    await Files.destroy({where:{id:[fileB1.id]}});
+  });
+  test('IDOR multi-tenant: tagListId em campanhas, transferQueueId em whatsapp e extraInfo em contatos', async () => {
+    const Tag = load('models/Tag.ts').default;
+    const TicketTag = load('models/TicketTag.ts').default;
+    const ContactList = load('models/ContactList.ts').default;
+    const ContactListItem = load('models/ContactListItem.ts').default;
+    const Campaign = load('models/Campaign.ts').default;
+    const Whatsapp = load('models/Whatsapp.ts').default;
+    const ContactCustomField = load('models/ContactCustomField.ts').default;
+    const CampaignController = load('controllers/CampaignController.ts');
+    const freshAdmin = await User.findByPk(admin.id, { include: [Queue, Company] });
+    const freshAgent = await User.findByPk(agent.id, { include: [Queue, Company] });
+
+    // 1. Campanhas: tagListId de outra empresa, sintaxe invalida, "Nenhuma" e isolamento em createContactListFromTag
+    const tagA = await Tag.create({ name: 'Tag A', color: '#111111', companyId: c1.id });
+    const tagB = await Tag.create({ name: 'Tag B', color: '#222222', companyId: c2.id });
+    const taggedContactA = await Contact.create({ name: 'Cliente A Tag', number: '5511999900001', email: 'a@example.invalid', companyId: c1.id });
+    const taggedTicketA = await Ticket.create({ status: 'open', companyId: c1.id, queueId: q1.id, contactId: taggedContactA.id });
+    await TicketTag.create({ ticketId: taggedTicketA.id, tagId: tagA.id });
+    // Simula vinculo cruzado inconsistente no banco para validar defesa em profundidade
+    await TicketTag.create({ ticketId: t2.id, tagId: tagA.id });
+    await TicketTag.create({ ticketId: t2.id, tagId: tagB.id });
+
+    const beforeLists = await ContactList.count();
+    const beforeCampaigns = await Campaign.count();
+    assert.equal((await request.post('/campaigns').set(auth(freshAgent)).send({ name: 'Campanha Bloqueada', tagListId: tagA.id })).status, 403);
+    assert.equal((await request.post('/campaigns').set(auth(freshAdmin)).send({ name: 'Campanha Cross', tagListId: tagB.id })).status, 403);
+    assert.equal((await request.post('/campaigns').set(auth(freshAdmin)).send({ name: 'Campanha Cross Str', tagListId: String(tagB.id) })).status, 403);
+    assert.equal((await request.post('/campaigns').set(auth(freshAdmin)).send({ name: 'Campanha Invalida', tagListId: 'invalida' })).status, 403);
+    assert.equal(await ContactList.count(), beforeLists);
+    assert.equal(await Campaign.count(), beforeCampaigns);
+
+    // Defesa em profundidade caso store seja chamado diretamente sem authorizeRequest
+    await assert.rejects(
+      CampaignController.store({ user: { companyId: c1.id }, body: { name: 'Direta Cross', tagListId: tagB.id } }, { status: () => ({ json: () => {} }) }),
+      err => err.statusCode === 403
+    );
+
+    // Default do frontend ("Nenhuma") segue permitido sem gerar lista por tag
+    const noTagRes = await request.post('/campaigns').set(auth(freshAdmin)).send({ name: 'Campanha Sem Tag', tagListId: 'Nenhuma' });
+    assert.equal(noTagRes.status, 200, JSON.stringify(noTagRes.body));
+    assert.equal(noTagRes.body.contactListId, null);
+
+    // Criacao com tag da propria empresa aguarda criacao da lista e filtra contatos pelo companyId
+    const ownTagRes = await request.post('/campaigns').set(auth(freshAdmin)).send({ name: 'Campanha Tag A', tagListId: tagA.id });
+    assert.equal(ownTagRes.status, 200, JSON.stringify(ownTagRes.body));
+    assert.ok(ownTagRes.body.contactListId, 'contactListId must be populated before response');
+    const items = await ContactListItem.findAll({ where: { contactListId: ownTagRes.body.contactListId } });
+    assert.deepEqual(items.map(i => i.number), [taggedContactA.number]);
+    assert.ok(!items.some(i => i.number === contact2.number));
+
+    // 2. WhatsApp: transferQueueId de outra empresa e rejeitado em POST e PUT
+    const conn = await Whatsapp.create({ name: 'Conexao Transfer', companyId: c1.id });
+    assert.equal((await request.post('/whatsapp').set(auth(freshAdmin)).send({ name: 'Nova Wpp', transferQueueId: q2.id })).status, 403);
+    assert.equal((await request.put(`/whatsapp/${conn.id}`).set(auth(freshAdmin)).send({ name: 'Edit Wpp', transferQueueId: q2.id })).status, 403);
+    assert.equal((await request.put(`/whatsapp/${conn.id}`).set(auth(freshAdmin)).send({ name: 'Edit Wpp', transferQueueId: 'invalida' })).status, 403);
+    for (const transferQueueId of [q1.id, null, '', 0]) {
+      assert.equal((await request.post('/whatsapp').set(auth(freshAdmin)).send({ name: 'Nova Wpp', transferQueueId })).status, 200);
+      assert.equal((await request.put(`/whatsapp/${conn.id}`).set(auth(freshAdmin)).send({ name: 'Edit Wpp', transferQueueId })).status, 200);
+    }
+
+    // 3. Contatos: extraInfo.id de outra empresa ou de outro contato nao pode ser sequestrado via upsert
+    const contactAOther = await Contact.create({ name: 'Outro Contato A', number: '5511999900002', companyId: c1.id });
+    const fieldA = await ContactCustomField.create({ name: 'Plano', value: 'Basico', contactId: contact.id });
+    const fieldAOther = await ContactCustomField.create({ name: 'Origem', value: 'Site', contactId: contactAOther.id });
+    const fieldB = await ContactCustomField.create({ name: 'Segredo B', value: 'Privado', contactId: contact2.id });
+
+    for (const badExtraInfo of [
+      [{ name: 'Novo Parcial', value: 'Nao Inserir' }, { id: fieldB.id, name: 'Sequestrado', value: 'Hack' }],
+      [{ id: String(fieldB.id), name: 'Sequestrado Str', value: 'Hack' }],
+      [{ id: fieldAOther.id, name: 'Outro Contato', value: 'Hack' }],
+      [{ id: 0, name: 'Zero', value: 'Hack' }],
+      [{ id: 'abc', name: 'Invalido', value: 'Hack' }]
+    ]) {
+      const res = await request.put(`/contacts/${contact.id}/security-check`).set(auth(freshAdmin)).send({
+        name: contact.name,
+        number: contact.number,
+        extraInfo: badExtraInfo
+      });
+      assert.equal(res.status, 403, JSON.stringify(badExtraInfo));
+    }
+
+    const reloadedFieldB = await ContactCustomField.findByPk(fieldB.id);
+    assert.equal(reloadedFieldB.contactId, contact2.id);
+    assert.equal(reloadedFieldB.name, 'Segredo B');
+    assert.equal(reloadedFieldB.value, 'Privado');
+    assert.equal(await ContactCustomField.count({ where: { name: 'Novo Parcial' } }), 0);
+    assert.ok(await ContactCustomField.findByPk(fieldA.id));
+    assert.equal((await ContactCustomField.findByPk(fieldAOther.id)).contactId, contactAOther.id);
+
+    // Edicao legitima atualiza campo proprio, cria novo campo e remove ausente sem afetar terceiros
+    const okRes = await request.put(`/contacts/${contact.id}/security-check`).set(auth(freshAdmin)).send({
+      name: contact.name,
+      number: contact.number,
+      extraInfo: [
+        { id: fieldA.id, name: 'Plano', value: 'Pro' },
+        { name: 'Cidade', value: 'Campo Grande' }
+      ]
+    });
+    assert.equal(okRes.status, 200, JSON.stringify(okRes.body));
+    assert.equal((await ContactCustomField.findByPk(fieldA.id)).value, 'Pro');
+    assert.equal(await ContactCustomField.count({ where: { contactId: contact.id } }), 2);
+
+    const removeFieldARes = await request.put(`/contacts/${contact.id}/security-check`).set(auth(freshAdmin)).send({
+      name: contact.name,
+      number: contact.number,
+      extraInfo: [{ id: okRes.body.extraInfo.find(f => f.name === 'Cidade').id, name: 'Cidade', value: 'Campo Grande' }]
+    });
+    assert.equal(removeFieldARes.status, 200);
+    assert.equal(await ContactCustomField.findByPk(fieldA.id), null);
+    assert.ok(await ContactCustomField.findByPk(fieldB.id));
+  });
+  test('QuickMessages: bloqueia mediaName no body e usa confinedPath sobre mediaPath em deleteMedia', async () => {
+    const QuickMessage = load('models/QuickMessage.ts').default;
+    const freshAdmin = await User.findByPk(admin.id, { include: [Queue, Company] });
+    const freshAgent = await User.findByPk(agent.id, { include: [Queue, Company] });
+    const otherAdmin = await User.findByPk(actors[`admin${c2.id}`].id, { include: [Queue, Company] });
+    const outsideVictim = path.join(temp, 'outside-victim.txt');
+    fs.writeFileSync(outsideVictim, 'nao-apagar');
+
+    // 1. authorizeRequest bloqueia mediaName, mediaPath, mediaUrl e path em POST e PUT
+    for (const key of ['mediaName', 'mediaPath', 'mediaUrl', 'path']) {
+      assert.equal((await request.post('/quick-messages').set(auth(freshAdmin)).send({
+        shortcode: 'ataque',
+        message: 'Tentativa traversal',
+        geral: false,
+        [key]: '../outside-victim.txt'
+      })).status, 403, `POST com ${key} deveria falhar`);
+    }
+
+    // 2. Fluxo legitimo: cria, edita sem mediaName, anexa e remove arquivo fisico sem deixar orfao
+    const created = await request.post('/quick-messages').set(auth(freshAdmin)).send({
+      shortcode: 'boasvindas',
+      message: 'Ola! Segue anexo.',
+      geral: true
+    });
+    assert.equal(created.status, 200, JSON.stringify(created.body));
+    const qmId = created.body.id;
+
+    for (const key of ['mediaName', 'mediaPath', 'mediaUrl', 'path']) {
+      assert.equal((await request.put(`/quick-messages/${qmId}`).set(auth(freshAdmin)).send({
+        shortcode: 'boasvindas',
+        message: 'Editado',
+        geral: true,
+        [key]: key === 'mediaName' ? 'original.png' : '../outside-victim.txt'
+      })).status, 403, `PUT com ${key} deveria falhar`);
+    }
+
+    assert.equal((await request.put(`/quick-messages/${qmId}`).set(auth(freshAdmin)).send({
+      shortcode: 'boasvindas',
+      message: 'Editado sem mediaName',
+      geral: true
+    })).status, 200);
+
+    const pngBytes = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex');
+    const uploaded = await request.post(`/quick-messages/${qmId}/media-upload`)
+      .set(auth(freshAdmin))
+      .attach('file', pngBytes, { filename: 'anexo-rapido.png', contentType: 'image/png' });
+    assert.equal(uploaded.status, 200, JSON.stringify(uploaded.body));
+
+    const recordAfterUpload = await QuickMessage.findByPk(qmId);
+    const storedHexName = recordAfterUpload.getDataValue('mediaPath');
+    assert.ok(storedHexName && /^[a-f0-9]+\.png$/.test(storedHexName));
+    assert.equal(recordAfterUpload.mediaName, 'anexo-rapido.png');
+    const diskFile = path.join(temp, 'quickMessage', storedHexName);
+    assert.equal(fs.existsSync(diskFile), true);
+
+    // Atendente e admin de outra empresa nao podem remover anexo
+    assert.equal((await request.delete(`/quick-messages/${qmId}/media-upload`).set(auth(freshAgent))).status, 403);
+    assert.equal((await request.delete(`/quick-messages/${qmId}/media-upload`).set(auth(otherAdmin))).status, 403);
+    assert.equal(fs.existsSync(diskFile), true);
+
+    // Remocao legitima apaga o arquivo real (mediaPath) e limpa mediaPath/mediaName antes de responder
+    const deleted = await request.delete(`/quick-messages/${qmId}/media-upload`).set(auth(freshAdmin));
+    assert.equal(deleted.status, 200, JSON.stringify(deleted.body));
+    assert.equal(fs.existsSync(diskFile), false, 'Arquivo fisico em quickMessage nao pode ficar orfao');
+    const recordAfterDelete = await QuickMessage.findByPk(qmId);
+    assert.equal(recordAfterDelete.getDataValue('mediaPath'), null);
+    assert.equal(recordAfterDelete.mediaName, null);
+
+    // 3. Defesa em profundidade: mediaName malicioso no banco nao e usado, e mediaPath invalido e rejeitado por confinedPath
+    await recordAfterDelete.update({ mediaName: '../outside-victim.txt', mediaPath: null });
+    assert.equal((await request.delete(`/quick-messages/${qmId}/media-upload`).set(auth(freshAdmin))).status, 200);
+    assert.equal(fs.existsSync(outsideVictim), true, 'Arquivo externo nao pode ser apagado via mediaName');
+
+    await recordAfterDelete.update({ mediaPath: '../outside-victim.txt', mediaName: 'ok.txt' });
+    assert.equal((await request.delete(`/quick-messages/${qmId}/media-upload`).set(auth(freshAdmin))).status, 400);
+    assert.equal(fs.existsSync(outsideVictim), true, 'Arquivo externo nao pode ser apagado via mediaPath traversal');
+
+    fs.rmSync(outsideVictim, { force: true });
+    await recordAfterDelete.destroy();
+  });
+  test('Health: /health/whatsapp e /health/metrics exigem isAuth e isolam dados por empresa', async () => {
+    const Whatsapp = load('models/Whatsapp.ts').default;
+    const QueueWaitAlert = load('models/QueueWaitAlert.ts').default;
+    const { HealthController } = load('controllers/HealthController.ts');
+    const freshAdmin = await User.findByPk(admin.id, { include: [Queue, Company] });
+    const otherAdmin = await User.findByPk(actors[`admin${c2.id}`].id, { include: [Queue, Company] });
+
+    await c1.update({ name: 'Empresa A Health', aiMonthlyBudgetLimit: 100.00, aiMonthlySpent: 15.25, aiBudgetPeriod: '2026-11' });
+    await c2.update({ name: 'Empresa B Secreta', aiMonthlyBudgetLimit: 500.00, aiMonthlySpent: 250.75, aiBudgetPeriod: '2026-11' });
+
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const wppA1 = await Whatsapp.create({ name: 'WPP_HEALTH_A_OK', companyId: c1.id, status: 'CONNECTED' });
+    const wppA2 = await Whatsapp.create({ name: 'WPP_HEALTH_A_DOWN', companyId: c1.id, status: 'DISCONNECTED', updatedAt: tenMinutesAgo });
+    const wppB1 = await Whatsapp.create({ name: 'WPP_HEALTH_B_SECRETO', companyId: c2.id, status: 'DISCONNECTED', updatedAt: tenMinutesAgo });
+    await database.query('UPDATE "Whatsapps" SET "updatedAt" = $1 WHERE id IN ($2, $3)', { bind: [tenMinutesAgo, wppA2.id, wppB1.id] });
+
+    const msgFailedA = await Message.create({ id: 'health-msg-a-fail', body: 'a', ticketId: t1.id, contactId: contact.id, companyId: c1.id, status: 'failed' });
+    const msgFailedB1 = await Message.create({ id: 'health-msg-b-fail-1', body: 'b1', ticketId: t2.id, contactId: contact2.id, companyId: c2.id, status: 'failed' });
+    const msgFailedB2 = await Message.create({ id: 'health-msg-b-fail-2', body: 'b2', ticketId: t2.id, contactId: contact2.id, companyId: c2.id, status: 'uncertain' });
+
+    const alertA = await QueueWaitAlert.create({
+      ticketId: t1.id, companyId: c1.id, queueId: q1.id, episodeId: 'ep-health-a',
+      waitingSince: tenMinutesAgo, alertedAt: new Date(), businessMinutesWaiting: 12, recipientUserIds: [freshAdmin.id]
+    });
+    const alertB1 = await QueueWaitAlert.create({
+      ticketId: t2.id, companyId: c2.id, queueId: q2.id, episodeId: 'ep-health-b1',
+      waitingSince: tenMinutesAgo, alertedAt: new Date(), businessMinutesWaiting: 15, recipientUserIds: [otherAdmin.id]
+    });
+    const alertB2 = await QueueWaitAlert.create({
+      ticketId: t2.id, companyId: c2.id, queueId: q2.id, episodeId: 'ep-health-b2',
+      waitingSince: tenMinutesAgo, alertedAt: new Date(), businessMinutesWaiting: 20, recipientUserIds: [otherAdmin.id]
+    });
+
+    try {
+      // 1. Probes publicos permanecem acessiveis sem autenticacao
+      assert.equal((await request.get('/health')).status, 200);
+      assert.equal((await request.get('/health/live')).status, 200);
+      assert.equal((await request.get('/health/ready')).status, 200);
+
+      // 2. /health/whatsapp e /health/metrics rejeitam requisicoes anonimas
+      assert.equal((await request.get('/health/whatsapp')).status, 401);
+      assert.equal((await request.get('/health/metrics')).status, 401);
+      assert.equal((await request.get('/health/whatsapp').set('Authorization', 'Bearer token-invalido')).status, 401);
+      assert.equal((await request.get('/health/metrics').set('Authorization', 'Bearer token-invalido')).status, 401);
+
+      // 3. Tentativa de sobrescrever companyId via query e bloqueada pelo authorizeRequest
+      assert.equal((await request.get(`/health/whatsapp?companyId=${c2.id}`).set(auth(freshAdmin))).status, 403);
+      assert.equal((await request.get(`/health/metrics?companyId=${c2.id}`).set(auth(freshAdmin))).status, 403);
+
+      // 4. Defesa em profundidade caso HealthController seja chamado diretamente sem req.user
+      for (const method of ['whatsapp', 'metrics']) {
+        let directStatus = 0;
+        let directBody = null;
+        const mockRes = { status(code) { directStatus = code; return mockRes; }, json(data) { directBody = data; return mockRes; } };
+        await HealthController[method]({}, mockRes);
+        assert.equal(directStatus, 401);
+        assert.equal(directBody.error, 'ERR_SESSION_EXPIRED');
+      }
+
+      // 5. /health/whatsapp autenticado retorna apenas conexoes da empresa do usuario
+      const wppResA = await request.get('/health/whatsapp').set(auth(freshAdmin));
+      assert.equal(wppResA.status, 200, JSON.stringify(wppResA.body));
+      assert.ok(wppResA.body.connections.every(c => Number(c.companyId) === Number(c1.id)));
+      assert.ok(wppResA.body.connections.some(c => c.name === 'WPP_HEALTH_A_OK'));
+      assert.ok(wppResA.body.connections.some(c => c.name === 'WPP_HEALTH_A_DOWN'));
+      assert.ok(!wppResA.body.connections.some(c => c.name === 'WPP_HEALTH_B_SECRETO'));
+
+      const wppResB = await request.get('/health/whatsapp').set(auth(otherAdmin));
+      assert.equal(wppResB.status, 200, JSON.stringify(wppResB.body));
+      assert.ok(wppResB.body.connections.every(c => Number(c.companyId) === Number(c2.id)));
+      assert.ok(wppResB.body.connections.some(c => c.name === 'WPP_HEALTH_B_SECRETO'));
+      assert.ok(!wppResB.body.connections.some(c => c.name === 'WPP_HEALTH_A_OK'));
+
+      // 6. /health/metrics autenticado retorna apenas aiSpend, contadores e alertas da propria empresa
+      const metricsResA = await request.get('/health/metrics').set(auth(freshAdmin));
+      assert.equal(metricsResA.status, 200, JSON.stringify(metricsResA.body));
+      assert.equal(metricsResA.body.aiSpend.length, 1);
+      assert.equal(Number(metricsResA.body.aiSpend[0].companyId), Number(c1.id));
+      assert.equal(metricsResA.body.aiSpend[0].name, 'Empresa A Health');
+      assert.equal(Number(metricsResA.body.aiSpend[0].spent), 15.25);
+
+      const expectedFailedA = await Message.count({ where: { companyId: c1.id, status: 'failed' } });
+      const expectedUncertainA = await Message.count({ where: { companyId: c1.id, status: 'uncertain' } });
+      const expectedAlertsA = await QueueWaitAlert.count({ where: { companyId: c1.id, resolvedAt: null } });
+      assert.equal(metricsResA.body.messageStats.failed, expectedFailedA);
+      assert.equal(metricsResA.body.messageStats.uncertain, expectedUncertainA);
+      assert.equal(metricsResA.body.unresolvedQueueAlerts, expectedAlertsA);
+
+      const serializedA = JSON.stringify(metricsResA.body);
+      assert.equal(serializedA.includes('Empresa B Secreta'), false);
+      assert.equal(serializedA.includes('WPP_HEALTH_B_SECRETO'), false);
+      const waAlertsA = metricsResA.body.activeOperationalAlerts.filter(a => a.type === 'WHATSAPP_DISCONNECTED');
+      assert.ok(waAlertsA.every(a => Number(a.details?.companyId) === Number(c1.id)));
+      const msgAlertA = metricsResA.body.activeOperationalAlerts.find(a => a.type === 'MESSAGE_DELIVERY_FAILURE');
+      assert.equal(msgAlertA?.details?.failedCount, expectedFailedA + expectedUncertainA);
+      const qwaAlertA = metricsResA.body.activeOperationalAlerts.find(a => a.type === 'QUEUE_WAIT_OVERDUE');
+      assert.equal(qwaAlertA?.details?.count, expectedAlertsA);
+    } finally {
+      await Promise.all([
+        alertA.destroy(), alertB1.destroy(), alertB2.destroy(),
+        msgFailedA.destroy(), msgFailedB1.destroy(), msgFailedB2.destroy(),
+        wppA1.destroy(), wppA2.destroy(), wppB1.destroy()
+      ]);
+    }
   });
   let failed=0;
   for(const {name,fn} of tests) {

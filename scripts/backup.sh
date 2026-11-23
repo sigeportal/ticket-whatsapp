@@ -15,10 +15,35 @@ echo "=========================================================="
 
 mkdir -p "${TARGET_DIR}"
 
-# 1. Carregar variáveis de ambiente se existir arquivo .env
+# 1. Carregar apenas variáveis DB_* do .env com globbing desabilitado (set -f)
+load_db_env() {
+    local env_file="$1"
+    [ -f "$env_file" ] || return 0
+    set -f
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="${line%$'\r'}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        case "$line" in
+            ""|\#*) continue ;;
+            DB_*=*)
+                local key="${line%%=*}"
+                local val="${line#*=}"
+                case "$val" in
+                    \"*\") val="${val#\"}"; val="${val%\"}" ;;
+                    \'*\') val="${val#\'}"; val="${val%\'}" ;;
+                esac
+                export "${key}=${val}"
+                ;;
+        esac
+    done < "$env_file"
+    set +f
+}
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -f .env ]; then
-    # shellcheck disable=SC2046
-    export $(grep -v '^#' .env | xargs -d '\n')
+    load_db_env .env
+elif [ -f "${SCRIPT_DIR}/../.env" ]; then
+    load_db_env "${SCRIPT_DIR}/../.env"
 fi
 
 DB_USER="${DB_USER:-agilizap}"
@@ -27,11 +52,22 @@ COMPOSE_PROJECT="${COMPOSE_PROJECT_NAME:-ticket-whatsapp}"
 
 # 2. Backup do Banco de Dados PostgreSQL
 echo "💾 [1/3] Gerando dump do banco de dados PostgreSQL..."
-if docker ps --format '{{.Names}}' | grep -q "ticket-postgres"; then
-    docker exec ticket-postgres pg_dump -U "${DB_USER}" -d "${DB_NAME}" | gzip > "${TARGET_DIR}/postgres_${DB_NAME}.sql.gz"
+if docker ps --format '{{.Names}}' | grep -qx "ticket-postgres"; then
+    if [ -n "${DB_PASS:-}" ]; then
+        docker exec -e "PGPASSWORD=${DB_PASS}" ticket-postgres \
+            pg_dump --clean --if-exists -U "${DB_USER}" -d "${DB_NAME}" \
+            | gzip > "${TARGET_DIR}/postgres_${DB_NAME}.sql.gz"
+    else
+        docker exec ticket-postgres \
+            pg_dump --clean --if-exists -U "${DB_USER}" -d "${DB_NAME}" \
+            | gzip > "${TARGET_DIR}/postgres_${DB_NAME}.sql.gz"
+    fi
+    test -s "${TARGET_DIR}/postgres_${DB_NAME}.sql.gz"
+    gzip -t "${TARGET_DIR}/postgres_${DB_NAME}.sql.gz"
     echo "   ✅ Banco de dados exportado com sucesso: postgres_${DB_NAME}.sql.gz"
 else
-    echo "   ⚠️ Container ticket-postgres não está rodando. Tentando via volume montado..."
+    echo "   ❌ Erro: container ticket-postgres não está rodando." >&2
+    exit 1
 fi
 
 # 3. Backup do Volume de Sessões do WhatsApp (backend_sessions)

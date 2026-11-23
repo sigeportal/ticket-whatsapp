@@ -134,6 +134,21 @@ function harness({ voice = 'texto', aiError = false, userId = null } = {}) {
         assert.equal(h.calls.sent.length, 1);
         assert.equal(h.calls.errors.length, 0);
       }
+    }],
+    ['Client messages update lastClientMessageAt while fromMe messages do not', async () => {
+      const h = harness({ userId: 12 });
+      assert.equal(h.ticket.lastClientMessageAt, undefined);
+      await h.context.handleMessage(h.message({ conversation: 'Oi, tem alguém aí?' }), h.wbot, 1);
+      assert.equal(Object.prototype.toString.call(h.ticket.lastClientMessageAt), '[object Date]', 'lastClientMessageAt must be set for !msg.key.fromMe');
+      assert.ok(!Number.isNaN(h.ticket.lastClientMessageAt.getTime()), 'lastClientMessageAt must be a valid Date');
+      const clientTs = h.ticket.lastClientMessageAt;
+
+      await h.context.handleMessage({
+        key: { id: 'outgoing', fromMe: true, remoteJid: '5500000000000@s.whatsapp.net' },
+        message: { conversation: 'Resposta do sistema/bot' }
+      }, h.wbot, 1);
+      assert.equal(h.ticket.lastClientMessageAt, clientTs, 'fromMe message must not overwrite lastClientMessageAt');
+      assert.equal(h.calls.errors.length, 0);
     }]
   ];
   let failed = 0;
