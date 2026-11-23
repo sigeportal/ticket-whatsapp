@@ -29,139 +29,171 @@ import ConfirmationModal from "../../components/ConfirmationModal";
 import { getInitials } from "../../helpers/getInitials";
 import type { InternalChat, User } from "../../types";
 
-const useStyles = makeStyles((theme) => ({
-  mainContainer: {
-    display: "flex",
-    flexDirection: "column",
-    position: "relative",
-    flex: 1,
-    minHeight: 0,
-    overflow: "hidden",
-    backgroundColor: "var(--bg-subtle)",
-  },
-  searchBox: {
-    padding: theme.spacing(1, 1.5),
-    borderBottom: "1px solid var(--border-hairline)",
-  },
-  searchInput: {
-    backgroundColor: "var(--field-bg)",
-    borderRadius: 10,
-    "& .MuiOutlinedInput-root": {
+const useStyles = makeStyles((theme) => {
+  const isDark = theme.palette.type === "dark";
+  return {
+    mainContainer: {
+      display: "flex",
+      flexDirection: "column",
+      position: "relative",
+      flex: 1,
+      minHeight: 0,
+      overflow: "hidden",
+      backgroundColor: isDark ? "#111b21" : "#ffffff",
+    },
+    searchBox: {
+      padding: "8px 12px",
+      backgroundColor: isDark ? "#111b21" : "#ffffff",
+      borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "#e9edef"}`,
+    },
+    searchInput: {
+      backgroundColor: isDark ? "#202c33" : "#f0f2f5",
+      borderRadius: 20,
+      "& .MuiOutlinedInput-root": {
+        borderRadius: 20,
+        "& fieldset": {
+          borderColor: "transparent",
+        },
+        "&:hover fieldset": {
+          borderColor: isDark ? "rgba(255,255,255,0.14)" : "#d1d7db",
+        },
+        "&.Mui-focused fieldset": {
+          borderColor: "#00a884",
+        },
+      },
+      "& .MuiOutlinedInput-input": {
+        padding: "8px 12px",
+        fontSize: "0.84rem",
+      },
+    },
+    chatList: {
+      display: "flex",
+      flexDirection: "column",
+      position: "relative",
+      flex: 1,
+      overflowY: "auto",
+      padding: "4px 6px",
+      ...theme.scrollbarStyles,
+      minHeight: 0,
+      minWidth: 0,
+    },
+    listItem: {
+      cursor: "pointer",
       borderRadius: 10,
+      margin: "2px 0",
+      padding: "10px 12px",
+      position: "relative",
+      "&.MuiListItem-secondaryAction": {
+        paddingRight: 12,
+      },
+      transition: "background-color 0.15s ease",
+      "&:hover": {
+        backgroundColor: isDark ? "#202c33" : "#f5f6f6",
+      },
+      "&:hover $rowActions, &:focus-within $rowActions": {
+        opacity: 1,
+        pointerEvents: "auto",
+      },
     },
-    "& .MuiOutlinedInput-input": {
-      padding: "9px 12px",
-      fontSize: "0.84rem",
+    listItemSelected: {
+      backgroundColor: isDark ? "#2a3942 !important" : "#f0f2f5 !important",
+      borderLeft: "3px solid #00a884",
     },
-  },
-  chatList: {
-    display: "flex",
-    flexDirection: "column",
-    position: "relative",
-    flex: 1,
-    overflowY: "auto",
-    padding: theme.spacing(0.5),
-    ...theme.scrollbarStyles,
-    minHeight: 0,
-    minWidth: 0,
-  },
-  listItem: {
-    cursor: "pointer",
-    borderRadius: 10,
-    margin: "3px 4px",
-    padding: "8px 12px",
-    "&.MuiListItem-secondaryAction": { paddingRight: 12, paddingBottom: 54 },
-    transition: "background-color var(--t-in) var(--ease-ui)",
-    "&:hover": {
-      backgroundColor: "var(--action-soft)",
+    avatarSquircle: {
+      borderRadius: "50%",
+      fontWeight: 700,
+      fontSize: "0.95rem",
+      width: 46,
+      height: 46,
+      marginRight: 6,
+      boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
     },
-  },
-  listItemSelected: {
-    backgroundColor: "var(--action-soft-hover) !important",
-    borderLeft: "3.5px solid var(--action)",
-  },
-  avatarSquircle: {
-    borderRadius: 10,
-    fontWeight: 700,
-    fontSize: "0.85rem",
-    width: 38,
-    height: 38,
-    marginRight: 4,
-    boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
-  },
-  primaryTextWrapper: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-    gap: 8,
-  },
-  chatTitle: {
-    fontWeight: 600,
-    fontSize: "0.875rem",
-    color: "var(--ink-primary)",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  chatLastMessage: {
-    fontSize: "0.75rem",
-    color: "var(--ink-secondary)",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    marginTop: 2,
-  },
-  chatTime: {
-    fontSize: "0.75rem",
-    color: theme.palette.type === "dark" ? "#6ee7b7" : "#047857",
-    fontWeight: 500,
-  },
-  unreadBadge: {
-    backgroundColor: "#047857",
-    color: "#ffffff",
-    fontWeight: 700,
-    fontSize: "0.75rem",
-    height: 18,
-    minWidth: 18,
-    padding: "0 4px",
-    borderRadius: 9,
-    marginLeft: 6,
-  },
-  actionButtonEdit: {
-    minWidth: 44,
-    minHeight: 44,
-    color: theme.palette.type === "dark" ? "#34d399" : "#059669",
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.12)"
-        : "rgba(16, 185, 129, 0.08)",
-    borderRadius: 6,
-    padding: 5,
-    marginRight: 4,
-    transition: "background-color 0.2s ease, color 0.2s ease",
-    "&:hover": {
-      backgroundColor: "#10b981",
+    primaryTextWrapper: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      width: "100%",
+      gap: 8,
+    },
+    chatTitle: {
+      fontWeight: 600,
+      fontSize: "0.92rem",
+      color: isDark ? "#e9edef" : "#111b21",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+    },
+    chatLastMessage: {
+      fontSize: "0.8rem",
+      color: isDark ? "#8696a0" : "#667781",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+      marginTop: 2,
+      paddingRight: 52,
+    },
+    chatTime: {
+      fontSize: "0.72rem",
+      color: isDark ? "#8696a0" : "#667781",
+      fontWeight: 500,
+      flexShrink: 0,
+    },
+    unreadBadge: {
+      backgroundColor: "#00a884",
       color: "#ffffff",
+      fontWeight: 700,
+      fontSize: "0.72rem",
+      height: 20,
+      minWidth: 20,
+      padding: "0 5px",
+      borderRadius: 10,
+      marginLeft: 6,
     },
-  },
-  actionButtonDelete: {
-    minWidth: 44,
-    minHeight: 44,
-    color: theme.palette.type === "dark" ? "#f87171" : "#dc2626",
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(239, 68, 68, 0.12)"
-        : "rgba(239, 68, 68, 0.08)",
-    borderRadius: 6,
-    padding: 5,
-    transition: "background-color 0.2s ease, color 0.2s ease",
-    "&:hover": {
-      backgroundColor: "#ef4444",
-      color: "#ffffff",
+    rowActions: {
+      top: "auto",
+      bottom: 6,
+      right: 8,
+      transform: "none",
+      display: "flex",
+      alignItems: "center",
+      gap: 4,
+      opacity: 0,
+      pointerEvents: "none",
+      transition: "opacity 0.15s ease",
+      backgroundColor: isDark ? "rgba(32, 44, 51, 0.92)" : "rgba(245, 246, 246, 0.92)",
+      borderRadius: 8,
+      padding: "2px",
+      [theme.breakpoints.down("sm")]: {
+        opacity: 1,
+        pointerEvents: "auto",
+      },
     },
-  },
-}));
+    actionButtonEdit: {
+      minWidth: 28,
+      minHeight: 28,
+      color: isDark ? "#34d399" : "#00a884",
+      borderRadius: 6,
+      padding: 4,
+      transition: "background-color 0.15s ease, color 0.15s ease",
+      "&:hover": {
+        backgroundColor: "#00a884",
+        color: "#ffffff",
+      },
+    },
+    actionButtonDelete: {
+      minWidth: 28,
+      minHeight: 28,
+      color: isDark ? "#f87171" : "#dc2626",
+      borderRadius: 6,
+      padding: 4,
+      transition: "background-color 0.15s ease, color 0.15s ease",
+      "&:hover": {
+        backgroundColor: "#ef4444",
+        color: "#ffffff",
+      },
+    },
+  };
+});
 
 export default function ChatList({
   chats,
@@ -299,7 +331,7 @@ export default function ChatList({
                   />
 
                   {(chat.ownerId === user.id || user.profile === "admin") && (
-                    <ListItemSecondaryAction style={{ top: "auto", bottom: 6, transform: "none" }}>
+                    <ListItemSecondaryAction className={classes.rowActions}>
                       <Tooltip title="Editar Conversa" arrow>
                         <IconButton
                           onClick={(e) => {
@@ -311,7 +343,7 @@ export default function ChatList({
                           className={classes.actionButtonEdit}
                           size="small"
                         >
-                          <EditIcon style={{ fontSize: 18 }} />
+                          <EditIcon style={{ fontSize: 15 }} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Excluir Conversa" arrow>
@@ -325,7 +357,7 @@ export default function ChatList({
                           className={classes.actionButtonDelete}
                           size="small"
                         >
-                          <DeleteIcon style={{ fontSize: 18 }} />
+                          <DeleteIcon style={{ fontSize: 15 }} />
                         </IconButton>
                       </Tooltip>
                     </ListItemSecondaryAction>

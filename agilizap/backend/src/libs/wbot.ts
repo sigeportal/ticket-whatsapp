@@ -13,7 +13,9 @@ import { Op } from "sequelize";
 import Whatsapp from "../models/Whatsapp";
 import { logger } from "../utils/logger";
 import MAIN_LOGGER from "@whiskeysockets/baileys/lib/Utils/logger";
-import authState, { deleteSessionFiles } from "../helpers/authState";
+import authState, { deleteSessionFiles, getSessionDir } from "../helpers/authState";
+import fs from "fs";
+import path from "path";
 import { Boom } from "@hapi/boom";
 import AppError from "../errors/AppError";
 import { getIO } from "./socket";
@@ -35,10 +37,12 @@ const sessions: Session[] = [];
 const reconnectTimeoutMap = new Map<number, NodeJS.Timeout>();
 const reconnectRetriesMap = new Map<number, number>();
 const stableConnectionTimers = new Map<number, NodeJS.Timeout>();
+const connectWatchdogTimers = new Map<number, NodeJS.Timeout>();
 const startingSessions = new Map<number, symbol>();
 const retriesQrCodeMap = new Map<number, number>();
 const MAX_RECONNECT_ATTEMPTS = 10;
 const STABLE_CONNECTION_MS = 60_000;
+const CONNECT_WATCHDOG_MS = 65_000;
 
 /**
  * Calcula o tempo de espera com backoff exponencial e jitter
@@ -63,6 +67,17 @@ const clearReconnectTimeout = (whatsappId: number): void => {
 };
 
 /**
+ * Cancela o watchdog de handshake pendente para a conexão
+ */
+const clearConnectWatchdog = (whatsappId: number): void => {
+  const timeout = connectWatchdogTimers.get(whatsappId);
+  if (timeout) {
+    clearTimeout(timeout);
+    connectWatchdogTimers.delete(whatsappId);
+  }
+};
+
+/**
  * Obtém a sessão ativa de um WhatsApp pelo ID
  */
 export const getWbot = (whatsappId: number): Session => {
@@ -83,6 +98,7 @@ export const removeWbot = async (
 ): Promise<void> => {
   try {
     clearReconnectTimeout(whatsappId);
+    clearConnectWatchdog(whatsappId);
     startingSessions.delete(whatsappId);
     clearTimeout(stableConnectionTimers.get(whatsappId));
     stableConnectionTimers.delete(whatsappId);
@@ -137,12 +153,27 @@ export const restartWbot = async (
 ): Promise<void> => {
   try {
     const whatsapps = await Whatsapp.findAll({
-      where: { companyId },
-      attributes: ["id"]
+      where: { companyId }
     });
 
     for (const c of whatsapps) {
       await removeWbot(c.id, false);
+      reconnectRetriesMap.delete(c.id);
+      retriesQrCodeMap.delete(c.id);
+    }
+
+    const { StartWhatsAppSession } = await import(
+      "../services/WbotServices/StartWhatsAppSession"
+    );
+
+    for (const c of whatsapps) {
+      const hasSessionFiles = fs.existsSync(
+        path.join(getSessionDir(c.id), "creds.json")
+      );
+      if (c.status !== "DISCONNECTED" || hasSessionFiles) {
+        logger.info(`WhatsApp #${c.id} (${c.name}): restarting session via restartWbot.`);
+        void StartWhatsAppSession(c, companyId, false);
+      }
     }
   } catch (err) {
     logger.error(`Error in restartWbot for company #${companyId}: ${err}`);
@@ -165,6 +196,7 @@ const scheduleReconnect = async (
   reason: number | string
 ): Promise<void> => {
   const { id } = whatsapp;
+  clearReconnectTimeout(id);
   const attempts = reconnectRetriesMap.get(id) || 0;
   if (attempts >= MAX_RECONNECT_ATTEMPTS) {
     logger.warn(`WhatsApp #${id}: automatic reconnect paused after ${attempts} attempts (reason: ${reason}).`);
@@ -270,6 +302,21 @@ export const initWASocket = async (
       sessions.push(wsocket);
     }
 
+    // Watchdog: evita sessões presas indefinidamente em "connecting" após queda de rede
+    clearConnectWatchdog(id);
+    const connectWatchdog = setTimeout(async () => {
+      connectWatchdogTimers.delete(id);
+      if (!sessions.includes(wsocket)) return;
+      logger.warn(`[Socket #${id} - ${name}] Connection handshake timed out in connecting state. Forcing reconnect.`);
+      await removeWbot(id, false);
+      const currentWapp = await Whatsapp.findByPk(id);
+      if (currentWapp && currentWapp.status !== "DISCONNECTED") {
+        await scheduleReconnect(currentWapp, "connect watchdog timeout")
+          .catch(err => logger.error(`Could not schedule watchdog reconnect for #${id}: ${err}`));
+      }
+    }, CONNECT_WATCHDOG_MS);
+    connectWatchdogTimers.set(id, connectWatchdog);
+
     // Suporte a Pairing Code (Código de 8 dígitos) quando explicitamente solicitado
     if (!state.creds.registered && pairingRequested && whatsappUpdate.number) {
       const cleanNumber = whatsappUpdate.number.replace(/\D/g, "");
@@ -311,6 +358,7 @@ export const initWASocket = async (
 
         if (connection === "open") {
           clearReconnectTimeout(id);
+          clearConnectWatchdog(id);
           if (reconnectRetriesMap.has(id) && !stableConnectionTimers.has(id)) {
             stableConnectionTimers.set(id, setTimeout(() => {
               stableConnectionTimers.delete(id);
@@ -340,7 +388,8 @@ export const initWASocket = async (
         }
 
         if (connection === "close") {
-        logger.warn(`[Socket #${id} - ${name}] Connection closed with status code: ${statusCode} (${lastDisconnect?.error?.message ?? "unknown"})`);
+          clearConnectWatchdog(id);
+          logger.warn(`[Socket #${id} - ${name}] Connection closed with status code: ${statusCode} (${lastDisconnect?.error?.message ?? "unknown"})`);
 
           // 401: Logged Out pelo dispositivo
           if (statusCode === DisconnectReason.loggedOut) {
@@ -413,6 +462,7 @@ export const initWASocket = async (
         }
 
         if (qr !== undefined) {
+          clearConnectWatchdog(id);
           const currentRetries = retriesQrCodeMap.get(id) || 0;
 
           if (currentRetries >= 5) {
@@ -500,6 +550,7 @@ export const initWASocket = async (
 
     return wsocket;
   } catch (error) {
+    clearConnectWatchdog(id);
     if (startingSessions.get(id) !== start) return;
     Sentry.captureException(error);
     logger.error(`initWASocket error: ${error}`);

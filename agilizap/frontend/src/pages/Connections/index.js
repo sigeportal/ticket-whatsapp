@@ -66,11 +66,11 @@ import { Can } from "../../components/Can";
 const useStyles = makeStyles(theme => ({
 	mainPaper: {
 		flex: 1,
-		padding: theme.spacing(2),
+		padding: theme.spacing(0.5, 0.5, 2, 0.5),
 		overflowY: "auto",
-		borderRadius: 16,
-		backgroundColor: "var(--bg-subtle)",
-		border: "1px solid var(--border-subtle)",
+		borderRadius: 0,
+		backgroundColor: "transparent",
+		border: "none",
 		...theme.scrollbarStyles,
 	},
 	headerContainer: {
@@ -180,14 +180,19 @@ const useStyles = makeStyles(theme => ({
 		marginBottom: theme.spacing(2.5),
 	},
 	statCard: {
-		padding: theme.spacing(1.5, 2),
-		borderRadius: 12,
+		padding: theme.spacing(1.75, 2),
+		borderRadius: 14,
 		display: "flex",
 		alignItems: "center",
 		gap: theme.spacing(1.5),
 		backgroundColor: "var(--bg-surface)",
-		border: "1px solid var(--border-subtle)",
-		boxShadow: "none",
+		border: "1px solid var(--border-hairline)",
+		boxShadow: "var(--shadow-subtle)",
+		minWidth: 0,
+		transition: "border-color 150ms ease, transform 150ms ease",
+		"&:hover": {
+			borderColor: "var(--border-strong)",
+		},
 	},
 	statIconCirclePrimary: {
 		width: 38,
@@ -249,11 +254,12 @@ const useStyles = makeStyles(theme => ({
 	connectionCard: {
 		borderRadius: 14,
 		backgroundColor: "var(--bg-surface)",
-		border: "1px solid var(--border-subtle)",
-		boxShadow: "none",
+		border: "1px solid var(--border-hairline)",
+		boxShadow: "var(--shadow-subtle)",
 		display: "flex",
 		flexDirection: "column",
 		justifyContent: "space-between",
+		height: "100%",
 		transition: "transform 150ms cubic-bezier(0.2, 0.8, 0.2, 1), border-color 150ms ease, box-shadow 150ms ease",
 		position: "relative",
 		overflow: "hidden",
@@ -268,10 +274,11 @@ const useStyles = makeStyles(theme => ({
 		display: "flex",
 		alignItems: "flex-start",
 		justifyContent: "space-between",
+		gap: theme.spacing(1),
 	},
 	channelAvatarWrapper: {
-		width: 48,
-		height: 48,
+		width: 44,
+		height: 44,
 		borderRadius: 12,
 		backgroundColor: "var(--action)",
 		display: "flex",
@@ -282,7 +289,6 @@ const useStyles = makeStyles(theme => ({
 		flexShrink: 0,
 	},
 	channelMeta: {
-		marginLeft: theme.spacing(1.5),
 		flex: 1,
 		minWidth: 0,
 	},
@@ -291,6 +297,7 @@ const useStyles = makeStyles(theme => ({
 		alignItems: "center",
 		gap: theme.spacing(0.75),
 		flexWrap: "wrap",
+		minWidth: 0,
 	},
 	channelName: {
 		fontFamily: "var(--font-display)",
@@ -300,6 +307,7 @@ const useStyles = makeStyles(theme => ({
 		whiteSpace: "nowrap",
 		overflow: "hidden",
 		textOverflow: "ellipsis",
+		maxWidth: "100%",
 	},
 	defaultChip: {
 		height: 20,
@@ -331,6 +339,7 @@ const useStyles = makeStyles(theme => ({
 		display: "flex",
 		alignItems: "center",
 		gap: 2,
+		flexShrink: 0,
 	},
 	iconActionBtn: {
 		padding: 6,
@@ -547,6 +556,7 @@ const useStyles = makeStyles(theme => ({
 	},
 	cardActionsGrid: {
 		display: "flex",
+		flexWrap: "wrap",
 		gap: theme.spacing(1),
 		width: "100%",
 	},
@@ -1312,9 +1322,21 @@ const Connections = () => {
 				) : viewMode === "cards" ? (
 					/* Visualização em Cards (Grid Moderno) */
 					<Grid container spacing={2.5}>
-						{whatsApps.map(whatsApp => (
-							<Grid item xs={12} sm={6} md={4} key={whatsApp.id}>
-								<div className={classes.connectionCard}>
+						{whatsApps.map(whatsApp => {
+							const topAccentColor =
+								whatsApp.status === "CONNECTED"
+									? "#10b981"
+									: whatsApp.status === "qrcode"
+									? "#f59e0b"
+									: whatsApp.status === "OPENING"
+									? "#3b82f6"
+									: "#ef4444";
+							return (
+							<Grid item xs={12} md={6} lg={4} key={whatsApp.id}>
+								<div
+									className={classes.connectionCard}
+									style={{ borderTop: `3px solid ${topAccentColor}` }}
+								>
 									<div className={classes.cardHeader}>
 										<div className={classes.channelAvatarWrapper}>
 											<WhatsAppIcon />
@@ -1414,7 +1436,8 @@ const Connections = () => {
 									</div>
 								</div>
 							</Grid>
-						))}
+							);
+						})}
 					</Grid>
 				) : (
 					/* Visualização em Tabela Refinada SaaS */
