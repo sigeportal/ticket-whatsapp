@@ -7,10 +7,10 @@ import type { ContactListStats as Stats } from "../../types";
 const useStyles = makeStyles(theme => ({
   root: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12, marginBottom: 16,
     [theme.breakpoints.down("xs")]: { gridTemplateColumns: "1fr", gap: 8 } },
-  card: { padding: "12px 16px", borderRadius: 12, borderColor: theme.palette.type === "dark" ? "#334155" : "#e2e8f0", background: theme.palette.type === "dark" ? "#162032" : "#fff", boxShadow: "none",
-    [theme.breakpoints.down("xs")]: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px" } },
-  value: { fontSize: 24, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: theme.palette.text.primary },
-  label: { fontSize: 13, color: theme.palette.text.secondary },
+  card: { padding: "14px 18px", borderRadius: 12, borderColor: "var(--border-hairline)", background: "var(--bg-surface)", boxShadow: "none",
+    [theme.breakpoints.down("xs")]: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px" } },
+  value: { fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "var(--ink-primary)", letterSpacing: "-0.02em" },
+  label: { fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--ink-muted)" },
 }));
 
 export default function ContactListStats({ contactListId, refreshKey = 0 }: { contactListId?: string; refreshKey?: number }) {

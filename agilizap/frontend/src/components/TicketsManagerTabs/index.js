@@ -36,24 +36,20 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: "column",
     overflow: "hidden",
     borderRadius: 0,
-    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
-    borderRight: `1px solid ${
-      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.18)" : "rgba(226, 232, 240, 0.9)"
-    }`,
+    backgroundColor: "var(--bg-surface)",
+    borderRight: "1px solid var(--border-hairline)",
   },
 
   tabsHeader: {
     flex: "none",
-    backgroundColor: theme.palette.type === "dark" ? "#07130e" : "#f8fafc",
-    borderBottom: `1px solid ${
-      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.15)" : "#e2e8f0"
-    }`,
+    backgroundColor: "var(--bg-subtle)",
+    borderBottom: "1px solid var(--border-hairline)",
   },
 
   tabsIndicator: {
-    backgroundColor: theme.palette.type === "dark" ? "#25d366" : "#10b981",
-    height: 3,
-    borderRadius: "3px 3px 0 0",
+    backgroundColor: "var(--action)",
+    height: 2.5,
+    borderRadius: "2px 2px 0 0",
   },
 
   tab: {
@@ -62,31 +58,30 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     padding: "8px 10px",
     textTransform: "none",
+    fontFamily: "var(--font-sans)",
     fontWeight: 600,
     fontSize: "0.82rem",
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
-    transition: "all 0.2s ease",
+    color: "var(--ink-secondary)",
+    transition: "color var(--t-in) var(--ease-ui)",
     "&$tabSelected": {
-      color: theme.palette.type === "dark" ? "#34d399 !important" : "#059669 !important",
+      color: "var(--action) !important",
       fontWeight: 700,
     },
     "&:hover": {
-      color: theme.palette.type === "dark" ? "#34d399" : "#10b981",
+      color: "var(--ink-primary)",
       opacity: 1,
     },
   },
 
   tabSelected: {
-    color: theme.palette.type === "dark" ? "#34d399 !important" : "#059669 !important",
+    color: "var(--action) !important",
   },
 
   subTabsContainer: {
     flex: "none",
-    backgroundColor: theme.palette.type === "dark" ? "#07130e" : "#f1f5f9",
+    backgroundColor: "var(--bg-subtle)",
     padding: "4px 8px",
-    borderBottom: `1px solid ${
-      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.15)" : "#e2e8f0"
-    }`,
+    borderBottom: "1px solid var(--border-hairline)",
   },
 
   subTabs: {
@@ -94,39 +89,41 @@ const useStyles = makeStyles((theme) => ({
   },
 
   subTab: {
-    minHeight: 36,
-    padding: "6px 12px",
+    minHeight: 34,
+    padding: "5px 12px",
     textTransform: "none",
+    fontFamily: "var(--font-sans)",
     fontWeight: 600,
-    fontSize: "0.82rem",
+    fontSize: "0.8125rem",
     borderRadius: 8,
     minWidth: "auto",
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
-    transition: "all 0.2s ease",
+    color: "var(--ink-secondary)",
+    transition: "all var(--t-in) var(--ease-ui)",
     "&$tabSelected": {
-      color: "#10b981",
-      backgroundColor:
-        theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.12)" : "#ffffff",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+      color: "var(--action)",
+      backgroundColor: "var(--bg-surface)",
+      boxShadow: "var(--shadow-subtle)",
     },
   },
 
   badgeOpen: {
-    backgroundColor: "rgba(16, 185, 129, 0.15)",
-    color: "#059669",
-    borderRadius: 12,
-    padding: "2px 8px",
-    fontSize: "0.72rem",
+    backgroundColor: "var(--action-soft)",
+    color: "var(--action)",
+    fontFamily: "var(--font-mono)",
+    borderRadius: 6,
+    padding: "2px 7px",
+    fontSize: "0.7rem",
     fontWeight: 700,
     marginLeft: 6,
   },
 
   badgePending: {
-    backgroundColor: "rgba(245, 158, 11, 0.15)",
-    color: "#d97706",
-    borderRadius: 12,
-    padding: "2px 8px",
-    fontSize: "0.72rem",
+    backgroundColor: "var(--status-warning-bg)",
+    color: "var(--status-warning)",
+    fontFamily: "var(--font-mono)",
+    borderRadius: 6,
+    padding: "2px 7px",
+    fontSize: "0.7rem",
     fontWeight: 700,
     marginLeft: 6,
   },
@@ -135,57 +132,52 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: theme.palette.type === "dark" ? "#07130e" : "#f8fafc",
+    backgroundColor: "var(--bg-surface)",
     padding: "8px 12px",
     gap: "8px",
-    borderBottom: `1px solid ${
-      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.15)" : "#e2e8f0"
-    }`,
+    borderBottom: "1px solid var(--border-hairline)",
   },
 
   serachInputWrapper: {
     flex: 1,
-    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
+    backgroundColor: "var(--field-bg)",
     display: "flex",
     alignItems: "center",
     borderRadius: 10,
     padding: "5px 12px",
-    transition: "all 0.2s ease",
-    border: `1px solid ${
-      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.2)" : "rgba(226, 232, 240, 0.9)"
-    }`,
+    transition: "all var(--t-in) var(--ease-ui)",
+    border: "1px solid var(--field-border)",
     "&:focus-within": {
-      borderColor: "#10b981",
-      boxShadow: "0 0 0 3px rgba(16, 185, 129, 0.15)",
+      backgroundColor: "var(--field-focus)",
+      borderColor: "var(--action)",
+      boxShadow: "0 0 0 3px var(--focus-ring)",
     },
   },
 
   searchIcon: {
-    color: "#10b981",
+    color: "var(--action)",
     marginRight: 8,
-    fontSize: 20,
+    fontSize: 19,
   },
 
   searchInput: {
     flex: 1,
+    fontFamily: "var(--font-sans)",
     fontSize: "0.86rem",
-    color: theme.palette.type === "dark" ? "#e2e8f0" : "#1e293b",
+    color: "var(--ink-primary)",
   },
 
   newTicketButton: {
     width: 36,
     height: 36,
     borderRadius: 9,
-    backgroundColor: theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.15)" : "#ecfdf5",
-    color: theme.palette.type === "dark" ? "#34d399" : "#059669",
-    border: `1px solid ${
-      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.3)" : "rgba(16, 185, 129, 0.25)"
-    }`,
-    transition: "all 0.2s ease",
+    backgroundColor: "var(--action-soft)",
+    color: "var(--action)",
+    border: "1px solid var(--border-strong)",
+    transition: "all var(--t-in) var(--ease-ui)",
     "&:hover": {
-      backgroundColor: "#10b981",
-      color: "#ffffff",
-      boxShadow: "0 2px 8px rgba(16, 185, 129, 0.35)",
+      backgroundColor: "var(--action)",
+      color: "var(--action-ink)",
     },
   },
 
@@ -193,34 +185,31 @@ const useStyles = makeStyles((theme) => ({
     width: 36,
     height: 36,
     borderRadius: 9,
-    backgroundColor: theme.palette.type === "dark" ? "rgba(239, 68, 68, 0.12)" : "#fef2f2",
-    color: theme.palette.type === "dark" ? "#f87171" : "#dc2626",
-    border: `1px solid ${
-      theme.palette.type === "dark" ? "rgba(239, 68, 68, 0.25)" : "rgba(239, 68, 68, 0.2)"
-    }`,
-    transition: "all 0.2s ease",
+    backgroundColor: "var(--status-danger-bg)",
+    color: "var(--status-danger)",
+    border: "1px solid rgba(225, 29, 72, 0.25)",
+    transition: "all var(--t-in) var(--ease-ui)",
     "&:hover": {
-      backgroundColor: "#ef4444",
+      backgroundColor: "var(--status-danger)",
       color: "#ffffff",
-      boxShadow: "0 2px 8px rgba(239, 68, 68, 0.35)",
     },
   },
 
   switchLabel: {
     fontSize: "0.78rem",
     fontWeight: 600,
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+    color: "var(--ink-secondary)",
   },
 
   customSwitch: {
     "& .MuiSwitch-switchBase.Mui-checked": {
-      color: "#10b981",
+      color: "var(--action)",
       "&:hover": {
-        backgroundColor: "rgba(16, 185, 129, 0.08)",
+        backgroundColor: "var(--action-soft)",
       },
     },
     "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-      backgroundColor: "#10b981",
+      backgroundColor: "var(--action)",
     },
   },
 
@@ -228,38 +217,36 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#1e293b",
-    color: "#ffffff",
+    backgroundColor: "#07130E",
+    color: "#ECF5F0",
     borderRadius: 12,
-    border: `1px solid ${
-      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.25)" : "transparent"
-    }`,
-    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
+    border: "1px solid var(--border-strong)",
+    boxShadow: "var(--shadow-popover)",
     padding: "8px 16px",
   },
 
   yesButton: {
-    backgroundColor: "#10b981",
-    color: "#ffffff",
+    backgroundColor: "#25D366",
+    color: "#05130B",
     padding: "4px 12px",
     fontSize: "0.8rem",
-    fontWeight: "bold",
+    fontWeight: 700,
     borderRadius: 8,
     marginRight: theme.spacing(1),
     "&:hover": {
-      backgroundColor: "#059669",
+      backgroundColor: "#1FC45B",
     },
   },
 
   noButton: {
-    backgroundColor: "#ef4444",
+    backgroundColor: "var(--status-danger)",
     color: "#ffffff",
     padding: "4px 12px",
     fontSize: "0.8rem",
-    fontWeight: "bold",
+    fontWeight: 700,
     borderRadius: 8,
     "&:hover": {
-      backgroundColor: "#dc2626",
+      backgroundColor: "#BE123C",
     },
   },
 }));

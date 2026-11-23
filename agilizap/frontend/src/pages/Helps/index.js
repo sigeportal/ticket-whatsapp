@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { makeStyles, Paper, Typography, Modal, IconButton } from "@material-ui/core";
+import { makeStyles, Paper, Typography, Modal } from "@material-ui/core";
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
 import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
@@ -7,68 +7,97 @@ import Title from "../../components/Title";
 import { i18n } from "../../translate/i18n";
 import useHelps from "../../hooks/useHelps";
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
   mainPaperContainer: {
-    overflowY: 'auto',
-    maxHeight: 'calc(100vh - 200px)',
+    overflowY: "auto",
+    flex: 1,
+    borderRadius: 14,
+    border: "1px solid var(--border-hairline)",
+    backgroundColor: "var(--bg-surface)",
+    padding: theme.spacing(2.5),
+    ...theme.scrollbarStyles,
   },
-  mainPaper: {
-    width: '100%',
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-    gap: theme.spacing(3),
-    padding: theme.spacing(2),
-    marginBottom: theme.spacing(3),
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+    gap: theme.spacing(2.5),
   },
   helpPaper: {
-    position: 'relative',
-    width: '100%',
-    minHeight: '340px',
-    padding: theme.spacing(2),
-    boxShadow: theme.shadows[3],
-    borderRadius: theme.spacing(1),
-    cursor: 'pointer',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    maxWidth: '340px',
-  },
-  paperHover: {
-    transition: 'transform 0.3s, box-shadow 0.3s',
-    '&:hover': {
-      transform: 'scale(1.03)',
-      boxShadow: `0 0 8px`,
-      color: theme.palette.primary.main,
+    position: "relative",
+    width: "100%",
+    borderRadius: 12,
+    border: "1px solid var(--border-hairline)",
+    backgroundColor: "var(--bg-canvas)",
+    cursor: "pointer",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    boxShadow: "none",
+    transition: "transform var(--t-in) var(--ease-ui), border-color var(--t-in) var(--ease-ui)",
+    "&:hover": {
+      transform: "translateY(-2px)",
+      borderColor: "var(--border-strong)",
+      "& $videoThumbnail": {
+        transform: "scale(1.03)",
+      },
     },
   },
+  thumbFrame: {
+    width: "100%",
+    aspectRatio: "16 / 9",
+    overflow: "hidden",
+    backgroundColor: "#07130E",
+  },
   videoThumbnail: {
-    width: '100%',
-    height: 'calc(100% - 56px)',
-    objectFit: 'cover',
-    borderRadius: `${theme.spacing(1)}px ${theme.spacing(1)}px 0 0`,
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    display: "block",
+    transition: "transform 400ms var(--ease-ui)",
+  },
+  cardContent: {
+    padding: theme.spacing(2),
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
   },
   videoTitle: {
-    marginTop: theme.spacing(1),
-    flex: 1,
+    fontFamily: "var(--font-display)",
+    fontWeight: 700,
+    fontSize: "0.95rem",
+    color: "var(--ink-primary)",
+    lineHeight: 1.3,
   },
   videoDescription: {
-    maxHeight: '100px',
-    overflow: 'hidden',
+    fontSize: "0.825rem",
+    color: "var(--ink-secondary)",
+    lineHeight: 1.45,
+    display: "-webkit-box",
+    WebkitLineClamp: 3,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
   },
   videoModal: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: theme.spacing(2),
   },
   videoModalContent: {
-    outline: 'none',
-    width: '90%',
-    maxWidth: 1024,
-    aspectRatio: '16/9',
-    position: 'relative',
-    backgroundColor: 'white',
-    borderRadius: theme.spacing(1),
-    overflow: 'hidden',
+    outline: "none",
+    width: "100%",
+    maxWidth: 960,
+    aspectRatio: "16 / 9",
+    position: "relative",
+    backgroundColor: "#07130E",
+    borderRadius: 16,
+    border: "1px solid var(--border-strong)",
+    overflow: "hidden",
+  },
+  emptyState: {
+    padding: theme.spacing(5),
+    textAlign: "center",
+    color: "var(--ink-secondary)",
   },
 }));
 
@@ -118,9 +147,15 @@ const Helps = () => {
         <div className={classes.videoModalContent}>
           {selectedVideo && (
             <iframe
-              style={{ width: "100%", height: "100%", position: "absolute", top: 0, left: 0 }}
+              style={{
+                width: "100%",
+                height: "100%",
+                position: "absolute",
+                top: 0,
+                left: 0,
+              }}
               src={`https://www.youtube.com/embed/${selectedVideo}`}
-              title="YouTube video player"
+              title="Tutorial PortAI"
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
@@ -131,39 +166,52 @@ const Helps = () => {
     );
   };
 
-  const renderHelps = () => {
-    return (
-      <>
-        <div className={`${classes.mainPaper} ${classes.mainPaperContainer}`}>
-          {records.length ? records.map((record, key) => (
-            <Paper key={key} className={`${classes.helpPaper} ${classes.paperHover}`} onClick={() => openVideoModal(record.video)}>
-              <img
-                src={`https://img.youtube.com/vi/${record.video}/mqdefault.jpg`}
-                alt="Thumbnail"
-                className={classes.videoThumbnail}
-              />
-              <Typography variant="button" className={classes.videoTitle}>
-                {record.title}
-              </Typography>
-              <Typography variant="caption" className={classes.videoDescription}>
-                {record.description}
-              </Typography>
-            </Paper>
-          )) : null}
-        </div>
-      </>
-    );
-  };
-
   return (
     <MainContainer>
       <MainHeader>
-        <Title>{i18n.t("helps.title")} ({records.length})</Title>
-        <MainHeaderButtonsWrapper></MainHeaderButtonsWrapper>
+        <Title>
+          {i18n.t("helps.title")} ({records.length})
+        </Title>
+        <MainHeaderButtonsWrapper />
       </MainHeader>
-      <div className={classes.mainPaper}>
-        {renderHelps()}
-      </div>
+
+      <Paper className={classes.mainPaperContainer} elevation={0}>
+        {records.length ? (
+          <div className={classes.grid}>
+            {records.map((record, key) => (
+              <Paper
+                key={key}
+                elevation={0}
+                className={classes.helpPaper}
+                onClick={() => openVideoModal(record.video)}
+              >
+                <div className={classes.thumbFrame}>
+                  <img
+                    src={`https://img.youtube.com/vi/${record.video}/mqdefault.jpg`}
+                    alt={record.title || "Thumbnail do tutorial"}
+                    className={classes.videoThumbnail}
+                  />
+                </div>
+                <div className={classes.cardContent}>
+                  <Typography className={classes.videoTitle}>
+                    {record.title}
+                  </Typography>
+                  <Typography className={classes.videoDescription}>
+                    {record.description}
+                  </Typography>
+                </div>
+              </Paper>
+            ))}
+          </div>
+        ) : (
+          <div className={classes.emptyState}>
+            <Typography variant="body2">
+              Nenhum tutorial cadastrado no momento.
+            </Typography>
+          </div>
+        )}
+      </Paper>
+
       {renderVideoModal()}
     </MainContainer>
   );

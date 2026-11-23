@@ -92,15 +92,42 @@ const reducer = (state, action) => {
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(2),
-    margin: theme.spacing(1),
+    padding: theme.spacing(1.5),
     overflowY: "scroll",
+    borderRadius: 14,
+    border: "1px solid var(--border-hairline)",
+    backgroundColor: "var(--bg-surface)",
+    boxShadow: "none",
     ...theme.scrollbarStyles,
   },
   avatar: {
-    width: "140px",
-    height: "40px",
-    borderRadius: 4
+    width: "120px",
+    height: "36px",
+    borderRadius: 8,
+    objectFit: "contain",
+    backgroundColor: "var(--bg-subtle)",
+    padding: 4,
+  },
+  actionEdit: {
+    color: "var(--action)",
+    backgroundColor: "var(--action-soft)",
+    borderRadius: 8,
+    padding: 6,
+    marginRight: 6,
+    "&:hover": {
+      backgroundColor: "var(--action)",
+      color: "var(--action-ink)",
+    },
+  },
+  actionDelete: {
+    color: "var(--status-danger)",
+    backgroundColor: "var(--status-danger-bg)",
+    borderRadius: 8,
+    padding: 6,
+    "&:hover": {
+      backgroundColor: "var(--status-danger)",
+      color: "#ffffff",
+    },
   },
 }));
 
@@ -248,6 +275,8 @@ const QueueIntegration = () => {
         <Title>{i18n.t("queueIntegration.title")} ({queueIntegration.length})</Title>
         <MainHeaderButtonsWrapper>
           <TextField
+            variant="outlined"
+            size="small"
             placeholder={i18n.t("queueIntegration.searchPlaceholder")}
             type="search"
             value={searchParam}
@@ -255,7 +284,7 @@ const QueueIntegration = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon color="secondary" />
+                  <SearchIcon style={{ color: "var(--ink-muted)", fontSize: 19 }} />
                 </InputAdornment>
               ),
             }}
@@ -280,6 +309,7 @@ const QueueIntegration = () => {
               <TableCell padding="checkbox"></TableCell>
               <TableCell align="center">{i18n.t("queueIntegration.table.id")}</TableCell>
               <TableCell align="center">{i18n.t("queueIntegration.table.name")}</TableCell>
+              <TableCell align="center">Ações</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -297,29 +327,31 @@ const QueueIntegration = () => {
                       src={typebot} className={classes.avatar} />)}
                   </TableCell>
 
-                  <TableCell align="center">{integration.id}</TableCell>
-                  <TableCell align="center">{integration.name}</TableCell>
+                  <TableCell align="center" className="font-mono">{integration.id}</TableCell>
+                  <TableCell align="center" style={{ fontWeight: 600 }}>{integration.name}</TableCell>
                   <TableCell align="center">
                     <IconButton
                       size="small"
+                      className={classes.actionEdit}
                       onClick={() => handleEditIntegration(integration)}
                     >
-                      <Edit color="secondary" />
+                      <Edit fontSize="small" />
                     </IconButton>
 
                     <IconButton
                       size="small"
+                      className={classes.actionDelete}
                       onClick={(e) => {
                         setConfirmModalOpen(true);
                         setDeletingUser(integration);
                       }}
                     >
-                      <DeleteOutline color="secondary" />
+                      <DeleteOutline fontSize="small" />
                     </IconButton>
                   </TableCell>
                 </TableRow>
               ))}
-              {loading && <TableRowSkeleton columns={7} />}
+              {loading && <TableRowSkeleton columns={4} />}
             </>
           </TableBody>
         </Table>

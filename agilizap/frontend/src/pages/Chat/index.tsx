@@ -36,17 +36,13 @@ const useStyles = makeStyles((theme) => ({
     position: "relative",
     flex: 1,
     padding: theme.spacing(1.5),
-    height: `calc(100% - 64px)`,
+    height: "calc(100% - 64px)",
     minHeight: 0,
     minWidth: 0,
     overflowY: "hidden",
     borderRadius: 14,
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.18)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
-    backgroundColor: theme.palette.type === "dark" ? "#162032" : "#ffffff",
+    border: "1px solid var(--border-hairline)",
+    backgroundColor: "var(--bg-surface)",
     boxShadow: "none",
   },
   gridContainer: {
@@ -54,58 +50,47 @@ const useStyles = makeStyles((theme) => ({
     height: "100%",
     borderRadius: 12,
     overflow: "hidden",
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.12)"
-        : "rgba(226, 232, 240, 0.8)"
-    }`,
+    border: "1px solid var(--border-hairline)",
   },
   gridSidebar: {
     height: "100%",
     display: "flex",
     flexDirection: "column",
-    backgroundColor: theme.palette.type === "dark" ? "#0f172a" : "#f8fafc",
-    borderRight: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.12)"
-        : "rgba(226, 232, 240, 0.8)"
-    }`,
+    backgroundColor: "var(--bg-subtle)",
+    borderRight: "1px solid var(--border-hairline)",
   },
   gridContent: {
     height: "100%",
-    backgroundColor: theme.palette.type === "dark" ? "#162032" : "#ffffff",
+    backgroundColor: "var(--bg-surface)",
   },
   sidebarHeader: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     padding: "12px 16px",
-    backgroundColor: theme.palette.type === "dark" ? "#162032" : "#ffffff",
-    borderBottom: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.12)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
+    backgroundColor: "var(--bg-surface)",
+    borderBottom: "1px solid var(--border-hairline)",
   },
   sidebarTitle: {
+    fontFamily: "var(--font-display)",
     fontWeight: 700,
     fontSize: "0.95rem",
-    color: theme.palette.type === "dark" ? "#f1f5f9" : "#0f172a",
+    color: "var(--ink-primary)",
     display: "flex",
     alignItems: "center",
     gap: 8,
   },
   addButton: {
     borderRadius: 10,
-    fontWeight: 700,
+    fontWeight: 600,
     fontSize: "0.8rem",
     padding: "6px 14px",
-    background: "linear-gradient(135deg, #047857 0%, #0f766e 100%)",
-    color: "#ffffff",
+    backgroundColor: "var(--action)",
+    color: "var(--action-ink)",
     boxShadow: "none",
-    transition: "background-color 0.2s ease, color 0.2s ease",
+    transition: "background-color var(--t-in) var(--ease-ui)",
     "&:hover": {
-      background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+      backgroundColor: "var(--action-hover)",
       boxShadow: "none",
     },
   },
@@ -117,32 +102,30 @@ const useStyles = makeStyles((theme) => ({
     height: "100%",
     padding: theme.spacing(4),
     textAlign: "center",
-    backgroundColor: theme.palette.type === "dark" ? "#0f172a" : "#f8fafc",
+    backgroundColor: "var(--bg-canvas)",
   },
   emptyIconBox: {
     width: 68,
     height: 68,
-    borderRadius: 18,
+    borderRadius: 16,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: theme.spacing(2),
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.14)"
-        : "rgba(16, 185, 129, 0.1)",
-    color: theme.palette.type === "dark" ? "#34d399" : "#10b981",
-    boxShadow: "0 2px 10px rgba(16, 185, 129, 0.15)",
+    backgroundColor: "var(--action-soft)",
+    border: "1px solid var(--border-strong)",
+    color: "var(--action)",
   },
   emptyTitle: {
+    fontFamily: "var(--font-display)",
     fontWeight: 700,
     fontSize: "1.1rem",
-    color: theme.palette.type === "dark" ? "#f1f5f9" : "#0f172a",
+    color: "var(--ink-primary)",
     marginBottom: 6,
   },
   emptyText: {
-    fontSize: "0.85rem",
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+    fontSize: "0.875rem",
+    color: "var(--ink-secondary)",
     maxWidth: 380,
     marginBottom: theme.spacing(2.5),
   },
@@ -259,8 +242,9 @@ export function ChatModal({
           variant="contained"
           style={{
             borderRadius: 10,
-            background: "linear-gradient(135deg, #047857 0%, #0f766e 100%)",
-            color: "#ffffff",
+            backgroundColor: "var(--action)",
+            color: "var(--action-ink)",
+            boxShadow: "none",
             fontWeight: 700,
           }}
         >

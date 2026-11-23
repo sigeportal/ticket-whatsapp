@@ -33,19 +33,15 @@ const useStyles = makeStyles((theme) => ({
     overflow: "hidden",
     borderRadius: 0,
     height: "100%",
-    backgroundColor: theme.palette.type === "dark" ? "#0f172a" : "#f8fafc",
+    backgroundColor: "var(--bg-canvas)",
   },
   headerArea: {
     padding: "10px 16px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: theme.palette.type === "dark" ? "#162032" : "#ffffff",
-    borderBottom: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.12)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
+    backgroundColor: "var(--bg-surface)",
+    borderBottom: "1px solid var(--border-hairline)",
   },
   headerLeft: {
     display: "flex",
@@ -54,28 +50,29 @@ const useStyles = makeStyles((theme) => ({
   },
   avatarSquircle: {
     borderRadius: 10,
+    fontFamily: "var(--font-display)",
     fontWeight: 700,
     fontSize: "0.9rem",
     width: 40,
     height: 40,
-    boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
   },
   headerTitle: {
+    fontFamily: "var(--font-display)",
     fontWeight: 700,
     fontSize: "0.95rem",
-    color: theme.palette.type === "dark" ? "#f1f5f9" : "#0f172a",
+    color: "var(--ink-primary)",
     lineHeight: 1.2,
   },
   headerSubtitle: {
     fontSize: "0.75rem",
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+    color: "var(--ink-secondary)",
     display: "flex",
     alignItems: "center",
     gap: 4,
   },
   participants: { display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, maxHeight: 64, overflowY: "auto" },
-  presence: { color: theme.palette.type === "dark" ? "#6ee7b7" : "#047857", backgroundColor: "rgba(16,185,129,0.12)", padding: "2px 8px", borderRadius: 12 },
-  day: { alignSelf: "center", color: theme.palette.text.secondary, fontSize: 12, margin: "8px 0" },
+  presence: { color: "var(--action)", backgroundColor: "var(--action-soft)", padding: "2px 8px", borderRadius: 6 },
+  day: { alignSelf: "center", color: "var(--ink-muted)", fontFamily: "var(--font-mono)", fontSize: 11, margin: "8px 0" },
   messageList: {
     position: "relative",
     overflowY: "auto",
@@ -84,7 +81,7 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexDirection: "column",
     gap: 10,
-    backgroundColor: theme.palette.type === "dark" ? "#0f172a" : "#f8fafc",
+    backgroundColor: "var(--bg-chat-canvas)",
     ...theme.scrollbarStyles,
     minHeight: 0,
     minWidth: 0,
@@ -92,41 +89,39 @@ const useStyles = makeStyles((theme) => ({
   boxLeft: {
     alignSelf: "flex-start",
     maxWidth: "min(80%, 560px)",
-    padding: "8px 14px 6px",
-    borderRadius: "18px 18px 18px 4px",
-    backgroundColor: theme.palette.type === "dark" ? "#162032" : "#ffffff",
-    color: theme.palette.type === "dark" ? "#f1f5f9" : "#0f172a",
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.18)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
-    boxShadow: "none",
+    padding: "9px 14px 7px",
+    borderRadius: "4px 14px 14px 14px",
+    backgroundColor: "var(--bubble-in-bg)",
+    color: "var(--bubble-in-ink)",
+    border: "1px solid var(--bubble-in-border)",
+    boxShadow: "var(--shadow-subtle)",
   },
   boxRight: {
     alignSelf: "flex-end",
     maxWidth: "min(80%, 560px)",
-    padding: "8px 14px 6px",
-    borderRadius: "18px 18px 4px 18px",
-    background: "linear-gradient(135deg, #047857 0%, #0f766e 100%)",
-    color: "#ffffff",
-    boxShadow: "none",
+    padding: "9px 14px 7px",
+    borderRadius: "14px 4px 14px 14px",
+    backgroundColor: "var(--bubble-out-bg)",
+    color: "var(--bubble-out-ink)",
+    border: "1px solid var(--bubble-out-border)",
+    boxShadow: "var(--shadow-subtle)",
   },
   senderName: {
     fontWeight: 700,
     fontSize: "0.75rem",
-    color: theme.palette.type === "dark" ? "#34d399" : "#047857",
+    color: "var(--action)",
     marginBottom: 2,
   },
   messageText: {
     fontSize: "0.875rem",
-    lineHeight: 1.45,
+    lineHeight: 1.48,
     wordBreak: "break-word",
     whiteSpace: "pre-wrap",
   },
   timestampRight: {
-    fontSize: "0.75rem",
-    color: "rgba(255, 255, 255, 0.8)",
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.7rem",
+    color: "var(--ink-muted)",
     marginTop: 4,
     display: "flex",
     alignItems: "center",
@@ -134,19 +129,16 @@ const useStyles = makeStyles((theme) => ({
     gap: 4,
   },
   timestampLeft: {
-    fontSize: "0.75rem",
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.7rem",
+    color: "var(--ink-muted)",
     marginTop: 4,
     textAlign: "right",
   },
   inputArea: {
     padding: "10px 16px",
-    backgroundColor: theme.palette.type === "dark" ? "#162032" : "#ffffff",
-    borderTop: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.12)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
+    backgroundColor: "var(--bg-surface)",
+    borderTop: "1px solid var(--border-hairline)",
   },
   inputForm: {
     display: "flex",
@@ -155,36 +147,32 @@ const useStyles = makeStyles((theme) => ({
   },
   inputPill: {
     flex: 1,
-    backgroundColor: theme.palette.type === "dark" ? "#0f172a" : "#f8fafc",
-    borderRadius: 20,
-    padding: "6px 16px",
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.2)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
-    fontSize: "0.85rem",
-    color: theme.palette.type === "dark" ? "#f1f5f9" : "#0f172a",
+    backgroundColor: "var(--field-bg)",
+    borderRadius: 12,
+    padding: "6px 14px",
+    border: "1px solid var(--field-border)",
+    fontSize: "0.875rem",
+    color: "var(--ink-primary)",
     "&:focus-within": {
-      borderColor: "#10b981",
-      boxShadow: "0 0 0 2px rgba(16, 185, 129, 0.15)",
+      borderColor: "var(--action)",
+      backgroundColor: "var(--field-focus)",
+      boxShadow: "0 0 0 3px var(--focus-ring)",
     },
   },
   buttonSend: {
-    borderRadius: 12,
-    width: 44,
-    height: 44,
-    background: "linear-gradient(135deg, #047857 0%, #0f766e 100%)",
-    color: "#ffffff",
+    borderRadius: 10,
+    width: 42,
+    height: 42,
+    backgroundColor: "var(--action)",
+    color: "var(--action-ink)",
     boxShadow: "none",
-    transition: "background-color 0.2s ease, color 0.2s ease",
+    transition: "background-color var(--t-in) var(--ease-ui)",
     "&:hover": {
-      background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+      backgroundColor: "var(--action-hover)",
       boxShadow: "none",
     },
     "&:disabled": {
-      opacity: 0.6,
-      color: "rgba(255, 255, 255, 0.5)",
+      opacity: 0.45,
     },
   },
 }));

@@ -34,26 +34,29 @@ const useStyles = makeStyles(theme => ({
 	drawerPaper: {
 		width: drawerWidth,
 		display: "flex",
-		borderTop: "1px solid rgba(0, 0, 0, 0.12)",
-		borderRight: "1px solid rgba(0, 0, 0, 0.12)",
-		borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
-		borderTopRightRadius: 4,
-		borderBottomRightRadius: 4,
+		backgroundColor: "var(--bg-surface)",
+		borderLeft: "1px solid var(--border-hairline)",
+		borderRadius: 0,
 	},
 	header: {
 		display: "flex",
-		borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
-		backgroundColor: theme.palette.contactdrawer, //DARK MODE Multiconversa//
+		borderBottom: "1px solid var(--border-hairline)",
+		backgroundColor: "var(--bg-surface)",
+		color: "var(--ink-primary)",
 		alignItems: "center",
-		padding: theme.spacing(0, 1),
-		minHeight: "73px",
+		padding: theme.spacing(0, 1.5),
+		minHeight: 68,
 		justifyContent: "flex-start",
+		gap: 8,
+		fontFamily: "var(--font-display)",
+		fontWeight: 700,
 	},
 	content: {
 		display: "flex",
-		backgroundColor: theme.palette.contactdrawer, //DARK MODE Multiconversa//
+		backgroundColor: "var(--bg-canvas)",
 		flexDirection: "column",
-		padding: "8px 0px 8px 8px",
+		padding: 12,
+		gap: 10,
 		height: "100%",
 		overflowY: "scroll",
 		...theme.scrollbarStyles,
@@ -67,24 +70,30 @@ const useStyles = makeStyles(theme => ({
 
 	contactHeader: {
 		display: "flex",
-		padding: 8,
+		padding: 12,
 		flexDirection: "column",
 		alignItems: "center",
 		justifyContent: "center",
+		borderRadius: 12,
+		border: "1px solid var(--border-hairline)",
+		backgroundColor: "var(--bg-surface)",
 		"& > *": {
 			margin: 4,
 		},
 	},
 
 	contactDetails: {
-		marginTop: 8,
-		padding: 8,
+		marginTop: 4,
+		padding: 12,
+		borderRadius: 12,
+		border: "1px solid var(--border-hairline)",
+		backgroundColor: "var(--bg-surface)",
 		display: "flex",
 		flexDirection: "column",
 	},
 	contactExtraInfo: {
 		marginTop: 4,
-		padding: 6,
+		padding: 8,
 	},
 }));
 

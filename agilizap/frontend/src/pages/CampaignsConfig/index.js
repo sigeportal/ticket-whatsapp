@@ -33,8 +33,12 @@ import ConfirmationModal from "../../components/ConfirmationModal";
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(1),
+    padding: theme.spacing(2),
     overflowY: "scroll",
+    borderRadius: 14,
+    border: "1px solid var(--border-hairline)",
+    backgroundColor: "var(--bg-surface)",
+    boxShadow: "none",
     ...theme.scrollbarStyles,
   },
   textRight: {
@@ -42,6 +46,13 @@ const useStyles = makeStyles((theme) => ({
   },
   tabPanelsContainer: {
     padding: theme.spacing(2),
+  },
+  sectionHeading: {
+    fontFamily: "var(--font-display)",
+    fontWeight: 700,
+    fontSize: "1.05rem",
+    color: "var(--ink-primary)",
+    marginBottom: 8,
   },
 }));
 

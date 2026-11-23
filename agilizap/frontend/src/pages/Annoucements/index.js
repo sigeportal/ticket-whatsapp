@@ -84,10 +84,34 @@ const reducer = (state, action) => {
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
-    // padding: theme.spacing(1),
-    padding: theme.padding,
+    padding: theme.spacing(1.5),
     overflowY: "scroll",
+    borderRadius: 14,
+    border: "1px solid var(--border-hairline)",
+    backgroundColor: "var(--bg-surface)",
+    boxShadow: "none",
     ...theme.scrollbarStyles,
+  },
+  actionEdit: {
+    color: "var(--action)",
+    backgroundColor: "var(--action-soft)",
+    borderRadius: 8,
+    padding: 6,
+    marginRight: 6,
+    "&:hover": {
+      backgroundColor: "var(--action)",
+      color: "var(--action-ink)",
+    },
+  },
+  actionDelete: {
+    color: "var(--status-danger)",
+    backgroundColor: "var(--status-danger-bg)",
+    borderRadius: 8,
+    padding: 6,
+    "&:hover": {
+      backgroundColor: "var(--status-danger)",
+      color: "#ffffff",
+    },
   },
 }));
 
@@ -251,41 +275,31 @@ const Announcements = () => {
         announcementId={selectedAnnouncement && selectedAnnouncement.id}
       />
       <MainHeader>
-        <Grid style={{ width: "99.6%" }} container>
-          <Grid xs={12} sm={8} item>
-            <Title>{i18n.t("announcements.title")} ({announcements.length})</Title>
-          </Grid>
-          <Grid xs={12} sm={4} item>
-            <Grid spacing={2} container>
-              <Grid xs={6} sm={6} item>
-                <TextField
-                  fullWidth
-                  placeholder={i18n.t("announcements.searchPlaceholder")}
-                  type="search"
-                  value={searchParam}
-                  onChange={handleSearch}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon style={{ color: "gray" }} />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-              <Grid xs={6} sm={6} item>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  onClick={handleOpenAnnouncementModal}
-                  color="primary"
-                >
-                  {i18n.t("announcements.buttons.add")}
-                </Button>
-              </Grid>
-            </Grid>
-          </Grid>
-        </Grid>
+        <Title>{i18n.t("announcements.title")} ({announcements.length})</Title>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginLeft: "auto" }}>
+          <TextField
+            variant="outlined"
+            size="small"
+            placeholder={i18n.t("announcements.searchPlaceholder")}
+            type="search"
+            value={searchParam}
+            onChange={handleSearch}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon style={{ color: "var(--ink-muted)", fontSize: 19 }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <Button
+            variant="contained"
+            onClick={handleOpenAnnouncementModal}
+            color="primary"
+          >
+            {i18n.t("announcements.buttons.add")}
+          </Button>
+        </div>
       </MainHeader>
       <Paper
         className={classes.mainPaper}
@@ -329,19 +343,21 @@ const Announcements = () => {
                   <TableCell align="center">
                     <IconButton
                       size="small"
+                      className={classes.actionEdit}
                       onClick={() => handleEditAnnouncement(announcement)}
                     >
-                      <EditIcon />
+                      <EditIcon fontSize="small" />
                     </IconButton>
 
                     <IconButton
                       size="small"
+                      className={classes.actionDelete}
                       onClick={(e) => {
                         setConfirmModalOpen(true);
                         setDeletingAnnouncement(announcement);
                       }}
                     >
-                      <DeleteOutlineIcon />
+                      <DeleteOutlineIcon fontSize="small" />
                     </IconButton>
                   </TableCell>
                 </TableRow>

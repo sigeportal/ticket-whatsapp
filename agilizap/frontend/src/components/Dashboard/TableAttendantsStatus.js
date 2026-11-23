@@ -14,12 +14,8 @@ import moment from "moment";
 
 const useStyles = makeStyles((theme) => ({
   paperContainer: {
-    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.18)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
+    backgroundColor: "var(--bg-surface)",
+    border: "1px solid var(--border-hairline)",
     borderRadius: 14,
     boxShadow: "none",
     overflow: "hidden",
@@ -29,28 +25,22 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    borderBottom: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.12)"
-        : "rgba(226, 232, 240, 0.8)"
-    }`,
+    borderBottom: "1px solid var(--border-hairline)",
   },
   headerTitle: {
     fontSize: "1.05rem",
     fontWeight: 700,
-    color: theme.palette.type === "dark" ? "#f0fdf4" : "#0f172a",
-    fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+    color: "var(--ink-primary)",
+    fontFamily: "var(--font-display)",
   },
   headerCount: {
-    fontSize: "0.75rem",
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.72rem",
     fontWeight: 600,
     padding: "3px 10px",
-    borderRadius: 12,
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.15)"
-        : "rgba(16, 185, 129, 0.1)",
-    color: theme.palette.type === "dark" ? "#34d399" : "#059669",
+    borderRadius: 8,
+    backgroundColor: "var(--action-soft)",
+    color: "var(--action)",
   },
   statusOnline: {
     display: "inline-flex",
@@ -60,11 +50,8 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: 8,
     fontSize: "0.75rem",
     fontWeight: 600,
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.15)"
-        : "rgba(16, 185, 129, 0.1)",
-    color: theme.palette.type === "dark" ? "#34d399" : "#059669",
+    backgroundColor: "var(--action-soft)",
+    color: "var(--action)",
   },
   statusOffline: {
     display: "inline-flex",
@@ -74,11 +61,8 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: 8,
     fontSize: "0.75rem",
     fontWeight: 600,
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(148, 163, 184, 0.1)"
-        : "rgba(100, 116, 139, 0.08)",
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+    backgroundColor: "var(--bg-subtle)",
+    color: "var(--ink-muted)",
   },
   statusDot: {
     width: 6,
@@ -86,14 +70,14 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: "50%",
   },
   onlineDot: {
-    backgroundColor: "#10b981",
+    backgroundColor: "#25D366",
   },
   offlineDot: {
-    backgroundColor: "#94a3b8",
+    backgroundColor: "var(--ink-muted)",
   },
   attendantName: {
     fontWeight: 600,
-    color: theme.palette.type === "dark" ? "#f0fdf4" : "#0f172a",
+    color: "var(--ink-primary)",
   },
   pointer: {
     cursor: "pointer",

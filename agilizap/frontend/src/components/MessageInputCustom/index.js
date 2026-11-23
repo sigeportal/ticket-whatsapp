@@ -40,45 +40,39 @@ const Mp3Recorder = new MicRecorder({ bitRate: 128 });
 
 const useStyles = makeStyles((theme) => ({
   mainWrapper: {
-    backgroundColor: theme.palette.type === "dark" ? "#14181f" : "#f8fafc",
+    backgroundColor: "var(--bg-surface)",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    borderTop: `1px solid ${
-      theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.08)" : "#e2e8f0"
-    }`,
+    borderTop: "1px solid var(--border-hairline)",
     position: "relative",
     width: "100%",
   },
 
   newMessageBox: {
-    backgroundColor: theme.palette.type === "dark" ? "#07130e" : "#f1f5f9",
+    backgroundColor: "var(--bg-surface)",
     width: "100%",
     display: "flex",
-    padding: "8px 12px",
+    padding: "10px 14px",
     alignItems: "center",
-    gap: "6px",
-    borderTop: `1px solid ${
-      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.15)" : "#e2e8f0"
-    }`,
+    gap: "8px",
+    borderTop: "1px solid var(--border-hairline)",
   },
 
   messageInputWrapper: {
-    padding: "3px 14px",
-    backgroundColor: theme.palette.type === "dark" ? "#0d2219" : "#ffffff",
+    padding: "4px 14px",
+    backgroundColor: "var(--field-bg)",
     display: "flex",
-    borderRadius: 24,
+    borderRadius: 14,
     flex: 1,
     alignItems: "center",
-    border: `1px solid ${
-      theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.2)" : "#e2e8f0"
-    }`,
-    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
-    transition: "all 0.2s ease",
+    border: "1px solid var(--field-border)",
+    boxShadow: "none",
+    transition: "all var(--t-in) var(--ease-ui)",
     "&:focus-within": {
-      borderColor: theme.palette.type === "dark" ? "#25d366" : "#10b981",
-      boxShadow: "0 0 0 3px rgba(16, 185, 129, 0.15)",
-      backgroundColor: theme.palette.type === "dark" ? "#122c21" : "#ffffff",
+      borderColor: "var(--action)",
+      boxShadow: "0 0 0 3px var(--focus-ring)",
+      backgroundColor: "var(--field-focus)",
     },
   },
 
@@ -86,47 +80,53 @@ const useStyles = makeStyles((theme) => ({
     paddingLeft: 4,
     flex: 1,
     border: "none",
-    fontSize: "0.9rem",
-    color: theme.palette.type === "dark" ? "#f1f5f9" : "#1e293b",
+    fontFamily: "var(--font-sans)",
+    fontSize: "0.9125rem",
+    color: "var(--ink-primary)",
   },
 
   iconButton: {
     padding: 8,
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
-    transition: "all 0.2s ease",
+    color: "var(--ink-secondary)",
+    borderRadius: 9,
+    transition: "all var(--t-in) var(--ease-ui)",
     "&:hover": {
-      color: "#10b981",
-      backgroundColor: "rgba(16, 185, 129, 0.08)",
+      color: "var(--action)",
+      backgroundColor: "var(--action-soft)",
     },
   },
 
   sendFloatingButton: {
-    backgroundColor: "#10b981",
-    color: "#ffffff",
+    backgroundColor: "var(--action)",
+    color: "var(--action-ink)",
     width: 40,
     height: 40,
-    borderRadius: "50%",
-    boxShadow: "0 2px 6px rgba(16, 185, 129, 0.35)",
-    transition: "all 0.2s ease",
+    borderRadius: 11,
+    boxShadow: "none",
+    transition: "all var(--t-in) var(--ease-ui)",
     padding: 8,
     "&:hover": {
-      backgroundColor: "#059669",
-      transform: "scale(1.05)",
+      backgroundColor: "var(--action-hover)",
+      transform: "translateY(-1px)",
+    },
+    "&:active": {
+      transform: "scale(0.97)",
     },
     "&:disabled": {
-      backgroundColor: theme.palette.type === "dark" ? "#334155" : "#cbd5e1",
-      color: "#94a3b8",
+      backgroundColor: "var(--bg-subtle)",
+      color: "var(--ink-muted)",
       boxShadow: "none",
     },
   },
 
   micButton: {
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+    color: "var(--ink-secondary)",
     padding: 8,
-    transition: "all 0.2s ease",
+    borderRadius: 9,
+    transition: "all var(--t-in) var(--ease-ui)",
     "&:hover": {
-      color: "#10b981",
-      backgroundColor: "rgba(16, 185, 129, 0.08)",
+      color: "var(--action)",
+      backgroundColor: "var(--action-soft)",
     },
   },
 
@@ -145,10 +145,8 @@ const useStyles = makeStyles((theme) => ({
     position: "relative",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: theme.palette.type === "dark" ? "#1e242d" : "#f1f5f9",
-    borderTop: `1px solid ${
-      theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.08)" : "#e2e8f0"
-    }`,
+    backgroundColor: "var(--bg-subtle)",
+    borderTop: "1px solid var(--border-hairline)",
     width: "100%",
   },
 
@@ -157,53 +155,47 @@ const useStyles = makeStyles((theme) => ({
     bottom: 64,
     left: 12,
     zIndex: 100,
-    boxShadow: "0 10px 25px rgba(0, 0, 0, 0.25)",
-    borderRadius: 16,
+    boxShadow: "var(--shadow-popover)",
+    borderRadius: 14,
     overflow: "hidden",
-    border: `1px solid ${
-      theme.palette.type === "dark" ? "rgba(255,255,255,0.1)" : "#e2e8f0"
-    }`,
+    border: "1px solid var(--border-hairline)",
   },
 
   audioLoading: {
-    color: "#10b981",
-    opacity: "80%",
+    color: "var(--action)",
+    opacity: "85%",
   },
 
   recorderWrapper: {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    backgroundColor: theme.palette.type === "dark" ? "#222731" : "#ffffff",
-    borderRadius: 24,
-    padding: "2px 10px",
-    border: "1px solid rgba(239, 68, 68, 0.3)",
-    boxShadow: "0 1px 4px rgba(239, 68, 68, 0.1)",
+    backgroundColor: "var(--bg-elevated)",
+    borderRadius: 12,
+    padding: "3px 10px",
+    border: "1px solid rgba(225, 29, 72, 0.35)",
   },
 
   cancelAudioIcon: {
-    color: "#ef4444",
+    color: "var(--status-danger)",
   },
 
   sendAudioIcon: {
-    color: "#10b981",
+    color: "var(--action)",
   },
 
   replyginMsgWrapper: {
     display: "flex",
     width: "100%",
-    padding: "8px 12px 0 12px",
+    padding: "8px 14px 0 14px",
   },
 
   replyginMsgContainer: {
     flex: 1,
     overflowY: "hidden",
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(255, 255, 255, 0.05)"
-        : "rgba(0, 0, 0, 0.04)",
+    backgroundColor: "var(--bg-subtle)",
     borderRadius: 10,
-    borderLeft: "4px solid #10b981",
+    borderLeft: "3.5px solid var(--action)",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -212,8 +204,8 @@ const useStyles = makeStyles((theme) => ({
 
   replyginMsgBody: {
     fontSize: "0.82rem",
-    lineHeight: "1.3",
-    color: theme.palette.type === "dark" ? "#cbd5e1" : "#475569",
+    lineHeight: "1.35",
+    color: "var(--ink-secondary)",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
@@ -223,25 +215,25 @@ const useStyles = makeStyles((theme) => ({
   messageContactName: {
     fontSize: "0.8rem",
     fontWeight: 700,
-    color: "#10b981",
+    color: "var(--action)",
     marginBottom: 2,
   },
 
   switchLabel: {
     fontSize: "0.78rem",
     fontWeight: 600,
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+    color: "var(--ink-secondary)",
   },
 
   customSwitch: {
     "& .MuiSwitch-switchBase.Mui-checked": {
-      color: "#10b981",
+      color: "var(--action)",
       "&:hover": {
-        backgroundColor: "rgba(16, 185, 129, 0.08)",
+        backgroundColor: "var(--action-soft)",
       },
     },
     "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-      backgroundColor: "#10b981",
+      backgroundColor: "var(--action)",
     },
   },
 }));

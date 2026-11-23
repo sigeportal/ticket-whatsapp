@@ -69,8 +69,8 @@ const useStyles = makeStyles(theme => ({
 		padding: theme.spacing(2),
 		overflowY: "auto",
 		borderRadius: 16,
-		backgroundColor: theme.palette.type === "dark" ? "#07130e" : "#f8fafc",
-		border: theme.palette.type === "dark" ? "1px solid rgba(16, 185, 129, 0.18)" : "1px solid rgba(226, 232, 240, 0.9)",
+		backgroundColor: "var(--bg-subtle)",
+		border: "1px solid var(--border-subtle)",
 		...theme.scrollbarStyles,
 	},
 	headerContainer: {
@@ -95,22 +95,25 @@ const useStyles = makeStyles(theme => ({
 		width: 44,
 		height: 44,
 		borderRadius: 12,
-		background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+		backgroundColor: "var(--action-soft)",
+		border: "1px solid var(--action-ring)",
 		display: "flex",
 		alignItems: "center",
 		justifyContent: "center",
-		color: "#ffffff",
-		boxShadow: "0 4px 12px rgba(16, 185, 129, 0.25)",
+		color: "var(--action)",
+		boxShadow: "none",
 	},
 	titleText: {
+		fontFamily: "var(--font-display)",
 		fontWeight: 700,
+		letterSpacing: "-0.02em",
 		fontSize: "1.45rem",
-		color: theme.palette.type === "dark" ? "#f1f5f9" : "#0f172a",
+		color: "var(--ink-primary)",
 		lineHeight: 1.2,
 	},
 	subtitleText: {
 		fontSize: "0.85rem",
-		color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+		color: "var(--ink-secondary)",
 	},
 	headerActions: {
 		display: "flex",
@@ -121,53 +124,56 @@ const useStyles = makeStyles(theme => ({
 	viewToggleGroup: {
 		display: "flex",
 		alignItems: "center",
-		backgroundColor: theme.palette.type === "dark" ? "#1e293b" : "#ffffff",
+		backgroundColor: "var(--bg-surface)",
 		borderRadius: 10,
 		padding: 3,
-		border: theme.palette.type === "dark" ? "1px solid rgba(255, 255, 255, 0.1)" : "1px solid #e2e8f0",
-		boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+		border: "1px solid var(--border-subtle)",
+		boxShadow: "none",
 	},
 	viewToggleBtn: {
 		padding: 6,
 		borderRadius: 8,
-		color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
-		transition: "all 0.2s ease",
+		color: "var(--ink-muted)",
+		transition: "color 150ms ease, background-color 150ms ease",
 		"&:hover": {
-			color: "#10b981",
+			color: "var(--action)",
 		},
 	},
 	viewToggleBtnActive: {
-		backgroundColor: theme.palette.type === "dark" ? "#334155" : "#ecfdf5",
-		color: "#10b981",
-		boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
+		backgroundColor: "var(--action-soft)",
+		color: "var(--action)",
+		boxShadow: "none",
 	},
 	btnRestart: {
 		textTransform: "none",
 		fontWeight: 600,
 		borderRadius: 10,
 		padding: "7px 14px",
-		color: theme.palette.type === "dark" ? "#cbd5e1" : "#475569",
-		backgroundColor: theme.palette.type === "dark" ? "#0d2219" : "#ffffff",
-		border: theme.palette.type === "dark" ? "1px solid rgba(16, 185, 129, 0.2)" : "1px solid #cbd5e1",
-		boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+		color: "var(--ink-secondary)",
+		backgroundColor: "var(--bg-surface)",
+		border: "1px solid var(--border-subtle)",
+		boxShadow: "none",
 		"&:hover": {
-			backgroundColor: theme.palette.type === "dark" ? "#122c21" : "#f1f5f9",
-			borderColor: "#10b981",
+			backgroundColor: "var(--bg-elevated)",
+			borderColor: "var(--action-ring)",
+			color: "var(--ink-primary)",
 		},
 	},
 	btnAdd: {
 		textTransform: "none",
-		fontWeight: 600,
+		fontWeight: 700,
 		borderRadius: 10,
 		padding: "8px 18px",
-		background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-		color: "#ffffff",
-		boxShadow: "0 4px 14px rgba(16, 185, 129, 0.35)",
-		transition: "all 0.2s ease",
+		backgroundColor: "var(--action)",
+		color: "var(--action-ink)",
+		boxShadow: "none",
+		transition: "background-color 150ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 90ms ease",
 		"&:hover": {
-			background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
-			boxShadow: "0 6px 18px rgba(16, 185, 129, 0.45)",
-			transform: "translateY(-1px)",
+			backgroundColor: "var(--action-hover)",
+			boxShadow: "none",
+		},
+		"&:active": {
+			transform: "scale(0.985)",
 		},
 	},
 	statsRow: {
@@ -179,16 +185,17 @@ const useStyles = makeStyles(theme => ({
 		display: "flex",
 		alignItems: "center",
 		gap: theme.spacing(1.5),
-		backgroundColor: theme.palette.type === "dark" ? "#0d2219" : "#ffffff",
-		border: theme.palette.type === "dark" ? "1px solid rgba(16, 185, 129, 0.18)" : "1px solid rgba(226, 232, 240, 0.9)",
-		boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+		backgroundColor: "var(--bg-surface)",
+		border: "1px solid var(--border-subtle)",
+		boxShadow: "none",
 	},
 	statIconCirclePrimary: {
 		width: 38,
 		height: 38,
 		borderRadius: 10,
-		backgroundColor: theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.15)" : "#ecfdf5",
-		color: "#10b981",
+		backgroundColor: "var(--action-soft)",
+		color: "var(--action)",
+		border: "1px solid var(--action-ring)",
 		display: "flex",
 		alignItems: "center",
 		justifyContent: "center",
@@ -197,8 +204,8 @@ const useStyles = makeStyles(theme => ({
 		width: 38,
 		height: 38,
 		borderRadius: 10,
-		backgroundColor: theme.palette.type === "dark" ? "rgba(34, 197, 94, 0.15)" : "#f0fdf4",
-		color: "#22c55e",
+		backgroundColor: "var(--action-soft)",
+		color: "var(--action)",
 		display: "flex",
 		alignItems: "center",
 		justifyContent: "center",
@@ -207,8 +214,8 @@ const useStyles = makeStyles(theme => ({
 		width: 38,
 		height: 38,
 		borderRadius: 10,
-		backgroundColor: theme.palette.type === "dark" ? "rgba(245, 158, 11, 0.15)" : "#fffbeb",
-		color: "#f59e0b",
+		backgroundColor: theme.palette.type === "dark" ? "rgba(245, 158, 11, 0.14)" : "#FFFBEB",
+		color: theme.palette.type === "dark" ? "#FBBF24" : "#D97706",
 		display: "flex",
 		alignItems: "center",
 		justifyContent: "center",
@@ -217,40 +224,43 @@ const useStyles = makeStyles(theme => ({
 		width: 38,
 		height: 38,
 		borderRadius: 10,
-		backgroundColor: theme.palette.type === "dark" ? "rgba(239, 68, 68, 0.15)" : "#fef2f2",
-		color: "#ef4444",
+		backgroundColor: theme.palette.type === "dark" ? "rgba(239, 68, 68, 0.14)" : "#FEF2F2",
+		color: theme.palette.type === "dark" ? "#FCA5A5" : "#DC2626",
 		display: "flex",
 		alignItems: "center",
 		justifyContent: "center",
 	},
 	statLabel: {
-		fontSize: "0.75rem",
-		fontWeight: 500,
-		color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+		fontFamily: "var(--font-mono)",
+		fontSize: "0.7rem",
+		fontWeight: 600,
+		color: "var(--ink-muted)",
 		textTransform: "uppercase",
-		letterSpacing: "0.5px",
+		letterSpacing: "0.06em",
 	},
 	statValue: {
+		fontFamily: "var(--font-display)",
+		fontVariantNumeric: "tabular-nums",
 		fontWeight: 700,
-		fontSize: "1.25rem",
-		color: theme.palette.type === "dark" ? "#f8fafc" : "#0f172a",
+		fontSize: "1.35rem",
+		color: "var(--ink-primary)",
 		lineHeight: 1.2,
 	},
 	connectionCard: {
-		borderRadius: 16,
-		backgroundColor: theme.palette.type === "dark" ? "#0d2219" : "#ffffff",
-		border: theme.palette.type === "dark" ? "1px solid rgba(16, 185, 129, 0.18)" : "1px solid rgba(226, 232, 240, 0.9)",
-		boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+		borderRadius: 14,
+		backgroundColor: "var(--bg-surface)",
+		border: "1px solid var(--border-subtle)",
+		boxShadow: "none",
 		display: "flex",
 		flexDirection: "column",
 		justifyContent: "space-between",
-		transition: "all 0.25s ease-in-out",
+		transition: "transform 150ms cubic-bezier(0.2, 0.8, 0.2, 1), border-color 150ms ease, box-shadow 150ms ease",
 		position: "relative",
 		overflow: "hidden",
 		"&:hover": {
-			transform: "translateY(-3px)",
-			boxShadow: theme.palette.type === "dark" ? "0 12px 28px rgba(0, 0, 0, 0.4)" : "0 12px 28px rgba(0, 0, 0, 0.08)",
-			borderColor: theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.4)" : "#a7f3d0",
+			transform: "translateY(-2px)",
+			boxShadow: "var(--shadow-md)",
+			borderColor: "var(--action-ring)",
 		},
 	},
 	cardHeader: {
@@ -262,13 +272,13 @@ const useStyles = makeStyles(theme => ({
 	channelAvatarWrapper: {
 		width: 48,
 		height: 48,
-		borderRadius: 14,
-		background: "linear-gradient(135deg, #25D366 0%, #128C7E 100%)",
+		borderRadius: 12,
+		backgroundColor: "var(--action)",
 		display: "flex",
 		alignItems: "center",
 		justifyContent: "center",
-		color: "#ffffff",
-		boxShadow: "0 4px 10px rgba(18, 140, 126, 0.25)",
+		color: "var(--action-ink)",
+		boxShadow: "none",
 		flexShrink: 0,
 	},
 	channelMeta: {
@@ -283,9 +293,10 @@ const useStyles = makeStyles(theme => ({
 		flexWrap: "wrap",
 	},
 	channelName: {
+		fontFamily: "var(--font-display)",
 		fontWeight: 700,
 		fontSize: "1rem",
-		color: theme.palette.type === "dark" ? "#f8fafc" : "#0f172a",
+		color: "var(--ink-primary)",
 		whiteSpace: "nowrap",
 		overflow: "hidden",
 		textOverflow: "ellipsis",
@@ -294,9 +305,9 @@ const useStyles = makeStyles(theme => ({
 		height: 20,
 		fontSize: "0.68rem",
 		fontWeight: 700,
-		backgroundColor: theme.palette.type === "dark" ? "rgba(245, 158, 11, 0.2)" : "#fef3c7",
-		color: theme.palette.type === "dark" ? "#fbbf24" : "#b45309",
-		border: "1px solid #fde68a",
+		backgroundColor: theme.palette.type === "dark" ? "rgba(245, 158, 11, 0.16)" : "#FEF3C7",
+		color: theme.palette.type === "dark" ? "#FBBF24" : "#B45309",
+		border: theme.palette.type === "dark" ? "1px solid rgba(251, 191, 36, 0.28)" : "1px solid #FDE68A",
 		"& .MuiChip-icon": {
 			color: "inherit",
 			marginLeft: 4,
@@ -304,8 +315,9 @@ const useStyles = makeStyles(theme => ({
 		},
 	},
 	channelPhone: {
-		fontSize: "0.82rem",
-		color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+		fontFamily: "var(--font-mono)",
+		fontSize: "0.78rem",
+		color: "var(--ink-secondary)",
 		display: "flex",
 		alignItems: "center",
 		gap: 4,
@@ -313,7 +325,7 @@ const useStyles = makeStyles(theme => ({
 	},
 	phoneIcon: {
 		fontSize: 14,
-		color: theme.palette.type === "dark" ? "#64748b" : "#94a3b8",
+		color: "var(--ink-muted)",
 	},
 	cardActionsMenu: {
 		display: "flex",
@@ -511,8 +523,8 @@ const useStyles = makeStyles(theme => ({
 	},
 	cardFooter: {
 		padding: theme.spacing(1.5, 2),
-		backgroundColor: theme.palette.type === "dark" ? "rgba(15, 23, 42, 0.5)" : "#f8fafc",
-		borderTop: theme.palette.type === "dark" ? "1px solid rgba(255, 255, 255, 0.06)" : "1px solid #f1f5f9",
+		backgroundColor: "var(--bg-subtle)",
+		borderTop: "1px solid var(--border-subtle)",
 	},
 	btnQrCodeAction: {
 		width: "100%",
@@ -521,13 +533,16 @@ const useStyles = makeStyles(theme => ({
 		textTransform: "none",
 		borderRadius: 10,
 		padding: "8px 14px",
-		background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-		color: "#ffffff",
-		boxShadow: "0 3px 10px rgba(16, 185, 129, 0.3)",
-		transition: "all 0.2s ease",
+		backgroundColor: "var(--action)",
+		color: "var(--action-ink)",
+		boxShadow: "none",
+		transition: "background-color 150ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 90ms ease",
 		"&:hover": {
-			background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
-			boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)",
+			backgroundColor: "var(--action-hover)",
+			boxShadow: "none",
+		},
+		"&:active": {
+			transform: "scale(0.985)",
 		},
 	},
 	cardActionsGrid: {
@@ -542,11 +557,11 @@ const useStyles = makeStyles(theme => ({
 		fontSize: "0.8rem",
 		borderRadius: 10,
 		padding: "6px 12px",
-		backgroundColor: theme.palette.type === "dark" ? "#1e3a8a" : "#eff6ff",
-		color: theme.palette.type === "dark" ? "#93c5fd" : "#1d4ed8",
-		border: "1px solid #bfdbfe",
+		backgroundColor: theme.palette.type === "dark" ? "rgba(59, 130, 246, 0.14)" : "#EFF6FF",
+		color: theme.palette.type === "dark" ? "#93C5FD" : "#1D4ED8",
+		border: theme.palette.type === "dark" ? "1px solid rgba(147, 197, 253, 0.28)" : "1px solid #BFDBFE",
 		"&:hover": {
-			backgroundColor: theme.palette.type === "dark" ? "#1d4ed8" : "#dbeafe",
+			backgroundColor: theme.palette.type === "dark" ? "rgba(59, 130, 246, 0.22)" : "#DBEAFE",
 		},
 	},
 	btnActionNewQr: {
@@ -556,11 +571,11 @@ const useStyles = makeStyles(theme => ({
 		fontSize: "0.8rem",
 		borderRadius: 10,
 		padding: "6px 12px",
-		backgroundColor: theme.palette.type === "dark" ? "#78350f" : "#fffbeb",
-		color: theme.palette.type === "dark" ? "#fcd34d" : "#b45309",
-		border: "1px solid #fde68a",
+		backgroundColor: theme.palette.type === "dark" ? "rgba(245, 158, 11, 0.14)" : "#FFFBEB",
+		color: theme.palette.type === "dark" ? "#FCD34D" : "#B45309",
+		border: theme.palette.type === "dark" ? "1px solid rgba(252, 211, 77, 0.28)" : "1px solid #FDE68A",
 		"&:hover": {
-			backgroundColor: theme.palette.type === "dark" ? "#92400e" : "#fef3c7",
+			backgroundColor: theme.palette.type === "dark" ? "rgba(245, 158, 11, 0.22)" : "#FEF3C7",
 		},
 	},
 	btnActionSync: {
@@ -570,11 +585,11 @@ const useStyles = makeStyles(theme => ({
 		fontSize: "0.8rem",
 		borderRadius: 10,
 		padding: "6px 12px",
-		backgroundColor: theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.12)" : "#ecfdf5",
-		color: theme.palette.type === "dark" ? "#34d399" : "#059669",
-		border: "1px solid #a7f3d0",
+		backgroundColor: "var(--action-soft)",
+		color: "var(--action)",
+		border: "1px solid var(--action-ring)",
 		"&:hover": {
-			backgroundColor: theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.22)" : "#d1fae5",
+			backgroundColor: "var(--action-ring)",
 		},
 	},
 	btnActionDisconnect: {
@@ -584,11 +599,11 @@ const useStyles = makeStyles(theme => ({
 		fontSize: "0.8rem",
 		borderRadius: 10,
 		padding: "6px 12px",
-		backgroundColor: theme.palette.type === "dark" ? "rgba(239, 68, 68, 0.12)" : "#fef2f2",
-		color: theme.palette.type === "dark" ? "#f87171" : "#dc2626",
-		border: "1px solid #fecaca",
+		backgroundColor: theme.palette.type === "dark" ? "rgba(239, 68, 68, 0.12)" : "#FEF2F2",
+		color: theme.palette.type === "dark" ? "#FCA5A5" : "#DC2626",
+		border: theme.palette.type === "dark" ? "1px solid rgba(248, 113, 113, 0.28)" : "1px solid #FECACA",
 		"&:hover": {
-			backgroundColor: theme.palette.type === "dark" ? "rgba(239, 68, 68, 0.22)" : "#fee2e2",
+			backgroundColor: theme.palette.type === "dark" ? "rgba(239, 68, 68, 0.22)" : "#FEE2E2",
 		},
 	},
 	btnActionConnecting: {
@@ -598,36 +613,37 @@ const useStyles = makeStyles(theme => ({
 		fontSize: "0.8rem",
 		borderRadius: 10,
 		padding: "6px 12px",
-		backgroundColor: theme.palette.type === "dark" ? "#1e293b" : "#f1f5f9",
-		color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+		backgroundColor: "var(--bg-elevated)",
+		color: "var(--ink-secondary)",
 	},
 	tablePaper: {
 		borderRadius: 14,
 		overflow: "hidden",
-		border: theme.palette.type === "dark" ? "1px solid rgba(255, 255, 255, 0.08)" : "1px solid #e2e8f0",
-		backgroundColor: theme.palette.type === "dark" ? "#1e293b" : "#ffffff",
-		boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+		border: "1px solid var(--border-subtle)",
+		backgroundColor: "var(--bg-surface)",
+		boxShadow: "none",
 	},
 	tableHeaderRow: {
-		backgroundColor: theme.palette.type === "dark" ? "#0f172a" : "#f8fafc",
+		backgroundColor: "var(--bg-subtle)",
 		"& th": {
+			fontFamily: "var(--font-mono)",
 			fontWeight: 700,
-			fontSize: "0.8rem",
+			fontSize: "0.72rem",
 			textTransform: "uppercase",
-			letterSpacing: "0.5px",
-			color: theme.palette.type === "dark" ? "#94a3b8" : "#475569",
-			borderBottom: theme.palette.type === "dark" ? "1px solid rgba(255, 255, 255, 0.08)" : "1px solid #e2e8f0",
+			letterSpacing: "0.06em",
+			color: "var(--ink-secondary)",
+			borderBottom: "1px solid var(--border-subtle)",
 			padding: theme.spacing(1.75, 2),
 		},
 	},
 	tableRow: {
-		transition: "background-color 0.15s ease",
+		transition: "background-color 150ms ease",
 		"&:hover": {
-			backgroundColor: theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.03)" : "#f8fafc",
+			backgroundColor: "var(--bg-subtle)",
 		},
 		"& td": {
 			padding: theme.spacing(1.5, 2),
-			borderBottom: theme.palette.type === "dark" ? "1px solid rgba(255, 255, 255, 0.05)" : "1px solid #f1f5f9",
+			borderBottom: "1px solid var(--border-subtle)",
 		},
 	},
 	tableChannelCell: {
@@ -639,16 +655,16 @@ const useStyles = makeStyles(theme => ({
 		width: 38,
 		height: 38,
 		borderRadius: 10,
-		background: "linear-gradient(135deg, #25D366 0%, #128C7E 100%)",
-		color: "#ffffff",
+		backgroundColor: "var(--action)",
+		color: "var(--action-ink)",
 	},
 	emptyStatePaper: {
 		padding: theme.spacing(6, 3),
 		borderRadius: 16,
 		textAlign: "center",
-		backgroundColor: theme.palette.type === "dark" ? "#1e293b" : "#ffffff",
-		border: theme.palette.type === "dark" ? "1px solid rgba(255, 255, 255, 0.08)" : "1px solid #e2e8f0",
-		boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+		backgroundColor: "var(--bg-surface)",
+		border: "1px solid var(--border-subtle)",
+		boxShadow: "none",
 		display: "flex",
 		flexDirection: "column",
 		alignItems: "center",
@@ -658,31 +674,34 @@ const useStyles = makeStyles(theme => ({
 	emptyStateAvatar: {
 		width: 72,
 		height: 72,
-		borderRadius: 24,
-		backgroundColor: theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.15)" : "#ecfdf5",
-		color: "#10b981",
+		borderRadius: 20,
+		backgroundColor: "var(--action-soft)",
+		border: "1px solid var(--action-ring)",
+		color: "var(--action)",
 		marginBottom: theme.spacing(2),
 	},
 	emptyStateIcon: {
 		fontSize: 36,
 	},
 	emptyStateTitle: {
+		fontFamily: "var(--font-display)",
 		fontWeight: 700,
+		letterSpacing: "-0.02em",
 		fontSize: "1.2rem",
-		color: theme.palette.type === "dark" ? "#f8fafc" : "#0f172a",
+		color: "var(--ink-primary)",
 		marginBottom: theme.spacing(1),
 	},
 	emptyStateSubtitle: {
 		fontSize: "0.9rem",
-		color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+		color: "var(--ink-secondary)",
 		marginBottom: theme.spacing(3),
 		maxWidth: 380,
 	},
 	skeletonCard: {
 		padding: theme.spacing(2.5),
 		borderRadius: 16,
-		backgroundColor: theme.palette.type === "dark" ? "#1e293b" : "#ffffff",
-		border: theme.palette.type === "dark" ? "1px solid rgba(255, 255, 255, 0.08)" : "1px solid #e2e8f0",
+		backgroundColor: "var(--bg-surface)",
+		border: "1px solid var(--border-subtle)",
 	},
 }));
 
@@ -715,7 +734,7 @@ const Connections = () => {
 		const total = whatsApps?.length || 0;
 		const connected = whatsApps?.filter(w => w.status === "CONNECTED").length || 0;
 		const qrcode = whatsApps?.filter(w => w.status === "qrcode").length || 0;
-		const disconnected = whatsApps?.filter(w => w.status === "DISCONNECTED" || w.status === "TIMEOUT").length || 0;
+		const disconnected = whatsApps?.filter(w => ["DISCONNECTED", "TIMEOUT", "RECONNECT_PAUSED"].includes(w.status)).length || 0;
 		return { total, connected, qrcode, disconnected };
 	}, [whatsApps]);
 
@@ -856,26 +875,30 @@ const Connections = () => {
 						</span>
 					</Tooltip>
 				);
+			case "RECONNECT_PAUSED":
 			case "DISCONNECTED":
 				return (
 					<Tooltip
 						title={
-							i18n.t("connections.toolTips.disconnected.title") ||
+							status === "RECONNECT_PAUSED"
+								? "Limite de tentativas atingido. Você pode reconectar manualmente."
+								: i18n.t("connections.toolTips.disconnected.title") ||
 							"Sessão desconectada. Clique para reconectar."
 						}
 					>
 						<span className={`${classes.statusBadge} ${classes.statusDisconnected}`}>
 							<span className={`${classes.statusDot} ${classes.dotRed}`} />
-							Desconectado
+							{status === "RECONNECT_PAUSED" ? "Reconexão automática pausada" : "Desconectado"}
 						</span>
 					</Tooltip>
 				);
+			case "RECONNECTING":
 			case "OPENING":
 				return (
-					<Tooltip title="Iniciando e autenticando sessão...">
+					<Tooltip title={status === "RECONNECTING" ? "Tentando recuperar a sessão automaticamente" : "Iniciando e autenticando sessão..."}>
 						<span className={`${classes.statusBadge} ${classes.statusOpening}`}>
 							<CircularProgress size={12} className={classes.statusSpinner} />
-							Conectando...
+							{status === "RECONNECTING" ? "Reconectando..." : "Conectando..."}
 						</span>
 					</Tooltip>
 				);
@@ -975,7 +998,7 @@ const Connections = () => {
 							</Button>
 						)}
 
-						{whatsApp.status === "DISCONNECTED" && (
+						{["DISCONNECTED", "RECONNECT_PAUSED"].includes(whatsApp.status) && (
 							<div className={classes.cardActionsGrid}>
 								<Button
 									size="small"
@@ -998,9 +1021,9 @@ const Connections = () => {
 							</div>
 						)}
 
-						{whatsApp.status === "CONNECTED" && (
+						{["CONNECTED", "RECONNECTING"].includes(whatsApp.status) && (
 							<div className={classes.cardActionsGrid}>
-								<Button
+								{whatsApp.status === "CONNECTED" && <Button
 									size="small"
 									variant="outlined"
 									className={classes.btnActionSync}
@@ -1008,7 +1031,7 @@ const Connections = () => {
 									onClick={() => handleSyncTickets(whatsApp.id)}
 								>
 									Sincronizar
-								</Button>
+								</Button>}
 								<Button
 									size="small"
 									variant="outlined"

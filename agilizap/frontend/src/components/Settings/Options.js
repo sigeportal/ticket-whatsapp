@@ -33,17 +33,16 @@ const useStyles = makeStyles((theme) => ({
     height: 240,
   },
   tab: {
-    backgroundColor: theme.palette.options,  //DARK MODE Multiconversa//
-    borderRadius: 4,
+    backgroundColor: "var(--bg-subtle)",
+    borderRadius: 10,
     width: "100%",
     "& .MuiTab-wrapper": {
-      color: theme.palette.fontecor,
-    },   //DARK MODE Multiconversa//
+      color: "var(--action)",
+      fontWeight: 600,
+    },
     "& .MuiTabs-flexContainer": {
       justifyContent: "center"
     }
-
-
   },
   paper: {
     padding: theme.spacing(2),
@@ -54,17 +53,17 @@ const useStyles = makeStyles((theme) => ({
   },
   cardAvatar: {
     fontSize: "55px",
-    color: grey[500],
-    backgroundColor: "#ffffff",
+    color: "var(--ink-muted)",
+    backgroundColor: "var(--bg-surface)",
     width: theme.spacing(7),
     height: theme.spacing(7),
   },
   cardTitle: {
     fontSize: "18px",
-    color: blue[700],
+    color: "var(--ink-primary)",
   },
   cardSubtitle: {
-    color: grey[600],
+    color: "var(--ink-secondary)",
     fontSize: "14px",
   },
   alignRight: {

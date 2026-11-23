@@ -30,29 +30,23 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: 16,
     maxWidth: 460,
     width: "100%",
-    backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.2)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
-    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.35)",
+    backgroundColor: "var(--bg-surface)",
+    border: "1px solid var(--border-subtle)",
+    boxShadow: "var(--shadow-lg)",
   },
   dialogTitle: {
     padding: "18px 24px 14px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    borderBottom: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.15)"
-        : "#f1f5f9"
-    }`,
+    borderBottom: "1px solid var(--border-subtle)",
   },
   titleText: {
-    fontSize: "1.125rem",
-    fontWeight: 800,
-    color: theme.palette.type === "dark" ? "#f0fdf4" : "#0f172a",
+    fontFamily: "var(--font-display)",
+    fontSize: "1.1rem",
+    fontWeight: 700,
+    letterSpacing: "-0.02em",
+    color: "var(--ink-primary)",
     display: "flex",
     alignItems: "center",
     gap: 8,
@@ -62,11 +56,8 @@ const useStyles = makeStyles((theme) => ({
   },
   dialogActions: {
     padding: "14px 24px 18px",
-    borderTop: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.15)"
-        : "#f1f5f9"
-    }`,
+    borderTop: "1px solid var(--border-subtle)",
+    backgroundColor: "var(--bg-subtle)",
     gap: 10,
   },
   btnCancel: {
@@ -74,10 +65,11 @@ const useStyles = makeStyles((theme) => ({
     padding: "7px 18px",
     fontWeight: 600,
     fontSize: "0.84rem",
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
-    borderColor: theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.15)" : "rgba(226, 232, 240, 0.9)",
+    color: "var(--ink-secondary)",
+    borderColor: "var(--border-strong)",
     "&:hover": {
-      backgroundColor: theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.06)" : "#f8fafc",
+      backgroundColor: "var(--bg-subtle)",
+      color: "var(--ink-primary)",
     },
   },
   btnSave: {
@@ -85,23 +77,28 @@ const useStyles = makeStyles((theme) => ({
     padding: "7px 22px",
     fontWeight: 700,
     fontSize: "0.84rem",
-    background: "linear-gradient(135deg, #10b981 0%, #0d9488 100%) !important",
-    color: "#ffffff !important",
-    boxShadow: "0 2px 8px rgba(16, 185, 129, 0.25)",
+    backgroundColor: "var(--action) !important",
+    color: "var(--action-ink) !important",
+    boxShadow: "none",
+    transition: "background-color 150ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 90ms ease",
     "&:hover": {
-      background: "linear-gradient(135deg, #059669 0%, #047857 100%) !important",
-      boxShadow: "0 4px 12px rgba(16, 185, 129, 0.4)",
+      backgroundColor: "var(--action-hover) !important",
+      boxShadow: "none",
+    },
+    "&:active": {
+      transform: "scale(0.985)",
     },
     "&.Mui-disabled": {
-      backgroundColor: "rgba(148, 163, 184, 0.2) !important",
-      color: "#94a3b8 !important",
+      backgroundColor: "var(--bg-elevated) !important",
+      color: "var(--ink-muted) !important",
       boxShadow: "none",
     },
   },
   online: {
+    fontFamily: "var(--font-mono)",
     fontSize: 11,
     fontWeight: 700,
-    color: "#10b981",
+    color: "var(--action)",
   },
   offline: {
     fontSize: 11,

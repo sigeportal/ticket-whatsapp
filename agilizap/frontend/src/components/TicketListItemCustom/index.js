@@ -31,36 +31,21 @@ const useStyles = makeStyles((theme) => ({
     position: "relative",
     display: "flex",
     alignItems: "flex-start",
-    padding: "10px 12px",
+    padding: "10px 12px 10px 14px",
     margin: "4px 8px",
-    borderRadius: 12,
-    border: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.18)"
-        : "rgba(226, 232, 240, 0.85)"
-    }`,
-    backgroundColor: theme.palette.type === "dark" ? "#0d2219" : "#ffffff",
-    transition: "all 0.2s ease-in-out",
+    borderRadius: 11,
+    border: "1px solid var(--border-hairline)",
+    backgroundColor: "var(--bg-surface)",
+    transition: "background-color var(--t-in) var(--ease-ui), border-color var(--t-in) var(--ease-ui)",
     cursor: "pointer",
-    boxShadow:
-      theme.palette.type === "dark"
-        ? "0 2px 6px rgba(0,0,0,0.35)"
-        : "0 1px 3px rgba(0,0,0,0.04)",
+    boxShadow: "none",
     "&:hover": {
-      backgroundColor:
-        theme.palette.type === "dark"
-          ? "rgba(37, 211, 102, 0.08)"
-          : "rgba(16, 185, 129, 0.05)",
-      borderColor: theme.palette.type === "dark" ? "rgba(37, 211, 102, 0.4)" : "rgba(16, 185, 129, 0.35)",
-      boxShadow: "0 4px 12px rgba(16, 185, 129, 0.12)",
+      backgroundColor: "var(--action-soft)",
+      borderColor: "var(--border-strong)",
     },
     "&$selectedTicket": {
-      backgroundColor:
-        theme.palette.type === "dark"
-          ? "rgba(37, 211, 102, 0.15)"
-          : "rgba(16, 185, 129, 0.1)",
-      borderColor: theme.palette.type === "dark" ? "#25d366" : "#10b981",
-      boxShadow: "0 4px 14px rgba(16, 185, 129, 0.2)",
+      backgroundColor: "var(--action-soft-hover)",
+      borderColor: "var(--action)",
     },
   },
 
@@ -86,12 +71,12 @@ const useStyles = makeStyles((theme) => ({
   },
 
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 11,
+    fontFamily: "var(--font-display)",
     fontWeight: 700,
-    fontSize: "0.95rem",
-    boxShadow: "0 2px 5px rgba(0,0,0,0.12)",
+    fontSize: "0.9rem",
   },
 
   contentWrapper: {
@@ -110,9 +95,10 @@ const useStyles = makeStyles((theme) => ({
   },
 
   contactName: {
+    fontFamily: "var(--font-display)",
     fontWeight: 600,
     fontSize: "0.88rem",
-    color: theme.palette.type === "dark" ? "#f1f5f9" : "#1e293b",
+    color: "var(--ink-primary)",
     display: "flex",
     alignItems: "center",
     overflow: "hidden",
@@ -121,8 +107,9 @@ const useStyles = makeStyles((theme) => ({
   },
 
   lastMessageTime: {
-    fontSize: "0.72rem",
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#94a3b8",
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.7rem",
+    color: "var(--ink-muted)",
     fontWeight: 500,
     whiteSpace: "nowrap",
     marginLeft: 6,
@@ -138,7 +125,7 @@ const useStyles = makeStyles((theme) => ({
 
   lastMessageText: {
     fontSize: "0.8rem",
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+    color: "var(--ink-secondary)",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
@@ -153,25 +140,25 @@ const useStyles = makeStyles((theme) => ({
   },
 
   presence: {
-    color: "#10b981",
+    color: "var(--action)",
     fontWeight: 600,
     fontSize: "0.8rem",
     fontStyle: "italic",
   },
 
   unreadBadge: {
-    backgroundColor: "#10b981",
-    color: "#ffffff",
-    borderRadius: 10,
+    backgroundColor: "var(--action)",
+    color: "var(--action-ink)",
+    fontFamily: "var(--font-mono)",
+    borderRadius: 6,
     padding: "1px 6px",
-    fontSize: "0.7rem",
+    fontSize: "0.68rem",
     fontWeight: 700,
     minWidth: 18,
     height: 18,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0 1px 4px rgba(16, 185, 129, 0.4)",
     flexShrink: 0,
   },
 
@@ -184,7 +171,7 @@ const useStyles = makeStyles((theme) => ({
   },
 
   queueChip: {
-    fontSize: "0.68rem",
+    fontSize: "0.66rem",
     fontWeight: 600,
     borderRadius: 6,
     padding: "1px 7px",
@@ -194,28 +181,22 @@ const useStyles = makeStyles((theme) => ({
   },
 
   whatsappChip: {
-    fontSize: "0.68rem",
+    fontSize: "0.66rem",
     fontWeight: 600,
     borderRadius: 6,
     padding: "1px 7px",
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.15)"
-        : "rgba(16, 185, 129, 0.12)",
-    color: "#10b981",
+    backgroundColor: "var(--action-soft)",
+    color: "var(--action)",
     whiteSpace: "nowrap",
   },
 
   userChip: {
-    fontSize: "0.68rem",
+    fontSize: "0.66rem",
     fontWeight: 600,
     borderRadius: 6,
     padding: "1px 7px",
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(148, 163, 184, 0.15)"
-        : "#f1f5f9",
-    color: theme.palette.type === "dark" ? "#cbd5e1" : "#475569",
+    backgroundColor: "var(--bg-subtle)",
+    color: "var(--ink-secondary)",
     whiteSpace: "nowrap",
   },
 
@@ -228,64 +209,64 @@ const useStyles = makeStyles((theme) => ({
   },
 
   actionButtonAccept: {
-    backgroundColor: "#10b981",
-    color: "#ffffff",
+    backgroundColor: "var(--action)",
+    color: "var(--action-ink)",
     padding: "3px 12px",
     borderRadius: 8,
     fontSize: "0.72rem",
     fontWeight: 700,
     textTransform: "none",
-    boxShadow: "0 2px 6px rgba(16, 185, 129, 0.3)",
     "&:hover": {
-      backgroundColor: "#059669",
+      backgroundColor: "var(--action-hover)",
     },
   },
 
   actionButtonClose: {
-    backgroundColor: theme.palette.type === "dark" ? "rgba(239, 68, 68, 0.15)" : "#fef2f2",
-    color: theme.palette.type === "dark" ? "#f87171" : "#dc2626",
-    border: `1px solid ${theme.palette.type === "dark" ? "rgba(239, 68, 68, 0.3)" : "#fecaca"}`,
+    backgroundColor: "var(--status-danger-bg)",
+    color: "var(--status-danger)",
+    border: "1px solid rgba(225, 29, 72, 0.25)",
     padding: "3px 12px",
     borderRadius: 8,
     fontSize: "0.72rem",
     fontWeight: 700,
     textTransform: "none",
     "&:hover": {
-      backgroundColor: "#ef4444",
+      backgroundColor: "var(--status-danger)",
       color: "#ffffff",
     },
   },
 
   actionButtonTransfer: {
-    backgroundColor: theme.palette.type === "dark" ? "rgba(148, 163, 184, 0.15)" : "#f1f5f9",
-    color: theme.palette.type === "dark" ? "#cbd5e1" : "#475569",
-    border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "#e2e8f0"}`,
+    backgroundColor: "var(--bg-subtle)",
+    color: "var(--ink-secondary)",
+    border: "1px solid var(--border-hairline)",
     padding: "3px 12px",
     borderRadius: 8,
     fontSize: "0.72rem",
     fontWeight: 600,
     textTransform: "none",
     "&:hover": {
-      backgroundColor: theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "#e2e8f0",
+      borderColor: "var(--border-strong)",
+      color: "var(--ink-primary)",
     },
   },
 
   actionButtonReopen: {
-    background: "linear-gradient(135deg, #10b981 0%, #0d9488 100%)",
-    color: "#ffffff",
+    backgroundColor: "var(--action)",
+    color: "var(--action-ink)",
     padding: "3px 14px",
     borderRadius: 8,
     fontSize: "0.72rem",
     fontWeight: 700,
     textTransform: "none",
-    boxShadow: "0 2px 6px rgba(16, 185, 129, 0.3)",
     "&:hover": {
-      background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+      backgroundColor: "var(--action-hover)",
     },
   },
 
   lastInteractionBadge: {
-    fontSize: "0.68rem",
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.66rem",
     fontWeight: 600,
     marginLeft: 6,
   },

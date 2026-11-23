@@ -3,8 +3,9 @@ import { makeStyles } from "@material-ui/core/styles";
 
 import Paper from "@material-ui/core/Paper";
 import Button from "@material-ui/core/Button";
-import Grid from '@material-ui/core/Grid';
-import TextField from '@material-ui/core/TextField';
+import Grid from "@material-ui/core/Grid";
+import TextField from "@material-ui/core/TextField";
+import Typography from "@material-ui/core/Typography";
 
 import SubscriptionModal from "../../components/SubscriptionModal";
 import MainHeader from "../../components/MainHeader";
@@ -16,9 +17,33 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(1),
-    overflowY: "scroll",
-    ...theme.scrollbarStyles,
+    padding: theme.spacing(3),
+    borderRadius: 14,
+    border: "1px solid var(--border-hairline)",
+    backgroundColor: "var(--bg-surface)",
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(2),
+    boxShadow: "none",
+  },
+  eyebrow: {
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.7rem",
+    fontWeight: 600,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    color: "var(--action)",
+  },
+  cardHeading: {
+    fontFamily: "var(--font-display)",
+    fontWeight: 700,
+    fontSize: "1.1rem",
+    color: "var(--ink-primary)",
+  },
+  ctaButton: {
+    marginTop: theme.spacing(1),
+    height: 44,
+    fontWeight: 700,
   },
 }));
 
@@ -27,20 +52,15 @@ const _formatDate = (date) => {
   const past = new Date(date);
   const diff = Math.abs(now.getTime() - past.getTime());
   const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-
   return days;
-}
+};
 
-const Contacts = () => {
+const Subscription = () => {
   const classes = useStyles();
   const { user } = useContext(AuthContext);
 
-  const [loading,] = useState(false);
-  const [, setPageNumber] = useState(1);
   const [selectedContactId, setSelectedContactId] = useState(null);
   const [contactModalOpen, setContactModalOpen] = useState(false);
-  const [hasMore,] = useState(false);
-
 
   const handleOpenContactModal = () => {
     setSelectedContactId(null);
@@ -52,88 +72,65 @@ const Contacts = () => {
     setContactModalOpen(false);
   };
 
-  const loadMore = () => {
-    setPageNumber((prevState) => prevState + 1);
-  };
-
-  const handleScroll = (e) => {
-    if (!hasMore || loading) return;
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    if (scrollHeight - (scrollTop + 100) < clientHeight) {
-      loadMore();
-    }
-  };
-
   return (
-    <MainContainer className={classes.mainContainer}>
+    <MainContainer>
       <SubscriptionModal
         open={contactModalOpen}
         onClose={handleCloseContactModal}
         aria-labelledby="form-dialog-title"
         contactId={selectedContactId}
-      ></SubscriptionModal>
+      />
 
       <MainHeader>
         <Title>Assinatura</Title>
       </MainHeader>
-      <Grid item xs={12} sm={4}>
-        <Paper
-          className={classes.mainPaper}
-          variant="outlined"
-          onScroll={handleScroll}
-        >
 
-          <div>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={6} lg={5}>
+          <Paper className={classes.mainPaper} elevation={0}>
+            <div>
+              <span className={classes.eyebrow}>Status da licença</span>
+              <Typography className={classes.cardHeading}>
+                Dados da assinatura da empresa
+              </Typography>
+            </div>
+
             <TextField
-              id="outlined-full-width"
+              id="trial-period"
               label="Período de teste"
-              defaultValue={`Seu período de teste termina em ${_formatDate(user?.company?.trialExpiration)} dias!`}
+              defaultValue={`Seu período de teste termina em ${_formatDate(
+                user?.company?.trialExpiration
+              )} dias!`}
               fullWidth
-              margin="normal"
-              InputLabelProps={{
-                shrink: true,
-              }}
-              InputProps={{
-                readOnly: true,
-              }}
+              InputLabelProps={{ shrink: true }}
+              InputProps={{ readOnly: true }}
               variant="outlined"
             />
 
-          </div>
-
-          <div>
             <TextField
-              id="outlined-full-width"
-              label="Email de cobrança"
-              defaultValue={user?.company?.email}
+              id="billing-email"
+              label="E-mail de cobrança"
+              defaultValue={user?.company?.email || ""}
               fullWidth
-              margin="normal"
-              InputLabelProps={{
-                shrink: true,
-              }}
-              InputProps={{
-                readOnly: true,
-              }}
+              InputLabelProps={{ shrink: true }}
+              InputProps={{ readOnly: true }}
               variant="outlined"
             />
 
-          </div>
-
-          <div>
             <Button
               variant="contained"
               color="primary"
               onClick={handleOpenContactModal}
               fullWidth
+              className={classes.ctaButton}
             >
-              Assine Agora!
+              Gerenciar assinatura
             </Button>
-          </div>
-
-        </Paper>
+          </Paper>
+        </Grid>
       </Grid>
     </MainContainer>
   );
 };
 
-export default Contacts;
+export default Subscription;

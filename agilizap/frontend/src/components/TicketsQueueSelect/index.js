@@ -14,44 +14,32 @@ const useStyles = makeStyles((theme) => ({
 		borderRadius: 10,
 		fontSize: "0.8125rem",
 		fontWeight: 600,
-		backgroundColor:
-			theme.palette.type === "dark"
-				? "rgba(255, 255, 255, 0.05)"
-				: "rgba(0, 0, 0, 0.03)",
-		color: theme.palette.type === "dark" ? "#f0fdf4" : "#1e293b",
+		backgroundColor: "var(--field-bg)",
+		color: "var(--ink-primary)",
 		"& .MuiOutlinedInput-notchedOutline": {
-			borderColor:
-				theme.palette.type === "dark"
-					? "rgba(16, 185, 129, 0.2)"
-					: "rgba(226, 232, 240, 0.9)",
+			borderColor: "var(--border-subtle)",
 			borderRadius: 10,
 		},
 		"&:hover .MuiOutlinedInput-notchedOutline": {
-			borderColor: "#10b981",
+			borderColor: "var(--action)",
 		},
 		"&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-			borderColor: "#10b981",
+			borderColor: "var(--action)",
 			borderWidth: "1.5px",
 		},
 		"& .MuiSelect-select": {
 			padding: "7px 12px",
 		},
 		"& .MuiSelect-icon": {
-			color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+			color: "var(--ink-muted)",
 		},
 	},
 	menuPaper: {
 		borderRadius: 12,
 		marginTop: 4,
-		backgroundColor: theme.palette.type === "dark" ? "#0b1e16" : "#ffffff",
-		border:
-			theme.palette.type === "dark"
-				? "1px solid rgba(16, 185, 129, 0.2)"
-				: "1px solid rgba(226, 232, 240, 0.9)",
-		boxShadow:
-			theme.palette.type === "dark"
-				? "0 10px 25px -5px rgba(0, 0, 0, 0.5)"
-				: "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
+		backgroundColor: "var(--bg-surface)",
+		border: "1px solid var(--border-subtle)",
+		boxShadow: "var(--shadow-popover)",
 	},
 }));
 

@@ -27,26 +27,25 @@ const useStyles = makeStyles(theme => ({
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
-    boxShadow: "0 20px 40px -15px rgba(0,0,0,0.3)",
-    border: theme.palette.type === "dark" 
-      ? "1px solid rgba(16, 185, 129, 0.2)" 
-      : "1px solid rgba(16, 185, 129, 0.15)",
+    backgroundColor: "var(--bg-surface)",
+    boxShadow: "var(--shadow-lg)",
+    border: "1px solid var(--border-subtle)",
   },
   dialogTitle: {
     flexShrink: 0,
-    background: theme.palette.type === "dark" 
-      ? "linear-gradient(135deg, #07130E 0%, #0D2219 100%)" 
-      : "linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 100%)",
-    borderBottom: "1px solid rgba(16, 185, 129, 0.15)",
+    backgroundColor: "var(--bg-subtle)",
+    borderBottom: "1px solid var(--border-subtle)",
     padding: "18px 24px",
     "& h2": {
       display: "flex",
       alignItems: "center",
       gap: 10,
-      fontSize: "1.15rem",
+      fontFamily: "var(--font-display)",
+      fontSize: "1.1rem",
       fontWeight: 700,
-      color: theme.palette.type === "dark" ? "#F0FDF4" : "#064E3B",
-    }
+      letterSpacing: "-0.02em",
+      color: "var(--ink-primary)",
+    },
   },
   formWrapper: {
     display: "flex",
@@ -68,10 +67,8 @@ const useStyles = makeStyles(theme => ({
   },
   dialogActions: {
     padding: "16px 24px",
-    borderTop: theme.palette.type === "dark" 
-      ? "1px solid rgba(255, 255, 255, 0.08)" 
-      : "1px solid rgba(0, 0, 0, 0.08)",
-    background: theme.palette.type === "dark" ? "#07130E" : "#FAFDFB",
+    borderTop: "1px solid var(--border-subtle)",
+    backgroundColor: "var(--bg-subtle)",
     flexShrink: 0,
   },
   multFieldLine: {
@@ -86,27 +83,31 @@ const useStyles = makeStyles(theme => ({
   providerCard: {
     padding: "12px 16px",
     borderRadius: 12,
-    border: "1px solid rgba(16, 185, 129, 0.25)",
-    background: theme.palette.type === "dark" ? "rgba(16, 185, 129, 0.05)" : "#F0FDF4",
+    border: "1px solid var(--action-ring)",
+    backgroundColor: "var(--action-soft)",
     marginBottom: 8,
   },
   btnSave: {
-    background: "linear-gradient(135deg, #10B981 0%, #0D9488 100%) !important",
-    color: "#FFFFFF !important",
-    borderRadius: 9,
-    fontWeight: 600,
+    backgroundColor: "var(--action) !important",
+    color: "var(--action-ink) !important",
+    borderRadius: 10,
+    fontWeight: 700,
     textTransform: "none",
     padding: "8px 20px",
-    boxShadow: "0 4px 12px rgba(16, 185, 129, 0.25)",
+    boxShadow: "none",
+    transition: "background-color 150ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 90ms ease",
     "&:hover": {
-      background: "linear-gradient(135deg, #059669 0%, #0F766E 100%) !important",
-    }
+      backgroundColor: "var(--action-hover) !important",
+    },
+    "&:active": {
+      transform: "scale(0.985)",
+    },
   },
   btnCancel: {
-    borderRadius: 9,
+    borderRadius: 10,
     textTransform: "none",
     fontWeight: 600,
-    color: theme.palette.type === "dark" ? "#94A3B8" : "#64748B",
+    color: "var(--ink-secondary)",
   },
   buttonProgress: {
     color: "#FFFFFF",

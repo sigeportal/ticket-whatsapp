@@ -1,0 +1,549 @@
+/* ==========================================================================
+   PORTAI DESIGN SYSTEM — "SIGNAL & PRECISION"
+   Paleta derivada diretamente do símbolo oficial PortAI:
+     • Signal Green   : #25D366
+     • Emerald Core   : #10B981
+     • Deep Emerald   : #059669 / #047857
+     • Mint Spark     : #4ADE80
+     • Teal Accent    : #0D9488
+     • Obsidian Base  : #07130E
+   Superfícies 90–95% neutras, traço arquitetônico de 1px e hierarquia em 3 fontes:
+     • Display / KPIs : Sora
+     • Interface / UI : Instrument Sans
+     • Dados / IDs    : JetBrains Mono
+   ========================================================================== */
+
+:root {
+  /* Tipografia */
+  --font-display: 'Sora', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Instrument Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* Superfícies Light ("Porcelain & Graphite") */
+  --bg-canvas: #f5f7f5;
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-subtle: #edf1ee;
+  --bg-chat-canvas: #eef2ee;
+
+  /* Campos e Formulários */
+  --field-bg: #f8faf8;
+  --field-hover: #ffffff;
+  --field-focus: #ffffff;
+  --field-border: rgba(10, 21, 16, 0.14);
+  --field-border-hover: rgba(5, 150, 105, 0.45);
+
+  /* Tintas e Hierarquia de Texto */
+  --ink-primary: #0a1510;
+  --ink-secondary: #41524a;
+  --ink-muted: #65786f;
+
+  /* Bordas e Divisores */
+  --border-hairline: rgba(10, 21, 16, 0.09);
+  --border-subtle: rgba(10, 21, 16, 0.09);
+  --border-strong: rgba(5, 150, 105, 0.28);
+  --action-ring: rgba(5, 150, 105, 0.28);
+
+  /* Ação e Marca (Logo PortAI) */
+  --brand-signal: #25d366;
+  --brand-emerald: #10b981;
+  --brand-deep: #059669;
+  --brand-forest: #047857;
+  --brand-teal: #0d9488;
+  --brand-mint: #4ade80;
+  --brand-obsidian: #07130e;
+
+  --action: #059669;
+  --action-hover: #047857;
+  --action-ink: #ffffff;
+  --action-soft: rgba(16, 185, 129, 0.1);
+  --action-soft-hover: rgba(16, 185, 129, 0.16);
+  --focus-ring: rgba(5, 150, 105, 0.18);
+
+  /* Semântica (sem violeta) */
+  --status-success: #059669;
+  --status-success-bg: rgba(16, 185, 129, 0.1);
+  --status-warning: #d97706;
+  --status-warning-bg: rgba(245, 158, 11, 0.11);
+  --status-danger: #e11d48;
+  --status-danger-bg: rgba(225, 29, 72, 0.09);
+  --status-info: #0284c7;
+  --status-info-bg: rgba(2, 132, 199, 0.1);
+
+  /* Bolhas de Mensagem (WhatsApp Nativo Refinado) */
+  --bubble-in-bg: #ffffff;
+  --bubble-in-ink: #0a1510;
+  --bubble-in-border: rgba(10, 21, 16, 0.08);
+  --bubble-out-bg: #dcfce7;
+  --bubble-out-ink: #052e16;
+  --bubble-out-border: rgba(5, 150, 105, 0.18);
+  --bubble-quote-bg: rgba(10, 21, 16, 0.045);
+
+  /* Raios (Escala Única) */
+  --r-badge: 6px;
+  --r-control: 10px;
+  --r-card: 14px;
+  --r-dialog: 18px;
+
+  /* Movimento */
+  --ease-ui: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-enter: cubic-bezier(0.22, 1, 0.36, 1);
+  --t-in: 150ms;
+  --t-out: 120ms;
+  --t-press: 90ms;
+
+  /* Elevação Minimalista */
+  --shadow-subtle: 0 1px 2px rgba(7, 19, 14, 0.04);
+  --shadow-card: 0 1px 3px rgba(7, 19, 14, 0.05), 0 1px 2px rgba(7, 19, 14, 0.03);
+  --shadow-popover: 0 12px 32px -8px rgba(7, 19, 14, 0.14), 0 2px 6px rgba(7, 19, 14, 0.05);
+  --shadow-md: 0 12px 32px -8px rgba(7, 19, 14, 0.14), 0 2px 6px rgba(7, 19, 14, 0.05);
+  --shadow-dialog: 0 24px 48px -12px rgba(7, 19, 14, 0.22);
+  --shadow-lg: 0 24px 48px -12px rgba(7, 19, 14, 0.22);
+}
+
+html.dark,
+body.dark,
+[data-theme="dark"] {
+  /* Superfícies Dark ("Obsidian Forest & Carbon") */
+  --bg-canvas: #070d0a;
+  --bg-surface: #0c1511;
+  --bg-elevated: #122019;
+  --bg-subtle: #09110d;
+  --bg-chat-canvas: #08100c;
+
+  /* Campos e Formulários */
+  --field-bg: #09120e;
+  --field-hover: #0e1a14;
+  --field-focus: #101e17;
+  --field-border: rgba(237, 245, 240, 0.12);
+  --field-border-hover: rgba(37, 211, 102, 0.45);
+
+  /* Tintas e Hierarquia de Texto */
+  --ink-primary: #ecf5f0;
+  --ink-secondary: #9db2a7;
+  --ink-muted: #6f8479;
+
+  /* Bordas e Divisores */
+  --border-hairline: rgba(237, 245, 240, 0.09);
+  --border-subtle: rgba(237, 245, 240, 0.09);
+  --border-strong: rgba(37, 211, 102, 0.26);
+  --action-ring: rgba(37, 211, 102, 0.26);
+
+  /* Ação */
+  --action: #25d366;
+  --action-hover: #1fc45b;
+  --action-ink: #05130b;
+  --action-soft: rgba(37, 211, 102, 0.12);
+  --action-soft-hover: rgba(37, 211, 102, 0.2);
+  --focus-ring: rgba(37, 211, 102, 0.22);
+
+  /* Semântica */
+  --status-success: #34d399;
+  --status-success-bg: rgba(16, 185, 129, 0.14);
+  --status-warning: #fbbf24;
+  --status-warning-bg: rgba(245, 158, 11, 0.14);
+  --status-danger: #fb7185;
+  --status-danger-bg: rgba(244, 63, 94, 0.14);
+  --status-info: #38bdf8;
+  --status-info-bg: rgba(56, 189, 248, 0.14);
+
+  /* Bolhas de Mensagem Dark */
+  --bubble-in-bg: #111d17;
+  --bubble-in-ink: #ecf5f0;
+  --bubble-in-border: rgba(237, 245, 240, 0.08);
+  --bubble-out-bg: #0c3521;
+  --bubble-out-ink: #ecfdf5;
+  --bubble-out-border: rgba(37, 211, 102, 0.22);
+  --bubble-quote-bg: rgba(255, 255, 255, 0.05);
+
+  --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-popover: 0 16px 36px -8px rgba(0, 0, 0, 0.65);
+  --shadow-md: 0 16px 36px -8px rgba(0, 0, 0, 0.65);
+  --shadow-dialog: 0 28px 56px -12px rgba(0, 0, 0, 0.78);
+  --shadow-lg: 0 28px 56px -12px rgba(0, 0, 0, 0.78);
+}
+
+/* Base Reset & Typographic Precision */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-canvas);
+  color: var(--ink-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4,
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
+}
+
+code, pre, kbd, samp,
+.font-mono,
+.tabular-data {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Utilitário de Fundo Técnico (Dot Matrix Discreto) */
+.bg-dot-matrix {
+  background-image: radial-gradient(rgba(16, 185, 129, 0.16) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+html.dark .bg-dot-matrix,
+[data-theme="dark"] .bg-dot-matrix {
+  background-image: radial-gradient(rgba(37, 211, 102, 0.14) 1px, transparent 1px);
+}
+
+/* Scrollbars Refinados */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(101, 120, 111, 0.28);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(16, 185, 129, 0.5);
+}
+
+/* ==========================================================================
+   SISTEMA GLOBAL DE CAMPOS E BOTÕES (MUI v4 + MUI v5 + HTML Inputs)
+   ========================================================================== */
+.MuiInputBase-root,
+.MuiOutlinedInput-root,
+.MuiSelect-root {
+  font-family: var(--font-sans) !important;
+  color: var(--ink-primary);
+}
+
+.MuiOutlinedInput-root {
+  border-radius: var(--r-control) !important;
+  background-color: var(--field-bg);
+  transition: background-color var(--t-in) var(--ease-ui),
+    border-color var(--t-in) var(--ease-ui),
+    box-shadow var(--t-in) var(--ease-ui) !important;
+}
+
+.MuiOutlinedInput-root:hover {
+  background-color: var(--field-hover);
+}
+
+.MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: var(--field-border-hover) !important;
+}
+
+.MuiOutlinedInput-root.Mui-focused {
+  background-color: var(--field-focus);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: var(--action) !important;
+  border-width: 1.5px !important;
+}
+
+.MuiOutlinedInput-notchedOutline {
+  border-color: var(--field-border) !important;
+  transition: border-color var(--t-in) var(--ease-ui);
+}
+
+.MuiInputLabel-root,
+.MuiFormLabel-root {
+  font-family: var(--font-sans) !important;
+  font-weight: 500 !important;
+  color: var(--ink-secondary) !important;
+}
+
+.MuiInputLabel-root.Mui-focused,
+.MuiFormLabel-root.Mui-focused {
+  color: var(--action) !important;
+  font-weight: 600 !important;
+}
+
+.MuiFormHelperText-root {
+  font-family: var(--font-sans) !important;
+  font-size: 0.78rem !important;
+  margin-top: 5px !important;
+}
+
+.MuiOutlinedInput-input {
+  font-size: 0.9rem !important;
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+}
+
+.MuiOutlinedInput-inputMarginDense {
+  padding-top: 9.5px !important;
+  padding-bottom: 9.5px !important;
+  font-size: 0.875rem !important;
+}
+
+/* Menus & Popovers */
+.MuiMenu-paper,
+.MuiPopover-paper {
+  background-color: var(--bg-elevated) !important;
+  color: var(--ink-primary) !important;
+  border: 1px solid var(--border-hairline) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--shadow-popover) !important;
+}
+
+.MuiMenuItem-root {
+  font-family: var(--font-sans) !important;
+  font-size: 0.875rem !important;
+  border-radius: 8px !important;
+  margin: 2px 6px !important;
+  transition: background-color var(--t-out) var(--ease-ui), color var(--t-out) var(--ease-ui);
+}
+
+.MuiMenuItem-root:hover {
+  background-color: var(--action-soft) !important;
+}
+
+.MuiMenuItem-root.Mui-selected {
+  background-color: var(--action-soft-hover) !important;
+  color: var(--action) !important;
+  font-weight: 600 !important;
+}
+
+/* Botões Táteis — Micro-interação de Precisão */
+.MuiButton-root {
+  font-family: var(--font-sans) !important;
+  border-radius: var(--r-control) !important;
+  text-transform: none !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.005em !important;
+  transition: background-color var(--t-in) var(--ease-ui),
+    border-color var(--t-in) var(--ease-ui),
+    color var(--t-in) var(--ease-ui),
+    transform var(--t-in) var(--ease-ui) !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .MuiButton-contained:not(:disabled):hover,
+  .portai-btn-hover:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+}
+
+.MuiButton-root:not(:disabled):active,
+.portai-btn-hover:not(:disabled):active {
+  transform: translateY(0) scale(0.985) !important;
+  transition-duration: var(--t-press) !important;
+}
+
+/* Focus Ring Acessível Sem Delay */
+.MuiButton-root:focus-visible,
+.MuiIconButton-root:focus-visible,
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--action) !important;
+  outline-offset: 2px !important;
+}
+
+/* Tooltips Refinados */
+.MuiTooltip-tooltip {
+  font-family: var(--font-sans) !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  background-color: #07130e !important;
+  color: #ecf5f0 !important;
+  border: 1px solid rgba(37, 211, 102, 0.22) !important;
+  border-radius: 8px !important;
+  padding: 6px 10px !important;
+}
+
+.MuiTooltip-arrow {
+  color: #07130e !important;
+}
+
+/* Skeletons Limpos */
+.MuiSkeleton-root {
+  background-color: var(--bg-subtle) !important;
+}
+
+/* ==========================================================================
+   KANBAN BOARD (react-trello) — REMODELAÇÃO INTEGRAL
+   ========================================================================== */
+.portai-kanban-board .react-trello-board {
+  background-color: transparent !important;
+  padding: 4px 2px 16px !important;
+  font-family: var(--font-sans) !important;
+  height: 100% !important;
+}
+
+.portai-kanban-board .smooth-dnd-container.horizontal {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 14px !important;
+}
+
+.portai-kanban-board .react-trello-lane {
+  background-color: var(--bg-surface) !important;
+  border: 1px solid var(--border-hairline) !important;
+  border-radius: var(--r-card) !important;
+  padding: 12px !important;
+  min-width: 300px !important;
+  max-width: 320px !important;
+  margin: 0 !important;
+  box-shadow: var(--shadow-subtle) !important;
+}
+
+.portai-kanban-board .react-trello-lane header {
+  padding: 4px 4px 10px !important;
+  margin-bottom: 8px !important;
+  border-bottom: 1px solid var(--border-hairline) !important;
+  color: var(--ink-primary) !important;
+  font-family: var(--font-display) !important;
+  font-weight: 700 !important;
+}
+
+.portai-kanban-board .react-trello-card {
+  background-color: var(--bg-canvas) !important;
+  border: 1px solid var(--border-hairline) !important;
+  border-radius: 11px !important;
+  padding: 12px !important;
+  margin-bottom: 10px !important;
+  color: var(--ink-primary) !important;
+  box-shadow: none !important;
+  transition: transform var(--t-in) var(--ease-ui), border-color var(--t-in) var(--ease-ui) !important;
+}
+
+.portai-kanban-board .react-trello-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong) !important;
+}
+
+.portai-kanban-board .react-trello-card header {
+  border-bottom: none !important;
+  padding: 0 0 6px !important;
+  margin-bottom: 0 !important;
+}
+
+/* ==========================================================================
+   REACT BIG CALENDAR — TEMA UNIFICADO LIGHT & DARK
+   ========================================================================== */
+.rbc-calendar {
+  font-family: var(--font-sans) !important;
+  color: var(--ink-primary) !important;
+}
+
+.rbc-toolbar {
+  margin-bottom: 16px !important;
+  gap: 8px;
+}
+
+.rbc-toolbar .rbc-toolbar-label {
+  font-family: var(--font-display) !important;
+  font-weight: 700 !important;
+  font-size: 1rem !important;
+  color: var(--ink-primary) !important;
+  text-transform: capitalize;
+}
+
+.rbc-toolbar button {
+  color: var(--ink-secondary) !important;
+  background-color: var(--field-bg) !important;
+  border: 1px solid var(--border-hairline) !important;
+  border-radius: 8px !important;
+  padding: 6px 12px !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 600 !important;
+  font-size: 0.8125rem !important;
+  transition: all var(--t-in) var(--ease-ui) !important;
+}
+
+.rbc-toolbar button:hover {
+  border-color: var(--border-strong) !important;
+  color: var(--action) !important;
+}
+
+.rbc-toolbar button.rbc-active {
+  background-color: var(--action) !important;
+  color: var(--action-ink) !important;
+  border-color: var(--action) !important;
+  box-shadow: none !important;
+}
+
+.rbc-month-view,
+.rbc-time-view,
+.rbc-agenda-view {
+  border: 1px solid var(--border-hairline) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  background-color: var(--bg-surface) !important;
+}
+
+.rbc-header {
+  border-bottom: 1px solid var(--border-hairline) !important;
+  border-left-color: var(--border-hairline) !important;
+  padding: 10px 6px !important;
+  font-family: var(--font-display) !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: var(--ink-secondary) !important;
+  background-color: var(--bg-subtle) !important;
+}
+
+.rbc-day-bg,
+.rbc-month-row,
+.rbc-time-content,
+.rbc-timeslot-group {
+  border-color: var(--border-hairline) !important;
+}
+
+.rbc-off-range-bg {
+  background-color: var(--bg-subtle) !important;
+  opacity: 0.65;
+}
+
+.rbc-today {
+  background-color: var(--action-soft) !important;
+}
+
+.rbc-event {
+  background-color: var(--action) !important;
+  color: var(--action-ink) !important;
+  border-radius: 6px !important;
+  border: none !important;
+  padding: 3px 6px !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+}
+
+/* ==========================================================================
+   ACESSIBILIDADE — REDUCED MOTION
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -37,34 +37,21 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     minHeight: 0,
     overflow: "hidden",
-    backgroundColor: theme.palette.type === "dark" ? "#0f172a" : "#f8fafc",
+    backgroundColor: "var(--bg-subtle)",
   },
   searchBox: {
     padding: theme.spacing(1, 1.5),
-    borderBottom: `1px solid ${
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.12)"
-        : "rgba(226, 232, 240, 0.9)"
-    }`,
+    borderBottom: "1px solid var(--border-hairline)",
   },
   searchInput: {
-    backgroundColor: theme.palette.type === "dark" ? "#162032" : "#ffffff",
+    backgroundColor: "var(--field-bg)",
     borderRadius: 10,
     "& .MuiOutlinedInput-root": {
       borderRadius: 10,
-      border: `1px solid ${
-        theme.palette.type === "dark"
-          ? "rgba(16, 185, 129, 0.2)"
-          : "rgba(226, 232, 240, 0.9)"
-      }`,
-      "&.Mui-focused": {
-        borderColor: "#10b981",
-        boxShadow: "0 0 0 3px rgba(16, 185, 129, 0.15)",
-      },
     },
     "& .MuiOutlinedInput-input": {
       padding: "9px 12px",
-      fontSize: "0.82rem",
+      fontSize: "0.84rem",
     },
   },
   chatList: {
@@ -80,24 +67,18 @@ const useStyles = makeStyles((theme) => ({
   },
   listItem: {
     cursor: "pointer",
-    borderRadius: 12,
-    margin: "3px 0",
+    borderRadius: 10,
+    margin: "3px 4px",
     padding: "8px 12px",
     "&.MuiListItem-secondaryAction": { paddingRight: 12, paddingBottom: 54 },
-    transition: "background-color 0.2s ease, color 0.2s ease",
+    transition: "background-color var(--t-in) var(--ease-ui)",
     "&:hover": {
-      backgroundColor:
-        theme.palette.type === "dark"
-          ? "rgba(16, 185, 129, 0.08)"
-          : "rgba(16, 185, 129, 0.05)",
+      backgroundColor: "var(--action-soft)",
     },
   },
   listItemSelected: {
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? "rgba(16, 185, 129, 0.14) !important"
-        : "rgba(16, 185, 129, 0.1) !important",
-    borderLeft: "4px solid #10b981",
+    backgroundColor: "var(--action-soft-hover) !important",
+    borderLeft: "3.5px solid var(--action)",
   },
   avatarSquircle: {
     borderRadius: 10,
@@ -118,14 +99,14 @@ const useStyles = makeStyles((theme) => ({
   chatTitle: {
     fontWeight: 600,
     fontSize: "0.875rem",
-    color: theme.palette.type === "dark" ? "#f1f5f9" : "#0f172a",
+    color: "var(--ink-primary)",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
   chatLastMessage: {
     fontSize: "0.75rem",
-    color: theme.palette.type === "dark" ? "#94a3b8" : "#64748b",
+    color: "var(--ink-secondary)",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",

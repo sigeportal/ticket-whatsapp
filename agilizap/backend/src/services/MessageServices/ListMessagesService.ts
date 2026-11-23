@@ -1,5 +1,3 @@
-import { FindOptions } from "sequelize/types";
-import { Op } from "sequelize";
 import AppError from "../../errors/AppError";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
@@ -10,7 +8,6 @@ interface Request {
   ticketId: string;
   companyId: number;
   pageNumber?: string;
-  queues?: number[];
 }
 
 interface Response {
@@ -23,8 +20,7 @@ interface Response {
 const ListMessagesService = async ({
   pageNumber = "1",
   ticketId,
-  companyId,
-  queues = []
+  companyId
 }: Request): Promise<Response> => {
   const ticket = await ShowTicketService(ticketId, companyId);
 
@@ -36,24 +32,12 @@ const ListMessagesService = async ({
   const limit = 20;
   const offset = limit * (+pageNumber - 1);
 
-  const options: FindOptions = {
+  // The request authorizes access to the ticket's current queue. Its history may span older queues.
+  const { count, rows: messages } = await Message.findAndCountAll({
     where: {
       ticketId,
       companyId
-    }
-  };
-
-  if (queues.length > 0) {
-    options.where["queueId"] = {
-      [Op.or]: {
-        [Op.in]: queues,
-        [Op.eq]: null
-      }
-    };
-  }
-
-  const { count, rows: messages } = await Message.findAndCountAll({
-    ...options,
+    },
     limit,
     include: [
       "contact",
@@ -68,7 +52,7 @@ const ListMessagesService = async ({
       }
     ],
     offset,
-    order: [["createdAt", "DESC"]]
+    order: [["createdAt", "DESC"], ["id", "DESC"]]
   });
 
   const hasMore = count > offset + messages.length;
