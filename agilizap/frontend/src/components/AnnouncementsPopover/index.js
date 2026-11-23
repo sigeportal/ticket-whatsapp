@@ -170,12 +170,34 @@ export default function AnnouncementsPopover() {
   const [hasMore, setHasMore] = useState(false);
   const [searchParam] = useState("");
   const [announcements, dispatch] = useReducer(reducer, []);
-  const [invisible, setInvisible] = useState(false);
+  const [invisible, setInvisible] = useState(true);
   const [announcement, setAnnouncement] = useState({});
   const [showAnnouncementDialog, setShowAnnouncementDialog] = useState(false);
 
   const { user } = useContext(AuthContext);
   const socketManager = useContext(SocketContext);
+
+  const getSeenStorageKey = () =>
+    user?.id ? `announcements_seen_at_${user.id}` : "announcements_seen_at";
+
+  const getLatestAnnouncementTs = (list) => {
+    if (!Array.isArray(list) || list.length === 0) return 0;
+    return list.reduce((max, item) => {
+      const ts = new Date(item.updatedAt || item.createdAt || 0).getTime();
+      return Number.isFinite(ts) && ts > max ? ts : max;
+    }, 0);
+  };
+
+  useEffect(() => {
+    if (!Array.isArray(announcements) || announcements.length === 0) {
+      setInvisible(true);
+      return;
+    }
+    const latestTs = getLatestAnnouncementTs(announcements);
+    const seenTs = Number(localStorage.getItem(getSeenStorageKey()) || 0);
+    setInvisible(latestTs > 0 && seenTs >= latestTs);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [announcements, user?.id]);
 
   useEffect(() => {
     dispatch({ type: "RESET" });
@@ -241,6 +263,10 @@ export default function AnnouncementsPopover() {
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
     setInvisible(true);
+    const latestTs = Math.max(getLatestAnnouncementTs(announcements), Date.now());
+    try {
+      localStorage.setItem(getSeenStorageKey(), String(latestTs));
+    } catch {}
   };
 
   const handleClose = () => {

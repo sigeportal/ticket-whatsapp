@@ -36,6 +36,7 @@ import auditLogRoutes from "./auditLogRoutes";
 import dataRetentionRoutes from "./dataRetentionRoutes";
 import queueWaitAlertRoutes from "./queueWaitAlertRoutes";
 import healthRoutes from "./healthRoutes";
+import taskRoutes from "./taskRoutes";
 
 const routes = Router();
 
@@ -75,5 +76,6 @@ routes.use(auditLogRoutes);
 routes.use(dataRetentionRoutes);
 routes.use(queueWaitAlertRoutes);
 routes.use(healthRoutes);
+routes.use(taskRoutes);
 
 export default routes;

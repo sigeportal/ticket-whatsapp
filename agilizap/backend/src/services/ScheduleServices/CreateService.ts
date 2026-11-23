@@ -2,6 +2,8 @@ import * as Yup from "yup";
 
 import AppError from "../../errors/AppError";
 import Schedule from "../../models/Schedule";
+import Contact from "../../models/Contact";
+import User from "../../models/User";
 import { sendScheduleNotification } from "./SendScheduleNotificationService";
 
 interface Request {
@@ -45,7 +47,12 @@ const CreateService = async ({
     }
   );
 
-  await schedule.reload();
+  await schedule.reload({
+    include: [
+      { model: Contact, as: "contact", attributes: ["id", "name"] },
+      { model: User, as: "user", attributes: ["id", "name"] }
+    ]
+  });
 
   if (sendConfirmation) {
     await sendScheduleNotification({
