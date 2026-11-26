@@ -8,7 +8,7 @@ import { head, isNil } from "lodash";
 import path, { join } from "path";
 import { promisify } from "util";
 
-import { map_msg } from "../../utils/global";
+import { map_msg, clearContactBotState } from "../../utils/global";
 
 import {
   downloadMediaMessage,
@@ -1192,6 +1192,8 @@ const verifyQueue = async (
       companyId: ticket.companyId,
     });
 
+    clearContactBotState(contact.number);
+
     return;
   }
 
@@ -1222,7 +1224,10 @@ const verifyQueue = async (
     const textMessage = {
       text: formatBody(`\u200e${greetingMessage}\n\n${options}`, contact),
     };
-    let lastMsg = map_msg.get(contact.number)
+    let lastMsg = map_msg.get(contact.number);
+    if (lastMsg && lastMsg.ticketId !== ticket.id) {
+      lastMsg = undefined;
+    }
     let invalidOption = "Opção inválida, por favor, escolha uma opção válida."
     
 
@@ -1230,8 +1235,9 @@ const verifyQueue = async (
     console.log('textMessage2', textMessage)
      console.log("lastMsg::::::::::::':", contact.number)
     // map_msg.set(contact.number, lastMsg);
-    if (!lastMsg?.msg || getBodyMessage(msg).includes('#') || textMessage.text === 'concluido' || (lastMsg.msg !== textMessage.text && !lastMsg.invalid_option)) {
+    if (!lastMsg?.msg || getBodyMessage(msg).includes('#') || textMessage.text === 'concluido' || lastMsg.invalid_option || lastMsg.msg !== textMessage.text) {
       lastMsg ?? (lastMsg = {});
+      lastMsg.ticketId = ticket.id;
       lastMsg.msg = textMessage.text;
       lastMsg.invalid_option = false;
       map_msg.set(contact.number, lastMsg);
@@ -1245,6 +1251,7 @@ const verifyQueue = async (
     } else if (lastMsg.msg !== invalidOption && !lastMsg.invalid_option) {
       textMessage.text = invalidOption;
       lastMsg ?? (lastMsg = {});
+      lastMsg.ticketId = ticket.id;
       lastMsg.invalid_option = true;
       lastMsg.msg = textMessage.text;
       map_msg.set(contact.number, lastMsg);
@@ -1259,6 +1266,7 @@ const verifyQueue = async (
   };
 
   if (choosenQueue) {
+    clearContactBotState(contact.number);
     let chatbot = false;
     if (choosenQueue?.options) {
       chatbot = choosenQueue.options.length > 0;
@@ -1464,11 +1472,17 @@ export const handleRating = async (
 
   const oldQueueId = ticket.queueId;
 
+  clearContactBotState(ticket.contact?.number);
+
   await ticket.update({
-    queueId: null,
-    chatbot: null,
+    chatbot: false,
     queueOptionId: null,
-    userId: null,
+    promptId: null,
+    integrationId: null,
+    useIntegration: false,
+    typebotStatus: false,
+    typebotSessionId: null,
+    amountUsedBotQueues: 0,
     status: "closed",
     closedAt: new Date(),
     currentWaitEpisodeId: null,
@@ -1482,26 +1496,35 @@ export const handleRating = async (
 
   try {
     const io = getIO();
-    io.to(`company-${ticket.companyId}-open`)
-      .to(`queue-${oldQueueId}-open`)
-      .to(`company-${ticket.companyId}-notification`)
-      .to(`queue-${oldQueueId}-notification`)
-      .emit(`company-${ticket.companyId}-ticket`, {
-        action: "delete",
-        ticket,
-        ticketId: ticket.id,
-      });
+    let openEmitter = io.to(`company-${ticket.companyId}-open`)
+      .to(`company-${ticket.companyId}-notification`);
+    if (oldQueueId) {
+      openEmitter = openEmitter
+        .to(`queue-${oldQueueId}-open`)
+        .to(`queue-${oldQueueId}-notification`);
+    }
+    openEmitter.emit(`company-${ticket.companyId}-ticket`, {
+      action: "delete",
+      ticket,
+      ticketId: ticket.id,
+    });
 
-    io.to(`company-${ticket.companyId}-${ticket.status}`)
-      .to(`queue-${ticket.queueId}-${ticket.status}`)
+    let closedEmitter = io.to(`company-${ticket.companyId}-${ticket.status}`)
       .to(`company-${ticket.companyId}-notification`)
-      .to(`queue-${oldQueueId}-notification`)
-      .to(ticket.id.toString())
-      .emit(`company-${ticket.companyId}-ticket`, {
-        action: "update",
-        ticket,
-        ticketId: ticket.id,
-      });
+      .to(ticket.id.toString());
+    if (ticket.queueId) {
+      closedEmitter = closedEmitter
+        .to(`queue-${ticket.queueId}-${ticket.status}`);
+    }
+    if (oldQueueId) {
+      closedEmitter = closedEmitter
+        .to(`queue-${oldQueueId}-notification`);
+    }
+    closedEmitter.emit(`company-${ticket.companyId}-ticket`, {
+      action: "update",
+      ticket,
+      ticketId: ticket.id,
+    });
   } catch (err) {
     logger.warn(`[wbotMessageListener] Falha ao emitir evento socket na avaliação: ${err}`);
   }

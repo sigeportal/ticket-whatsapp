@@ -136,7 +136,7 @@ const load = name => require(path.join(source, name));
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 
-const flushPromises = () => new Promise(resolve => setTimeout(resolve, 60));
+const flushPromises = () => new Promise(resolve => setTimeout(resolve, 250));
 
 (async () => {
   const pg = new PGlite();
@@ -216,6 +216,8 @@ const flushPromises = () => new Promise(resolve => setTimeout(resolve, 60));
   const Message = load('models/Message.ts').default;
   const Setting = load('models/Setting.ts').default;
   const UserRating = load('models/UserRating.ts').default;
+  const WhatsappQueue = load('models/WhatsappQueue.ts').default;
+  const { map_msg } = load('utils/global.ts');
 
   const UpdateTicketService = load('services/TicketServices/UpdateTicketService.ts').default;
   const { wbotMessageListener, handleRating } = load('services/WbotServices/wbotMessageListener.ts');
@@ -423,6 +425,272 @@ const flushPromises = () => new Promise(resolve => setTimeout(resolve, 60));
     await ClosedAllOpenTickets(company.id);
     await openTicket.reload();
     assert.equal(openTicket.status, 'closed', 'Ticket expirado sem TicketTraking deve ser fechado sem crash');
+  });
+
+  const setSetting = async (key, value) => {
+    const existing = await Setting.findOne({ where: { key, companyId: company.id } });
+    if (existing) {
+      await existing.update({ value });
+    } else {
+      await Setting.create({ key, value, companyId: company.id });
+    }
+  };
+
+  test('6. Opcao A: resposta do cliente apos finalizacao direta reabre na mesma conversa (status open, mesmo userId e queueId) sem "Opcao invalida"', async () => {
+    await setSetting('userRating', 'disabled');
+    await setSetting('chatBotType', 'text');
+
+    await whatsapp.update({ greetingMessage: 'Ola, escolha uma fila:' });
+    const queue2 = await Queue.create({ id: 2, name: 'Comercial', color: '#111', companyId: company.id, orderQueue: 2 });
+    await queue.update({ orderQueue: 1 });
+    await WhatsappQueue.findOrCreate({ where: { whatsappId: whatsapp.id, queueId: queue.id } });
+    await WhatsappQueue.findOrCreate({ where: { whatsappId: whatsapp.id, queueId: queue2.id } });
+
+    const contact = await Contact.create({ name: 'Cliente Pos Finalizacao', number: '5567999991007', companyId: company.id });
+    const ticket = await Ticket.create({
+      contactId: contact.id,
+      companyId: company.id,
+      whatsappId: whatsapp.id,
+      userId: user.id,
+      queueId: queue.id,
+      status: 'open'
+    });
+    await TicketTraking.create({
+      ticketId: ticket.id,
+      companyId: company.id,
+      whatsappId: whatsapp.id,
+      userId: user.id,
+      startedAt: new Date()
+    });
+
+    // Simula estado residual de menu do atendimento anterior em map_msg
+    map_msg.set(contact.number, {
+      ticketId: ticket.id,
+      msg: `\u200eOla, escolha uma fila:\n\n*[ 1 ]* - ${queue.name}\n*[ 2 ]* - ${queue2.name}\n`,
+      invalid_option: false
+    });
+
+    await UpdateTicketService({
+      ticketData: { status: 'closed' },
+      ticketId: ticket.id,
+      companyId: company.id,
+      userId: user.id
+    });
+
+    await ticket.reload();
+    assert.equal(ticket.status, 'closed');
+    assert.equal(ticket.userId, user.id, 'Fechamento preserva userId no ticket');
+    assert.equal(ticket.queueId, queue.id, 'Fechamento preserva queueId no ticket');
+    assert.equal(map_msg.has(contact.number), false, 'map_msg deve ser limpo ao fechar o ticket');
+
+    const wbot = createFakeWbot();
+    await wbotMessageListener(wbot, company.id);
+
+    const beforeSent = sentMessages.length;
+    wbot.ev.emit('messages.upsert', {
+      type: 'notify',
+      messages: [{
+        key: { id: 'msg-after-close-ok', remoteJid: `${contact.number}@s.whatsapp.net`, fromMe: false },
+        message: { conversation: 'Ok' },
+        messageTimestamp: Math.floor(Date.now() / 1000)
+      }]
+    });
+    await flushPromises();
+
+    await ticket.reload();
+    const newSent = sentMessages.slice(beforeSent);
+    assert.equal(ticket.status, 'open', 'Ticket deve reabrir como open para o mesmo atendente');
+    assert.equal(ticket.userId, user.id, 'Deve manter o mesmo atendente');
+    assert.equal(ticket.queueId, queue.id, 'Deve manter a mesma fila');
+    assert.equal(ticket.closedAt, null, 'closedAt deve ser limpo na reabertura');
+    assert.equal(newSent.length, 0, 'Nao deve enviar Opcao invalida nem reenviar menu de filas');
+  });
+
+  test('7. Opcao A com userRating enabled: apos avaliar e fechar, resposta do cliente reabre na mesma conversa sem "Opcao invalida"', async () => {
+    await setSetting('userRating', 'enabled');
+    await setSetting('chatBotType', 'text');
+
+    const contact = await Contact.create({ name: 'Cliente Rating Opcao A', number: '5567999991008', companyId: company.id });
+    const ticket = await Ticket.create({
+      contactId: contact.id,
+      companyId: company.id,
+      whatsappId: whatsapp.id,
+      userId: user.id,
+      queueId: queue.id,
+      status: 'open'
+    });
+    const traking = await TicketTraking.create({
+      ticketId: ticket.id,
+      companyId: company.id,
+      whatsappId: whatsapp.id,
+      userId: user.id,
+      startedAt: new Date()
+    });
+
+    await UpdateTicketService({
+      ticketData: { status: 'closed' },
+      ticketId: ticket.id,
+      companyId: company.id,
+      userId: user.id
+    });
+
+    const wbot = createFakeWbot();
+    await wbotMessageListener(wbot, company.id);
+
+    // Cliente responde a avaliacao com nota 3
+    wbot.ev.emit('messages.upsert', {
+      type: 'notify',
+      messages: [{
+        key: { id: 'msg-rate-3', remoteJid: `${contact.number}@s.whatsapp.net`, fromMe: false },
+        message: { conversation: '3' },
+        messageTimestamp: Math.floor(Date.now() / 1000)
+      }]
+    });
+    await flushPromises();
+
+    await ticket.reload();
+    assert.equal(ticket.status, 'closed');
+    assert.equal(ticket.userId, user.id, 'handleRating deve preservar userId no ticket fechado');
+    assert.equal(ticket.queueId, queue.id, 'handleRating deve preservar queueId no ticket fechado');
+    assert.equal(map_msg.has(contact.number), false, 'map_msg deve ser limpo apos handleRating');
+
+    // Agora cliente manda "Ok" depois de receber a mensagem de finalizacao
+    const beforeSent = sentMessages.length;
+    wbot.ev.emit('messages.upsert', {
+      type: 'notify',
+      messages: [{
+        key: { id: 'msg-after-rating-ok', remoteJid: `${contact.number}@s.whatsapp.net`, fromMe: false },
+        message: { conversation: 'Ok' },
+        messageTimestamp: Math.floor(Date.now() / 1000)
+      }]
+    });
+    await flushPromises();
+
+    await ticket.reload();
+    const newSent = sentMessages.slice(beforeSent);
+    assert.equal(ticket.status, 'open', 'Ticket deve retornar na mesma conversa como open');
+    assert.equal(ticket.userId, user.id);
+    assert.equal(ticket.queueId, queue.id);
+    assert.equal(newSent.length, 0, 'Nao deve enviar Opcao invalida nem menu');
+  });
+
+  test('8. Opcao A fallback: se atendente do ticket fechado estiver bloqueado, reabre como pending na mesma fila sem "Opcao invalida"', async () => {
+    await setSetting('userRating', 'disabled');
+    const blockedUser = await User.create({
+      id: 99,
+      name: 'Atendente Bloqueado',
+      email: 'bloqueado@teste.local',
+      passwordHash: 'hash',
+      profile: 'user',
+      blocked: true,
+      companyId: company.id
+    });
+    const contact = await Contact.create({ name: 'Cliente Fallback User', number: '5567999991009', companyId: company.id });
+    const ticket = await Ticket.create({
+      contactId: contact.id,
+      companyId: company.id,
+      whatsappId: whatsapp.id,
+      userId: blockedUser.id,
+      queueId: queue.id,
+      status: 'closed',
+      closedAt: new Date(Date.now() - 5 * 60 * 1000)
+    });
+
+    const wbot = createFakeWbot();
+    await wbotMessageListener(wbot, company.id);
+
+    const beforeSent = sentMessages.length;
+    wbot.ev.emit('messages.upsert', {
+      type: 'notify',
+      messages: [{
+        key: { id: 'msg-blocked-user-ok', remoteJid: `${contact.number}@s.whatsapp.net`, fromMe: false },
+        message: { conversation: 'Ok' },
+        messageTimestamp: Math.floor(Date.now() / 1000)
+      }]
+    });
+    await flushPromises();
+
+    await ticket.reload();
+    const newSent = sentMessages.slice(beforeSent);
+    assert.equal(ticket.status, 'pending', 'Com usuario bloqueado deve reabrir como pending');
+    assert.equal(ticket.userId, null, 'Usuario bloqueado nao deve receber o ticket');
+    assert.equal(ticket.queueId, queue.id, 'Fila valida deve ser preservada');
+    assert.equal(newSent.length, 0, 'Com queueId preservado nao deve acionar verifyQueue');
+  });
+
+  test('9. botText nao trava apos opcao invalida e isola estado por ticketId', async () => {
+    await setSetting('userRating', 'disabled');
+    await setSetting('chatBotType', 'text');
+
+    const contact = await Contact.create({ name: 'Cliente Menu Novo', number: '5567999991010', companyId: company.id });
+    // Simula estado travado (invalid_option: true) deixado por um ticket antigo
+    map_msg.set(contact.number, {
+      ticketId: 99999,
+      msg: 'Opção inválida, por favor, escolha uma opção válida.',
+      invalid_option: true
+    });
+
+    const wbot = createFakeWbot();
+    await wbotMessageListener(wbot, company.id);
+
+    // 1a mensagem em ticket novo -> deve enviar o menu de filas (NAO "Opcao invalida")
+    let beforeSent = sentMessages.length;
+    wbot.ev.emit('messages.upsert', {
+      type: 'notify',
+      messages: [{
+        key: { id: 'msg-menu-1', remoteJid: `${contact.number}@s.whatsapp.net`, fromMe: false },
+        message: { conversation: 'Oi' },
+        messageTimestamp: Math.floor(Date.now() / 1000)
+      }]
+    });
+    await flushPromises();
+    let batch = sentMessages.slice(beforeSent);
+    assert.equal(batch.length, 1);
+    assert.ok(batch[0].payload.text.includes('*[ 1 ]*'), 'Primeira mensagem deve enviar o menu de filas');
+
+    // 2a mensagem invalida -> envia "Opção inválida..."
+    beforeSent = sentMessages.length;
+    wbot.ev.emit('messages.upsert', {
+      type: 'notify',
+      messages: [{
+        key: { id: 'msg-menu-2', remoteJid: `${contact.number}@s.whatsapp.net`, fromMe: false },
+        message: { conversation: 'abc' },
+        messageTimestamp: Math.floor(Date.now() / 1000)
+      }]
+    });
+    await flushPromises();
+    batch = sentMessages.slice(beforeSent);
+    assert.equal(batch.length, 1);
+    assert.ok(batch[0].payload.text.includes('Opção inválida'), 'Segunda tentativa invalida deve avisar opcao invalida');
+
+    // 3a mensagem invalida -> reenvia o menu em vez de ficar mudo para sempre
+    beforeSent = sentMessages.length;
+    wbot.ev.emit('messages.upsert', {
+      type: 'notify',
+      messages: [{
+        key: { id: 'msg-menu-3', remoteJid: `${contact.number}@s.whatsapp.net`, fromMe: false },
+        message: { conversation: 'xyz' },
+        messageTimestamp: Math.floor(Date.now() / 1000)
+      }]
+    });
+    await flushPromises();
+    batch = sentMessages.slice(beforeSent);
+    assert.equal(batch.length, 1);
+    assert.ok(batch[0].payload.text.includes('*[ 1 ]*'), 'Terceira mensagem deve reenviar o menu ao cliente');
+
+    // 4a mensagem valida ("1") -> escolhe fila 1 e limpa map_msg
+    wbot.ev.emit('messages.upsert', {
+      type: 'notify',
+      messages: [{
+        key: { id: 'msg-menu-4', remoteJid: `${contact.number}@s.whatsapp.net`, fromMe: false },
+        message: { conversation: '1' },
+        messageTimestamp: Math.floor(Date.now() / 1000)
+      }]
+    });
+    await flushPromises();
+    const activeTicket = await Ticket.findOne({ where: { contactId: contact.id } });
+    assert.equal(activeTicket.queueId, queue.id, 'Escolha valida deve atribuir a fila 1');
+    assert.equal(map_msg.has(contact.number), false, 'Escolha valida deve limpar map_msg');
   });
 
   for (const { name, fn } of tests) {

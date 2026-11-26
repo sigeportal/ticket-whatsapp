@@ -5,8 +5,11 @@ import ShowTicketService from "./ShowTicketService";
 import FindOrCreateATicketTrakingService from "./FindOrCreateATicketTrakingService";
 import Setting from "../../models/Setting";
 import Whatsapp from "../../models/Whatsapp";
+import Queue from "../../models/Queue";
+import User from "../../models/User";
 import { logAuditEvent } from "../../security/audit";
 import { getIO } from "../../libs/socket";
+import { clearContactBotState } from "../../utils/global";
 
 const FindOrCreateTicketService = async (
   contact: Contact,
@@ -69,26 +72,67 @@ const FindOrCreateTicketService = async (
     order: [["id", "DESC"]]
   });
 
+  let previousQueueId: number | null = null;
+
   if (recentClosedTicket) {
-    // Reopen within grace period
+    // Reopen within grace period preserving conversation context (queue & attendant)
     ticket = recentClosedTicket;
+    previousQueueId = recentClosedTicket.queueId;
+
+    let preservedQueueId: number | null = null;
+    if (recentClosedTicket.queueId) {
+      const existingQueue = await Queue.findOne({
+        where: { id: recentClosedTicket.queueId, companyId }
+      });
+      if (existingQueue) {
+        preservedQueueId = existingQueue.id;
+      }
+    }
+
+    let preservedUserId: number | null = null;
+    if (recentClosedTicket.userId) {
+      const existingUser = await User.findOne({
+        where: { id: recentClosedTicket.userId, companyId }
+      });
+      if (existingUser && !existingUser.blocked) {
+        preservedUserId = existingUser.id;
+      }
+    }
+
+    const reopenedStatus = preservedUserId ? "open" : "pending";
+
     await ticket.update({
-      status: "pending",
+      status: reopenedStatus,
       closedAt: null,
-      userId: null,
+      userId: preservedUserId,
       unreadMessages,
-      queueId: null,
+      queueId: preservedQueueId,
+      chatbot: false,
+      queueOptionId: null,
+      amountUsedBotQueues: 0,
       companyId,
       lastClientMessageAt: null,
       currentWaitEpisodeId: null
     });
 
-    await FindOrCreateATicketTrakingService({
+    clearContactBotState(contact.number);
+    clearContactBotState(groupContact?.number);
+
+    const ticketTraking = await FindOrCreateATicketTrakingService({
       ticketId: ticket.id,
       companyId,
       whatsappId: ticket.whatsappId,
-      userId: ticket.userId
+      userId: preservedUserId
     });
+
+    if (reopenedStatus === "open") {
+      await ticketTraking.update({
+        startedAt: ticketTraking.startedAt || new Date(),
+        userId: preservedUserId,
+        ratingAt: null,
+        rated: false
+      });
+    }
 
     await logAuditEvent({
       companyId,
@@ -98,7 +142,10 @@ const FindOrCreateTicketService = async (
       targetId: ticket.id,
       details: {
         reason: "Customer replied within reopening grace period",
-        graceSeconds
+        graceSeconds,
+        reopenedStatus,
+        preservedUserId,
+        preservedQueueId
       }
     });
   } else {
@@ -147,6 +194,9 @@ const FindOrCreateTicketService = async (
       userId: ticket.userId
     });
 
+    clearContactBotState(contact.number);
+    clearContactBotState(groupContact?.number);
+
     await logAuditEvent({
       companyId,
       resource: "ticket",
@@ -165,21 +215,28 @@ const FindOrCreateTicketService = async (
   try {
     const io = getIO();
     if (recentClosedTicket) {
-      io.to(`company-${companyId}-closed`)
-        .to(`queue-${recentClosedTicket.queueId}-closed`)
-        .emit(`company-${companyId}-ticket`, {
-          action: "delete",
-          ticketId: ticket.id
-        });
+      let closedDeleteRoom = io.to(`company-${companyId}-closed`);
+      if (previousQueueId) {
+        closedDeleteRoom = closedDeleteRoom.to(`queue-${previousQueueId}-closed`);
+      }
+      closedDeleteRoom.emit(`company-${companyId}-ticket`, {
+        action: "delete",
+        ticketId: ticket.id
+      });
     }
 
-    const ticketRoom = io.to(`company-${companyId}-${ticket.status}`)
-      .to(`company-${companyId}-notification`);
+    let ticketRoom = io.to(`company-${companyId}-${ticket.status}`)
+      .to(`company-${companyId}-notification`)
+      .to(ticket.id.toString());
 
     if (ticket.queueId) {
-      ticketRoom
+      ticketRoom = ticketRoom
         .to(`queue-${ticket.queueId}-${ticket.status}`)
         .to(`queue-${ticket.queueId}-notification`);
+    }
+
+    if (ticket.userId) {
+      ticketRoom = ticketRoom.to(`user-${ticket.userId}`);
     }
 
     ticketRoom.emit(`company-${companyId}-ticket`, {
