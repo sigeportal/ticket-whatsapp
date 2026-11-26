@@ -21,6 +21,7 @@ import { Op } from "sequelize";
 import AppError from "../../errors/AppError";
 import { logger } from "../../utils/logger";
 import { logAuditEvent } from "../../security/audit";
+import { clearContactBotState } from "../../utils/global";
 
 interface TicketData {
   status?: string;
@@ -206,8 +207,11 @@ const UpdateTicketService = async ({
         useIntegration: false,
         typebotStatus: false,
         typebotSessionId: null,
+        amountUsedBotQueues: 0,
         closedAt: new Date()
       });
+
+      clearContactBotState(ticket.contact?.number);
 
       ticketTraking.finishedAt = moment().toDate();
       ticketTraking.whatsappId = ticket.whatsappId;

@@ -10,6 +10,7 @@ import ShowTicketService from "../TicketServices/ShowTicketService";
 import { verifyMessage } from "./wbotMessageListener";
 import TicketTraking from "../../models/TicketTraking";
 import { logger } from "../../utils/logger";
+import { clearContactBotState } from "../../utils/global";
 
 export const ClosedAllOpenTickets = async (companyId: number): Promise<void> => {
 
@@ -22,7 +23,9 @@ export const ClosedAllOpenTickets = async (companyId: number): Promise<void> => 
         //userId: ticket.userId || null,
         lastMessage: body,
         unreadMessages: 0,
-        amountUseBotQueues: 0
+        amountUsedBotQueues: 0,
+        closedAt: new Date(),
+        currentWaitEpisodeId: null
       });
 
     } else if (currentStatus === 'open') {
@@ -32,7 +35,9 @@ export const ClosedAllOpenTickets = async (companyId: number): Promise<void> => 
         //  userId: ticket.userId || null,
         lastMessage: body,
         unreadMessages: 0,
-        amountUseBotQueues: 0
+        amountUsedBotQueues: 0,
+        closedAt: new Date(),
+        currentWaitEpisodeId: null
       });
 
     } else {
@@ -40,7 +45,10 @@ export const ClosedAllOpenTickets = async (companyId: number): Promise<void> => 
       await ticket.update({
         status: "closed",
         //userId: ticket.userId || null,
-        unreadMessages: 0
+        unreadMessages: 0,
+        amountUsedBotQueues: 0,
+        closedAt: new Date(),
+        currentWaitEpisodeId: null
       });
     }
   };
@@ -91,6 +99,7 @@ export const ClosedAllOpenTickets = async (companyId: number): Promise<void> => 
             if (dataUltimaInteracaoChamado < dataLimite && showTicket.fromMe) {
 
               await closeTicket(showTicket, showTicket.status, bodyExpiresMessageInactive);
+              clearContactBotState(showTicket.contact?.number);
 
               if (expiresInactiveMessage !== "" && expiresInactiveMessage != null) {
                 try {
