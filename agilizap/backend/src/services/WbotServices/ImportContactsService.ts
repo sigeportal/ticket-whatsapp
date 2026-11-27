@@ -24,7 +24,7 @@ const ImportContactsService = async (companyId: number): Promise<void> => {
     fs.writeFile(beforeFilePath, JSON.stringify(phoneContacts, null, 2), (err) => {
       if (err) {
         logger.error(`Failed to write contacts to file: ${err}`);
-        throw err;
+        return;
       }
       console.log('O arquivo contatos_antes.txt foi criado!');
     });
@@ -39,7 +39,6 @@ const ImportContactsService = async (companyId: number): Promise<void> => {
   fs.writeFile(afterFilePath, JSON.stringify(phoneContacts, null, 2), (err) => {
     if (err) {
       logger.error(`Failed to write contacts to file: ${err}`);
-      throw err;
     }
   });
 
@@ -48,34 +47,34 @@ const ImportContactsService = async (companyId: number): Promise<void> => {
     : phoneContacts;
 
   if (isArray(phoneContactsList)) {
-    phoneContactsList.forEach(async ({ id, name, notify }) => {
-      if (id === "status@broadcast" || id.includes("g.us")) return;
+    for (const { id, name, notify } of phoneContactsList) {
+      if (!id || id === "status@broadcast" || id.includes("g.us")) continue;
       const number = id.replace(/\D/g, "");
 
-      const existingContact = await Contact.findOne({
-        where: { number, companyId }
-      });
+      try {
+        const existingContact = await Contact.findOne({
+          where: { number, companyId }
+        });
 
-      if (existingContact) {
-        // Atualiza o nome do contato existente
-        existingContact.name = name || notify;
-        await existingContact.save();
-      } else {
-        // Criar um novo contato
-        try {
+        if (existingContact) {
+          // Atualiza o nome do contato existente
+          existingContact.name = name || notify;
+          await existingContact.save();
+        } else {
+          // Criar um novo contato
           await CreateContactService({
             number,
             name: name || notify,
             companyId
           });
-        } catch (error) {
-          Sentry.captureException(error);
-          logger.warn(
-            `Could not get whatsapp contacts from phone. Err: ${error}`
-          );
         }
+      } catch (error) {
+        Sentry.captureException(error);
+        logger.warn(
+          `Could not get whatsapp contacts from phone. Err: ${error}`
+        );
       }
-    });
+    }
   }
 };
 

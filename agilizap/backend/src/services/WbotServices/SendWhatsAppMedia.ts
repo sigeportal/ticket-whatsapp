@@ -81,11 +81,11 @@ const processAudioFile = (audio: string, deleteSource = false): Promise<string> 
     deleteSource
   );
 
-const readAndRemoveTempFile = (filePath: string): Buffer => {
+const readAndRemoveTempFile = async (filePath: string): Promise<Buffer> => {
   try {
-    return fs.readFileSync(filePath);
+    return await fs.promises.readFile(filePath);
   } finally {
-    fs.rmSync(filePath, { force: true });
+    await fs.promises.rm(filePath, { force: true });
   }
 };
 
@@ -104,7 +104,7 @@ export const getMessageOptions = async (
 
     if (typeMessage === "video") {
       options = {
-        video: fs.readFileSync(pathMedia),
+        video: await fs.promises.readFile(pathMedia),
         caption: body ? body : '',
         fileName: fileName
         // gifPlayback: true
@@ -112,28 +112,28 @@ export const getMessageOptions = async (
     } else if (typeMessage === "audio") {
       const convert = await processAudio(pathMedia, false);
       options = {
-        audio: readAndRemoveTempFile(convert),
+        audio: await readAndRemoveTempFile(convert),
         mimetype: "audio/mp4",
         caption: body ? body : null,
         ptt: true
       };
     } else if (typeMessage === "document") {
       options = {
-        document: fs.readFileSync(pathMedia),
+        document: await fs.promises.readFile(pathMedia),
         caption: body ? body : null,
         fileName: fileName,
         mimetype: mimeType
       };
     } else if (typeMessage === "application") {
       options = {
-        document: fs.readFileSync(pathMedia),
+        document: await fs.promises.readFile(pathMedia),
         caption: body ? body : null,
         fileName: fileName,
         mimetype: mimeType
       };
     } else {
       options = {
-        image: fs.readFileSync(pathMedia),
+        image: await fs.promises.readFile(pathMedia),
         caption: body ? body : null
       };
     }
@@ -163,7 +163,7 @@ const SendWhatsAppMedia = async ({
 
     if (typeMessage === "video") {
       options = {
-        video: fs.readFileSync(pathMedia),
+        video: await fs.promises.readFile(pathMedia),
         caption: bodyMessage,
         fileName: media.originalname,
         contextInfo: { forwardingScore: isForwarded ? 2 : 0, isForwarded: isForwarded }
@@ -174,7 +174,7 @@ const SendWhatsAppMedia = async ({
       const convert = typeAudio
         ? await processAudio(media.path, deleteSource)
         : await processAudioFile(media.path, deleteSource);
-      const audioBuffer = readAndRemoveTempFile(convert);
+      const audioBuffer = await readAndRemoveTempFile(convert);
       options = typeAudio
         ? {
             audio: audioBuffer,
@@ -189,7 +189,7 @@ const SendWhatsAppMedia = async ({
           };
     } else if (typeMessage === "document" || typeMessage === "text") {
       options = {
-        document: fs.readFileSync(pathMedia),
+        document: await fs.promises.readFile(pathMedia),
         caption: bodyMessage,
         fileName: media.originalname,
         mimetype: media.mimetype,
@@ -197,7 +197,7 @@ const SendWhatsAppMedia = async ({
       };
     } else if (typeMessage === "application") {
       options = {
-        document: fs.readFileSync(pathMedia),
+        document: await fs.promises.readFile(pathMedia),
         caption: bodyMessage,
         fileName: media.originalname,
         mimetype: media.mimetype,
@@ -205,7 +205,7 @@ const SendWhatsAppMedia = async ({
       };
     } else {
       options = {
-        image: fs.readFileSync(pathMedia),
+        image: await fs.promises.readFile(pathMedia),
         caption: bodyMessage,
         contextInfo: { forwardingScore: isForwarded ? 2 : 0, isForwarded: isForwarded }
       };

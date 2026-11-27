@@ -12,7 +12,6 @@ export const StartAllWhatsAppsSessions = async (
     const whatsapps = await ListWhatsAppsService({ companyId });
     if (whatsapps.length > 0) {
       whatsapps.forEach(whatsapp => {
-        if (whatsapp.status === "RECONNECT_PAUSED") return;
         const sessionDir = getSessionDir(whatsapp.id);
         const hasSessionFiles = fs.existsSync(path.join(sessionDir, "creds.json"));
 

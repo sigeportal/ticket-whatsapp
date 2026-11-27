@@ -39,7 +39,7 @@ export class OperationalAlertService {
       const disconnectedWhatsapps = await Whatsapp.findAll({
         where: {
           ...companyScope,
-          status: "DISCONNECTED",
+          status: { [Op.in]: ["DISCONNECTED", "RECONNECT_PAUSED", "RECONNECTING", "OPENING"] },
           updatedAt: { [Op.lte]: fiveMinutesAgo }
         }
       });
@@ -49,9 +49,17 @@ export class OperationalAlertService {
           id: `whatsapp_disconnected_${w.id}`,
           type: "WHATSAPP_DISCONNECTED",
           severity: "HIGH",
-          message: `Conexão WhatsApp "${w.name}" (ID ${w.id}) desconectada há mais de 5 minutos.`,
-          details: { whatsappId: w.id, companyId: w.companyId, lastUpdate: w.updatedAt },
-          actionRequired: "Acessar o painel administrativo e escanear o QR Code ou verificar conectividade do aparelho."
+          message: `Conexão WhatsApp "${w.name}" (ID ${w.id}) fora do ar (${w.status}) há mais de 5 minutos.`,
+          details: {
+            whatsappId: w.id,
+            companyId: w.companyId,
+            status: w.status,
+            disconnectReason: w.disconnectReason,
+            lastUpdate: w.updatedAt
+          },
+          actionRequired:
+            w.actionRequired ||
+            "Acessar o painel administrativo e escanear o QR Code ou verificar conectividade do aparelho."
         });
       }
     } catch (e: any) {
