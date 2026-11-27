@@ -221,6 +221,7 @@ const flushPromises = () => new Promise(resolve => setTimeout(resolve, 250));
 
   const UpdateTicketService = load('services/TicketServices/UpdateTicketService.ts').default;
   const { wbotMessageListener, handleRating } = load('services/WbotServices/wbotMessageListener.ts');
+  const { invalidateGroupMetadataCache } = load('libs/wbot.ts');
   const wbotMonitor = load('services/WbotServices/wbotMonitor.ts').default;
   const { TransferTicketQueue } = load('wbotTransferTicketQueue.ts');
   const { ClosedAllOpenTickets } = load('services/WbotServices/wbotClosedTickets.ts');
@@ -365,8 +366,10 @@ const flushPromises = () => new Promise(resolve => setTimeout(resolve, 250));
     const msgAck = await Message.create({ id: 'msg-ack-0', body: 'Oi', ticketId: ticket.id, contactId: contact.id, companyId: company.id, fromMe: true, ack: 1, status: 'sended' });
     const msgDel = await Message.create({ id: 'msg-del-1', body: 'Apagar esta', ticketId: ticket.id, contactId: contact.id, companyId: company.id, fromMe: false, ack: 1 });
 
+    let readMessagesCalls = 0;
     const wbot = createFakeWbot({
       readMessages: async () => {
+        readMessagesCalls++;
         throw new Error('Connection Closed while marking read');
       }
     });
@@ -382,7 +385,8 @@ const flushPromises = () => new Promise(resolve => setTimeout(resolve, 250));
 
     await msgAck.reload();
     await msgDel.reload();
-    assert.equal(msgAck.ack, 2, 'ACK deve ser atualizado mesmo se readMessages falhar');
+    assert.equal(readMessagesCalls, 0, 'messages.update nao deve chamar readMessages em cascata');
+    assert.equal(msgAck.ack, 2, 'ACK deve ser atualizado normalmente');
     assert.equal(msgAck.status, 'delivered');
     assert.equal(msgDel.isDeleted, true, 'Item no indice 1 do lote deve ser marcado como apagado (nao apenas indice 0)');
   });
@@ -691,6 +695,92 @@ const flushPromises = () => new Promise(resolve => setTimeout(resolve, 250));
     const activeTicket = await Ticket.findOne({ where: { contactId: contact.id } });
     assert.equal(activeTicket.queueId, queue.id, 'Escolha valida deve atribuir a fila 1');
     assert.equal(map_msg.has(contact.number), false, 'Escolha valida deve limpar map_msg');
+  });
+
+  test('10. verifyContact usa cache de profilePictureUrl inclusive quando foto falha/privada', async () => {
+    await setSetting('userRating', 'disabled');
+    const picCalls = new Map();
+    const wbot = createFakeWbot({
+      profilePictureUrl: async jid => {
+        picCalls.set(jid, (picCalls.get(jid) || 0) + 1);
+        if (jid.includes('5567999992002')) {
+          throw new Error('401 item-not-found');
+        }
+        return 'https://cdn.example.invalid/avatar-a.jpg';
+      }
+    });
+    await wbotMessageListener(wbot, company.id);
+
+    const jidA = '5567999992001@s.whatsapp.net';
+    const jidB = '5567999992002@s.whatsapp.net';
+    for (let i = 1; i <= 3; i++) {
+      wbot.ev.emit('messages.upsert', {
+        type: 'notify',
+        messages: [
+          {
+            key: { id: `msg-pic-a-${i}`, remoteJid: jidA, fromMe: false },
+            pushName: 'Contato A',
+            message: { conversation: `Oi A ${i}` },
+            messageTimestamp: Math.floor(Date.now() / 1000)
+          },
+          {
+            key: { id: `msg-pic-b-${i}`, remoteJid: jidB, fromMe: false },
+            pushName: 'Contato B',
+            message: { conversation: `Oi B ${i}` },
+            messageTimestamp: Math.floor(Date.now() / 1000)
+          }
+        ]
+      });
+      await flushPromises();
+    }
+
+    assert.equal(picCalls.get(jidA), 1, 'profilePictureUrl deve ser consultada apenas 1x para Contato A');
+    assert.equal(picCalls.get(jidB), 1, 'profilePictureUrl deve ser consultada apenas 1x mesmo quando falha para Contato B');
+    const contactA = await Contact.findOne({ where: { number: '5567999992001', companyId: company.id } });
+    const contactB = await Contact.findOne({ where: { number: '5567999992002', companyId: company.id } });
+    assert.equal(contactA.profilePicUrl, 'https://cdn.example.invalid/avatar-a.jpg');
+    assert.equal(contactB.profilePicUrl, 'http://localhost:3000/nopicture.png');
+  });
+
+  test('11. handleMessage usa cache de groupMetadata e reconsulta apos invalidacao', async () => {
+    await setSetting('CheckMsgIsGroup', 'disabled');
+    let groupMetaCalls = 0;
+    const groupJid = '120363000000001@g.us';
+    const wbot = createFakeWbot({
+      profilePictureUrl: async () => 'http://localhost:3000/nopicture.png',
+      groupMetadata: async jid => {
+        groupMetaCalls++;
+        return { id: jid, subject: 'Grupo Suporte Teste', participants: [] };
+      }
+    });
+    await wbotMessageListener(wbot, company.id);
+
+    for (let i = 1; i <= 3; i++) {
+      wbot.ev.emit('messages.upsert', {
+        type: 'notify',
+        messages: [{
+          key: { id: `msg-grp-${i}`, remoteJid: groupJid, participant: '5567999992003@s.whatsapp.net', fromMe: false },
+          pushName: 'Participante',
+          message: { conversation: `Mensagem grupo ${i}` },
+          messageTimestamp: Math.floor(Date.now() / 1000)
+        }]
+      });
+      await flushPromises();
+    }
+    assert.equal(groupMetaCalls, 1, 'groupMetadata deve ser consultada apenas 1x em 3 mensagens seguidas');
+
+    invalidateGroupMetadataCache(whatsapp.id, groupJid);
+    wbot.ev.emit('messages.upsert', {
+      type: 'notify',
+      messages: [{
+        key: { id: 'msg-grp-4', remoteJid: groupJid, participant: '5567999992003@s.whatsapp.net', fromMe: false },
+        pushName: 'Participante',
+        message: { conversation: 'Mensagem grupo 4' },
+        messageTimestamp: Math.floor(Date.now() / 1000)
+      }]
+    });
+    await flushPromises();
+    assert.equal(groupMetaCalls, 2, 'Apos invalidateGroupMetadataCache deve buscar novamente');
   });
 
   for (const { name, fn } of tests) {

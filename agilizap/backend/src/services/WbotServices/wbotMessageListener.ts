@@ -45,6 +45,7 @@ import MarkDeleteWhatsAppMessage from "./MarkDeleteWhatsAppMessage";
 import NodeCache from "node-cache";
 
 const messageProcessedCache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
+const profilePicCache = new NodeCache({ stdTTL: 6 * 3600, checkperiod: 600, useClones: false });
 import Campaign from "../../models/Campaign";
 import * as MessageUtils from "./wbotGetMessageFromType";
 import CampaignShipping from "../../models/CampaignShipping";
@@ -74,6 +75,7 @@ import { provider } from "./providers";
 import SendWhatsAppMessage from "./SendWhatsAppMessage";
 import { getMessageOptions } from "./SendWhatsAppMedia";
 import { getRecipientJid } from "../../helpers/GetRecipientJid";
+import { getCachedGroupMetadata } from "../../libs/wbot";
 
 
 const fs = require('fs')
@@ -551,12 +553,15 @@ const verifyContact = async (
   wbot: Session,
   companyId: number
 ): Promise<Contact> => {
-  let profilePicUrl: string;
-  try {
-    profilePicUrl = await wbot.profilePictureUrl(msgContact.id);
-  } catch (e) {
-    Sentry.captureException(e);
-    profilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
+  const picCacheKey = `pic:${companyId}:${msgContact.id}`;
+  let profilePicUrl = profilePicCache.get<string>(picCacheKey);
+  if (!profilePicUrl) {
+    try {
+      profilePicUrl = (await wbot.profilePictureUrl(msgContact.id)) || `${process.env.FRONTEND_URL}/nopicture.png`;
+    } catch (e) {
+      profilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
+    }
+    profilePicCache.set(picCacheKey, profilePicUrl);
   }
 
   const isLid = Boolean(msgContact.id && (msgContact.id.endsWith("@lid") || msgContact.id.includes("@lid")));
@@ -1965,7 +1970,7 @@ const handleMessage = async (
     if (msgIsGroupBlock?.value === "enabled" && isGroup) return;
 
     if (isGroup) {
-      const grupoMeta = await wbot.groupMetadata(msg.key.remoteJid);
+      const grupoMeta = await getCachedGroupMetadata(wbot, msg.key.remoteJid);
       const msgGroupContact = {
         id: grupoMeta.id,
         name: grupoMeta.subject
@@ -2516,14 +2521,6 @@ const wbotMessageListener = async (wbot: Session, companyId: number): Promise<vo
 
         for (const message of messageUpdate) {
           try {
-            if (message?.key) {
-              try {
-                await (wbot as WASocket)!.readMessages([message.key]);
-              } catch (readErr) {
-                logger.warn(`[wbotMessageListener] Falha ao marcar mensagem como lida: ${readErr}`);
-              }
-            }
-
             if (
               message?.update?.messageStubType === 1 &&
               message?.key?.remoteJid &&

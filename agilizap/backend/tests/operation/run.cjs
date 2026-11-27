@@ -449,6 +449,41 @@ let pg;
     assert.ok(result2.alerts.length > 0, 'Alerta deve ser reportado sem flood de logging');
   });
 
+  test('OPS-02: Alertas operacionais - detecta sessoes presas > 5min em RECONNECT_PAUSED, RECONNECTING e OPENING', async () => {
+    const wPaused = await Whatsapp.create({
+      id: 31,
+      name: 'Canal Paused',
+      companyId: 1,
+      status: 'RECONNECT_PAUSED',
+      disconnectReason: 'PERSISTENT_NETWORK_FAILURE',
+      actionRequired: 'Tentando reconectar automaticamente a cada 3 minutos.'
+    });
+    const wReconnecting = await Whatsapp.create({
+      id: 32,
+      name: 'Canal Reconnecting',
+      companyId: 1,
+      status: 'RECONNECTING',
+      disconnectReason: '408'
+    });
+    const wOpening = await Whatsapp.create({
+      id: 33,
+      name: 'Canal Opening',
+      companyId: 1,
+      status: 'OPENING'
+    });
+    await database.query('UPDATE "Whatsapps" SET "updatedAt" = NOW() - INTERVAL \'10 minutes\' WHERE id IN (31, 32, 33);');
+
+    const result = await OperationalAlertService.evaluateOperationalAlerts(1);
+    const byId = new Map(result.alerts.filter(a => a.type === 'WHATSAPP_DISCONNECTED').map(a => [a.details.whatsappId, a]));
+    assert.equal(byId.get(wPaused.id)?.details?.status, 'RECONNECT_PAUSED');
+    assert.equal(byId.get(wPaused.id)?.details?.disconnectReason, 'PERSISTENT_NETWORK_FAILURE');
+    assert.ok(byId.get(wPaused.id)?.actionRequired.includes('3 minutos'));
+    assert.equal(byId.get(wReconnecting.id)?.details?.status, 'RECONNECTING');
+    assert.equal(byId.get(wOpening.id)?.details?.status, 'OPENING');
+
+    await Promise.all([wPaused.destroy(), wReconnecting.destroy(), wOpening.destroy()]);
+  });
+
   // --------------------------------------------------------------------------
   // OPS-03: Runtime, resiliencia e deploy
   // --------------------------------------------------------------------------

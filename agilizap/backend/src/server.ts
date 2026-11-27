@@ -3,6 +3,7 @@ import app from "./app";
 import { initIO } from "./libs/socket";
 import { logger } from "./utils/logger";
 import { StartAllWhatsAppsSessions } from "./services/WbotServices/StartAllWhatsAppsSessions";
+import { closeAllWbots, isTransientBaileysError } from "./libs/wbot";
 import Company from "./models/Company";
 import { startQueueProcess, stopQueueProcess } from "./queues";
 import { TransferTicketQueue } from "./wbotTransferTicketQueue";
@@ -42,6 +43,7 @@ async function handleCriticalError(type: string, error: any) {
     isShuttingDown = true;
     logger.warn({ event: "supervised_shutdown_initiated", reason: type });
     try {
+      await closeAllWbots();
       await stopQueueProcess();
       await sequelize.close();
     } catch (cleanupErr: any) {
@@ -56,6 +58,14 @@ process.on("uncaughtException", err => {
 });
 
 process.on("unhandledRejection", (reason, p) => {
+  if (isTransientBaileysError(reason)) {
+    logger.warn({
+      event: "baileys_unhandled_rejection_ignored",
+      message: (reason as any)?.message || String(reason),
+      statusCode: (reason as any)?.output?.statusCode
+    });
+    return;
+  }
   handleCriticalError("unhandledRejection", reason);
 });
 
@@ -83,6 +93,11 @@ gracefulShutdown(server, {
       cronJob.stop();
     } catch (e: any) {
       logger.warn(`Erro ao parar cron: ${e.message}`);
+    }
+    try {
+      await closeAllWbots();
+    } catch (e: any) {
+      logger.warn(`Erro ao encerrar sessoes WhatsApp: ${e.message}`);
     }
     try {
       await stopQueueProcess();

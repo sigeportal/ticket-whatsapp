@@ -35,7 +35,6 @@ import {
 	ViewModule,
 	ViewList,
 	CheckCircle,
-	Sync,
 	BatteryFull,
 	Battery80,
 	Battery50,
@@ -775,15 +774,6 @@ const Connections = () => {
 		}
 	};
 
-	const handleSyncTickets = async whatsAppId => {
-		try {
-			await api.post(`/whatsappsession/${whatsAppId}`);
-			toast.success(i18n.t("connections.toasts.synced") || "Sincronização iniciada com sucesso!");
-		} catch (err) {
-			toastError(err);
-		}
-	};
-
 	const handleOpenWhatsAppModal = () => {
 		setSelectedWhatsApp(null);
 		setWhatsAppModalOpen(true);
@@ -860,7 +850,7 @@ const Connections = () => {
 	};
 
 	// Renderizador de Status Badge com Ponto Pulsante
-	const renderStatusBadge = status => {
+	const renderStatusBadge = (status, actionRequired) => {
 		switch (status) {
 			case "CONNECTED":
 				return (
@@ -890,22 +880,23 @@ const Connections = () => {
 				return (
 					<Tooltip
 						title={
-							status === "RECONNECT_PAUSED"
-								? "Limite de tentativas atingido. Você pode reconectar manualmente."
+							actionRequired ||
+							(status === "RECONNECT_PAUSED"
+								? "Falha persistente. Tentando reconectar automaticamente a cada 3 minutos."
 								: i18n.t("connections.toolTips.disconnected.title") ||
-							"Sessão desconectada. Clique para reconectar."
+							"Sessão desconectada. Clique para reconectar.")
 						}
 					>
 						<span className={`${classes.statusBadge} ${classes.statusDisconnected}`}>
 							<span className={`${classes.statusDot} ${classes.dotRed}`} />
-							{status === "RECONNECT_PAUSED" ? "Reconexão automática pausada" : "Desconectado"}
+							{status === "RECONNECT_PAUSED" ? "Tentando em segundo plano" : "Desconectado"}
 						</span>
 					</Tooltip>
 				);
 			case "RECONNECTING":
 			case "OPENING":
 				return (
-					<Tooltip title={status === "RECONNECTING" ? "Tentando recuperar a sessão automaticamente" : "Iniciando e autenticando sessão..."}>
+					<Tooltip title={actionRequired || (status === "RECONNECTING" ? "Tentando recuperar a sessão automaticamente" : "Iniciando e autenticando sessão...")}>
 						<span className={`${classes.statusBadge} ${classes.statusOpening}`}>
 							<CircularProgress size={12} className={classes.statusSpinner} />
 							{status === "RECONNECTING" ? "Reconectando..." : "Conectando..."}
@@ -1033,15 +1024,6 @@ const Connections = () => {
 
 						{["CONNECTED", "RECONNECTING"].includes(whatsApp.status) && (
 							<div className={classes.cardActionsGrid}>
-								{whatsApp.status === "CONNECTED" && <Button
-									size="small"
-									variant="outlined"
-									className={classes.btnActionSync}
-									startIcon={<Sync />}
-									onClick={() => handleSyncTickets(whatsApp.id)}
-								>
-									Sincronizar
-								</Button>}
 								<Button
 									size="small"
 									variant="outlined"
@@ -1328,7 +1310,7 @@ const Connections = () => {
 									? "#10b981"
 									: whatsApp.status === "qrcode"
 									? "#f59e0b"
-									: whatsApp.status === "OPENING"
+									: ["OPENING", "RECONNECTING"].includes(whatsApp.status)
 									? "#3b82f6"
 									: "#ef4444";
 							return (
@@ -1394,7 +1376,7 @@ const Connections = () => {
 
 									<div className={classes.cardBody}>
 										<div className={classes.statusRow}>
-											<div>{renderStatusBadge(whatsApp.status)}</div>
+											<div>{renderStatusBadge(whatsApp.status, whatsApp.actionRequired)}</div>
 											<div>{renderBatteryInfo(whatsApp)}</div>
 										</div>
 
@@ -1502,7 +1484,7 @@ const Connections = () => {
 											</Typography>
 										</TableCell>
 										<TableCell align="center">
-											{renderStatusBadge(whatsApp.status)}
+											{renderStatusBadge(whatsApp.status, whatsApp.actionRequired)}
 										</TableCell>
 										<TableCell align="center">
 											{renderBatteryInfo(whatsApp)}

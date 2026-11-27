@@ -220,7 +220,30 @@ async function run() {
   const invalidMimeResult = await getMessageOptions("weirdfile.unknownext", invalidExtFile, "Test");
   assert.equal(invalidMimeResult, null, "Unknown mimetype must return null inside try/catch");
 
-  console.log("PASS send-whatsapp-media reliability checks (5 scenarios)");
+  // 6. Async file reads for image, PDF, and video in getMessageOptions & SendWhatsAppMedia
+  const sampleImg = path.join(sourceDir, "foto.png");
+  const samplePdf = path.join(sourceDir, "manual.pdf");
+  const sampleVid = path.join(sourceDir, "demo.mp4");
+  fs.writeFileSync(sampleImg, Buffer.from("png-bytes"));
+  fs.writeFileSync(samplePdf, Buffer.from("pdf-bytes"));
+  fs.writeFileSync(sampleVid, Buffer.from("mp4-bytes"));
+
+  const imgOpts = await getMessageOptions("foto.png", sampleImg, "Foto");
+  const pdfOpts = await getMessageOptions("manual.pdf", samplePdf, "Manual");
+  const vidOpts = await getMessageOptions("demo.mp4", sampleVid, "Video");
+  assert.equal(imgOpts.image.toString(), "png-bytes");
+  assert.equal(pdfOpts.document.toString(), "pdf-bytes");
+  assert.equal(vidOpts.video.toString(), "mp4-bytes");
+
+  await SendWhatsAppMedia({
+    media: { path: samplePdf, mimetype: "application/pdf", originalname: "manual.pdf" },
+    ticket: fakeTicket,
+    body: "Segue manual",
+    deleteSource: false
+  });
+  assert.equal(sentMessages.at(-1).payload.document.toString(), "pdf-bytes");
+
+  console.log("PASS send-whatsapp-media reliability checks (6 scenarios)");
 }
 
 run()

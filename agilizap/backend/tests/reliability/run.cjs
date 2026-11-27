@@ -867,6 +867,35 @@ let pg, server, io;
     assert.ok(wapp.actionRequired.includes('canal alternativo'));
   });
 
+  test('REL-04: UpdateWhatsAppService nao sobrescreve status ou session de conexao em andamento', async () => {
+    const UpdateWhatsAppService = load('services/WhatsappService/UpdateWhatsAppService.ts').default;
+    const wapp = await Whatsapp.create({
+      id: 202,
+      name: 'WhatsApp Em Reconexao',
+      status: 'RECONNECTING',
+      session: 'connected',
+      companyId: 1,
+      number: '5567999990202'
+    });
+
+    await UpdateWhatsAppService({
+      whatsappId: String(wapp.id),
+      companyId: 1,
+      whatsappData: {
+        name: 'WhatsApp Suporte Atualizado',
+        greetingMessage: 'Nova saudacao',
+        status: 'CONNECTED',
+        session: ''
+      }
+    });
+
+    await wapp.reload();
+    assert.equal(wapp.name, 'WhatsApp Suporte Atualizado');
+    assert.equal(wapp.greetingMessage, 'Nova saudacao');
+    assert.equal(wapp.status, 'RECONNECTING', 'UpdateWhatsAppService deve preservar status controlado por wbot');
+    assert.equal(wapp.session, 'connected', 'UpdateWhatsAppService deve preservar session');
+  });
+
   // Execute all tests sequentially
   for (const { name, fn } of tests) {
     try {
